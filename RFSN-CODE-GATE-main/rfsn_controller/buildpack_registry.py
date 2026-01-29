@@ -10,7 +10,7 @@ import importlib.metadata
 import logging
 from typing import Type
 
-from .base import Buildpack, BuildpackType
+from .buildpacks.base import Buildpack, BuildpackType
 
 logger = logging.getLogger(__name__)
 
@@ -124,7 +124,7 @@ class BuildpackRegistry:
         for name, buildpack_class in self._buildpacks.items():
             try:
                 buildpack = buildpack_class()
-                from .base import BuildpackContext
+                from .buildpacks.base import BuildpackContext
                 
                 ctx = BuildpackContext(
                     repo_dir=repo_dir,
