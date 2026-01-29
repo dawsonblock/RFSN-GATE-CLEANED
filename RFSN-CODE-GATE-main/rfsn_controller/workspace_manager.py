@@ -128,16 +128,20 @@ class WorkspaceManager:
         Returns:
             True if path is safe to operate on
         """
-        # Normalize path
-        p = p.replace("\\", "/").lstrip("./")
+        # Normalize path - handle both ./ and .\ prefixes
+        p = p.replace("\\", "/")
+        while p.startswith("./"):
+            p = p[2:]
         
         # Check against forbidden prefixes
-        is_safe = not any(p.startswith(pref.rstrip("/")) for pref in self.forbidden_prefixes)
-        
-        if not is_safe:
-            logger.debug(f"Path rejected as unsafe", path=p)
+        for pref in self.forbidden_prefixes:
+            # Strip trailing slashes and wildcards for comparison
+            check_pref = pref.rstrip("/").rstrip("*")
+            if p.startswith(check_pref + "/") or p == check_pref:
+                logger.debug(f"Path rejected as unsafe", path=p, prefix=pref)
+                return False
             
-        return is_safe
+        return True
 
     def run_git(
         self, 
@@ -187,7 +191,7 @@ class WorkspaceManager:
             return GitResult(
                 returncode=-1,
                 stdout="",
-                stderr="Git command timed out",
+                stderr="git command timeout",
                 success=False
             )
         except Exception as e:

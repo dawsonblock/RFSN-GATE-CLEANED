@@ -352,3 +352,104 @@ def initialize_system_info(version: str, python_version: str) -> None:
         'version': version,
         'python_version': python_version,
     })
+
+
+# =============================================================================
+# Context Manager Tracking (Convenience Wrappers)
+# =============================================================================
+
+from contextlib import contextmanager
+from typing import Generator
+
+
+@contextmanager
+def track_llm_call(provider: str, model: str) -> Generator[None, None, None]:
+    """
+    Context manager for tracking LLM calls with automatic timing.
+    
+    Args:
+        provider: LLM provider name (e.g., 'deepseek', 'gemini')
+        model: Model name (e.g., 'deepseek-chat', 'gemini-2.0-flash')
+        
+    Example:
+        >>> with track_llm_call(provider="deepseek", model="deepseek-chat"):
+        ...     response = llm.generate(prompt)
+    """
+    start_time = time.time()
+    error = None
+    try:
+        yield
+    except Exception as e:
+        error = type(e).__name__
+        raise
+    finally:
+        duration = time.time() - start_time
+        llm_requests.labels(model=f"{provider}/{model}", purpose="general").inc()
+        llm_latency.observe(duration)
+        if error:
+            llm_errors.labels(model=f"{provider}/{model}", error_type=error).inc()
+
+
+@contextmanager
+def track_cache_operation(tier: str, operation: str) -> Generator[None, None, None]:
+    """
+    Context manager for tracking cache operations.
+    
+    Args:
+        tier: Cache tier ('memory', 'disk', 'semantic')
+        operation: Operation type ('get', 'set', 'delete')
+        
+    Example:
+        >>> with track_cache_operation(tier="memory", operation="get"):
+        ...     value = cache.get(key)
+    """
+    try:
+        yield
+    except KeyError:
+        # Cache miss
+        cache_misses.labels(cache_tier=tier).inc()
+        raise
+    else:
+        # Cache hit
+        if operation == "get":
+            cache_hits.labels(cache_tier=tier).inc()
+
+
+@contextmanager
+def track_patch_application(phase: str) -> Generator[None, None, None]:
+    """
+    Context manager for tracking patch applications.
+    
+    Args:
+        phase: Repair phase ('verification', 'gate_validation', 'execution')
+        
+    Example:
+        >>> with track_patch_application(phase="verification"):
+        ...     result = apply_patch(patch)
+    """
+    start_time = time.time()
+    success = False
+    try:
+        yield
+        success = True
+    finally:
+        duration = time.time() - start_time
+        if success:
+            patches_applied.labels(phase=phase).inc()
+        else:
+            patches_rejected.labels(reason="execution_failed", phase=phase).inc()
+
+
+def get_metrics_text() -> str:
+    """
+    Get metrics in Prometheus text format.
+    
+    Returns:
+        Metrics as text string
+        
+    Example:
+        >>> metrics = get_metrics_text()
+        >>> print(metrics)
+    """
+    from prometheus_client import generate_latest
+    return generate_latest(REGISTRY).decode('utf-8')
