@@ -141,62 +141,72 @@ def _build_prompt(profile: Profile, state: AgentState) -> str:
     """Build a comprehensive prompt with history for DeepSeek."""
     parts = []
     
-    # Task context
+    # Task context - most important
     problem = state.notes.get("problem_statement", "")
-    parts.append(f"# TASK\n{problem}")
+    parts.append(f"# 🎯 TASK\n{problem}")
+    
+    # Current phase with detailed instructions - up front so LLM knows what to do
+    parts.append(f"\n# 📋 CURRENT PHASE: {state.phase.value}")
+    parts.append(_get_phase_instruction(state.phase))
+    
+    # For PATCH_CANDIDATES, explicitly show which file to edit
+    if state.phase == Phase.PATCH_CANDIDATES:
+        last_contents = state.notes.get("last_file_contents", {})
+        if last_contents:
+            source_files = [f for f in last_contents.keys() if not '/test' in f and not 'test_' in f]
+            if source_files:
+                main_file = source_files[0]
+                parts.append(f"\n# 🎯 FILE TO EDIT: {main_file}")
+                parts.append("Generate a patch for this file based on the content shown below.")
     
     # File contents from last read - SHOW PROMINENTLY WITH LINE NUMBERS
     last_contents = state.notes.get("last_file_contents", {})
     if last_contents:
-        parts.append("\n# ⚠️ CRITICAL: FILE CONTENTS (with line numbers for your diff)")
-        parts.append("You MUST use exact line content from below when generating patches:")
+        parts.append("\n# 📄 FILE CONTENTS (use exact text for your diff)")
         for fname, content in list(last_contents.items())[:3]:
+            # Skip test files in PATCH_CANDIDATES to reduce confusion
+            if state.phase == Phase.PATCH_CANDIDATES and ('test_' in fname or '/test' in fname):
+                parts.append(f"\n## ⚠️ SKIP: {fname} (test file - do not edit)")
+                continue
             # Add line numbers to help with diff generation
             lines = content.split("\n")[:150]  # Limit to 150 lines
             numbered_lines = [f"{i+1:4}: {line}" for i, line in enumerate(lines)]
             numbered_content = "\n".join(numbered_lines)
-            parts.append(f"\n## {fname}\n```\n{numbered_content}\n```")
+            parts.append(f"\n## ✅ {fname}\n```\n{numbered_content}\n```")
     
-    # Current phase with detailed instructions
-    parts.append(f"\n# CURRENT PHASE: {state.phase.value}")
-    parts.append(_get_phase_instruction(state.phase))
+    # Budget status - show urgency
+    remaining_rounds = profile.max_rounds - state.budget.round_idx
+    parts.append(f"\n# ⏱️ BUDGET: {remaining_rounds} rounds remaining")
+    if remaining_rounds <= 2:
+        parts.append("⚠️ LOW BUDGET - Generate a patch NOW!")
     
-    # Budget status
-    parts.append("\n# BUDGET STATUS")
-    parts.append(f"- Round: {state.budget.round_idx}/{profile.max_rounds}")
-    parts.append(f"- Patch attempts: {state.budget.patch_attempts}/{profile.max_patch_attempts}")
-    parts.append(f"- Test runs: {state.budget.test_runs}/{profile.max_test_runs}")
+    # Localization hits - files that likely need changes
+    if state.localization_hits:
+        source_hits = [h for h in state.localization_hits if not 'test' in h.get('file', '').lower()]
+        if source_hits:
+            parts.append("\n# 📍 LIKELY BUG LOCATIONS")
+            for hit in source_hits[:5]:
+                parts.append(f"- {hit.get('file', 'unknown')}: {hit.get('reason', '')}")
     
-    # Add history of what was already done
+    # Add history of what was already done (compact)
     if "action_history" not in state.notes:
         state.notes["action_history"] = []
     
-    history = state.notes["action_history"]
+    history = state.notes.get("action_history", [])
     if history:
-        parts.append("\n# ACTIONS ALREADY TAKEN (DO NOT REPEAT)")
-        for h in history[-8:]:  # Last 8 actions
+        parts.append(f"\n# 📜 HISTORY (last {min(len(history), 5)} actions)")
+        for h in history[-5:]:
             parts.append(f"- {h}")
     
-    # Localization hits
-    if state.localization_hits:
-        parts.append("\n# LOCALIZATION HITS (files likely to need changes)")
-        for hit in state.localization_hits[:10]:
-            parts.append(f"- {hit.get('file', 'unknown')}: {hit.get('reason', '')}")
-    
-    # Files already read
-    files_read = state.notes.get("files_read", [])
-    if files_read:
-        parts.append(f"\n# FILES ALREADY READ: {', '.join(files_read[-10:])}")
-    
-    # Last failures
+    # Last failures - important for diagnosis
     if state.last_failures:
-        parts.append("\n# LAST TEST FAILURES")
+        parts.append("\n# ❌ LAST TEST FAILURES")
         for f in state.last_failures[:3]:
             parts.append(f"- {f.nodeid}: {f.message[:100]}")
     
     # Last gate rejection
     if "last_gate_reject" in state.notes:
-        parts.append(f"\n# LAST GATE REJECTION: {state.notes['last_gate_reject']}")
+        parts.append(f"\n# ⛔ LAST REJECTION: {state.notes['last_gate_reject']}")
     
     return "\n".join(parts)
 
@@ -205,62 +215,110 @@ def _get_phase_instruction(phase: Phase) -> str:
     """Get detailed instruction for current phase."""
     instructions = {
         Phase.INGEST: """
-INSTRUCTION: Parse the problem statement carefully.
-- Identify the bug or feature request
-- Note any specific file paths, function names, or class names mentioned
-- Output: tool_request to read the most relevant file
+## PHASE: INGEST - Understand the Problem
+
+Read the problem statement and identify:
+1. What is broken or needs to change?
+2. Which file(s) likely contain the bug?
+3. What behavior should change?
+
+OUTPUT: {"mode": "tool_request", "requests": [{"tool": "sandbox.read_file", "args": {"path": "<most_likely_source_file>"}}], "why": "Reading source to understand current behavior"}
 """,
         Phase.LOCALIZE: """
-INSTRUCTION: Find the exact code location that needs to be changed.
-- Use grep/search to find relevant functions, classes, or patterns
-- Read specific files to understand the code structure
-- DO NOT just read README.md - search for actual code files
-- Output: tool_request with grep/search for specific terms from the problem
+## PHASE: LOCALIZE - Find the Bug Location
+
+You've read some code. Now pinpoint the EXACT location of the bug.
+
+1. Search for function/class names mentioned in the problem
+2. Search for error messages or specific patterns
+3. Read the actual source file (NOT test files)
+
+OUTPUT: {"mode": "tool_request", "requests": [{"tool": "sandbox.grep", "args": {"pattern": "<function_or_class_name>", "path": "."}}], "why": "Finding exact location of bug"}
+
+IMPORTANT: Focus on SOURCE files in src/, lib/, or the main package directory. Avoid test/ directories.
 """,
         Phase.PLAN: """
-INSTRUCTION: Plan the minimal fix.
-- Based on localization, identify exactly what needs to change
-- Consider edge cases
-- Output: Continue inspecting if needed, or move to generating a patch
+## PHASE: PLAN - Design the Fix
+
+Based on what you've read, plan the minimal fix:
+
+1. What specific line(s) need to change?
+2. What is the old (buggy) code?
+3. What should the new (fixed) code be?
+
+If you need more info, read another file. Otherwise, proceed to generate a patch.
+
+OUTPUT: Continue reading OR proceed to patch generation
 """,
         Phase.PATCH_CANDIDATES: """
-YOU MUST NOW GENERATE A PATCH. Output EXACTLY this JSON format:
+## PHASE: PATCH_CANDIDATES - Generate the Fix
 
-{"mode": "patch", "diff": "--- a/filename.py\\n+++ b/filename.py\\n@@ -line,count +line,count @@\\n context line\\n-removed line\\n+added line\\n context line", "why": "explanation"}
+⚠️ YOU MUST OUTPUT A PATCH NOW. No more reading files.
 
-CRITICAL RULES:
-1. EDIT SOURCE FILES ONLY - NOT test files! Fix the bug in the actual implementation.
-2. Do NOT add tests or modify test files - fix the code that is being tested.
-3. You MUST output mode: "patch" - no other mode allowed here
-4. The diff MUST have actual changes (removed lines different from added lines)
-5. Use \\n for newlines in the JSON string
-6. Match exact whitespace from the original file you read earlier
+OUTPUT THIS EXACT JSON FORMAT:
+```json
+{
+  "mode": "patch",
+  "diff": "--- a/path/to/file.py\\n+++ b/path/to/file.py\\n@@ -LINE,COUNT +LINE,COUNT @@\\n context\\n-old_line\\n+new_line\\n context",
+  "why": "Brief explanation of fix"
+}
+```
 
-Example:
-{"mode": "patch", "diff": "--- a/src/utils.py\\n+++ b/src/utils.py\\n@@ -10,3 +10,3 @@\\n def foo():\\n-    return x + 1\\n+    return x * 2\\n", "why": "Fixed operator"}
+ABSOLUTE RULES:
+1. ⛔ NEVER edit test files - only edit SOURCE code
+2. ✅ Edit the file where the bug lives (from your earlier reading)
+3. ✅ Use EXACT text from the file you read (copy-paste the line)
+4. ✅ The - line (removed) MUST be different from + line (added)
+5. ✅ Include 1-2 context lines before/after your change
+
+DIFF FORMAT:
+- Start with: --- a/filepath
+- Then: +++ b/filepath
+- Then: @@ -startline,count +startline,count @@
+- Context lines: no prefix
+- Removed lines: start with -
+- Added lines: start with +
+
+EXAMPLE (fixing a comparison bug):
+{"mode": "patch", "diff": "--- a/mylib/core.py\\n+++ b/mylib/core.py\\n@@ -42,3 +42,3 @@\\n     def compare(self, x, y):\\n-        return x == y\\n+        return x is y\\n", "why": "Changed equality to identity comparison as required"}
 """,
         Phase.TEST_STAGE: """
-INSTRUCTION: Run tests to verify the fix.
-- Run the specific test mentioned in the problem if any
-- Or run the relevant test suite
-- Output: tool_request with sandbox.run_command for pytest
+## PHASE: TEST_STAGE - Verify the Fix
+
+Run the relevant tests to confirm your fix works.
+
+OUTPUT: {"mode": "tool_request", "requests": [{"tool": "sandbox.run_command", "args": {"cmd": ["pytest", "path/to/test.py", "-v"]}}], "why": "Verifying fix passes tests"}
+
+If no specific test is mentioned, run: pytest -x --tb=short
 """,
         Phase.DIAGNOSE: """
-INSTRUCTION: Analyze why tests are failing.
-- Review the test output
-- Identify what went wrong with your patch
-- Output: tool_request to read failing test or patched code
+## PHASE: DIAGNOSE - Analyze Test Failures
+
+Tests failed. Analyze WHY:
+
+1. Read the test that failed
+2. Compare expected vs actual behavior
+3. Check if your patch was applied correctly
+4. Identify what needs to change
+
+OUTPUT: Read the failing test file or the patched source file
 """,
         Phase.MINIMIZE: """
-INSTRUCTION: Ensure the patch is minimal.
-- Remove any unnecessary changes
-- Verify tests still pass
-- Output: final patch or tool_request for verification
+## PHASE: MINIMIZE - Clean Up
+
+Ensure your fix is minimal:
+1. Remove any unnecessary changes
+2. Verify tests still pass
+3. No formatting-only changes
+
+OUTPUT: Final verification or adjusted patch
 """,
         Phase.FINALIZE: """
-INSTRUCTION: Finalize the solution.
-- Confirm tests pass
-- Output: {"mode": "feature_summary", "summary": "...", "completion_status": "complete"}
+## PHASE: FINALIZE - Complete
+
+Tests pass! Finalize the solution.
+
+OUTPUT: {"mode": "feature_summary", "summary": "Fixed [problem] by [change made]", "completion_status": "complete"}
 """,
     }
     return instructions.get(phase, "Proceed with the task.")
