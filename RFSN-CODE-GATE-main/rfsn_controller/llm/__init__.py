@@ -1,4 +1,5 @@
 """LLM Client Package."""
+from __future__ import annotations
 
 from .async_client import generate_patches_parallel
 from .deepseek import call_model as call_deepseek

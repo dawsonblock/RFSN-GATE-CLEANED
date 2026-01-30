@@ -1,4 +1,5 @@
 """QA package for claim-based adversarial verification."""
+from __future__ import annotations
 
 from .qa_types import (
     Claim,

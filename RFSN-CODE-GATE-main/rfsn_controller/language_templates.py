@@ -1,4 +1,5 @@
 """Command templates for different languages.
+from __future__ import annotations
 
 Provides safe, templated commands for install, test, and build operations
 across supported languages.

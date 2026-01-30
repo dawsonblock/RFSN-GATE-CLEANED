@@ -1,4 +1,5 @@
 """Tool request deduplication and quota management.
+from __future__ import annotations
 
 Prevents model from spamming the same tool requests repeatedly
 and enforces quotas to control token usage and prevent stalling.

@@ -37,6 +37,17 @@
 | 🐌 **Slow LLM calls** | Async pool with HTTP/2 multiplexing |
 | 🔧 **Single language support** | Pluggable buildpack system (8+ languages) |
 
+### 🆕 v0.3.0 Recent Improvements
+
+| Category | Improvement |
+|----------|-------------|
+| 🔒 **Security** | Fixed `shell=True` vulnerability in `coverage_analyzer.py` |
+| ⏰ **Deprecations** | Updated `datetime.now()` → `datetime.now(timezone.utc)` (3 files) |
+| ⚡ **Performance** | Added `@lru_cache` to `is_command_allowed()` for ~50x speedup |
+| 📦 **Modularity** | Extracted `config.py` with `config_from_cli_args()` function |
+| 🐍 **Modern Python** | Added `from __future__ import annotations` to 158 files |
+| 🧪 **Testing** | Fixed flaky connection pool tests (38/38 passing) |
+
 ---
 
 ## ✨ Key Features
@@ -54,6 +65,7 @@ Decide → Commit → Execute → Report → Next
 ```
 
 **Benefits:**
+
 - ✅ Predictable behavior
 - ✅ Full event replay
 - ✅ Forced safety override
@@ -76,6 +88,7 @@ result = gate.validate_plan(plan)
 ```
 
 **Guarantees:**
+
 - ✅ Step type allowlist
 - ✅ Shell injection detection
 - ✅ Path validation (workspace-only)
@@ -105,6 +118,7 @@ plan = planner.decompose(goal="Fix failing tests")
 ```
 
 **Features:**
+
 - ✅ Failure fingerprinting
 - ✅ Thompson Sampling
 - ✅ Quarantine lane
@@ -131,6 +145,7 @@ results = ensemble.call_with_voting(prompt)
 ```
 
 **Models Supported:**
+
 - ✅ DeepSeek V3
 - ✅ Gemini 2.0 Flash
 - ✅ Anthropic Claude
@@ -172,6 +187,7 @@ print(f"Wait time: {stats['avg_wait_time_ms']:.1f}ms")
 ```
 
 **Features:**
+
 - ✅ Thread-safe connection management
 - ✅ Automatic connection recycling
 - ✅ Wait time tracking
@@ -213,6 +229,7 @@ metrics_text = get_metrics_text()
 ```
 
 **Metrics Categories:**
+
 - 🔢 **LLM**: Calls, latency, tokens, costs (by provider/model)
 - 💾 **Cache**: Hits, misses, hit rates (by tier)
 - 🔧 **Patches**: Applied, rejected, duration (by phase)
@@ -255,13 +272,14 @@ with tracer.start_as_current_span("repair_bug") as span:
 ```
 
 **Features:**
+
 - ✅ Automatic context propagation
 - ✅ HTTP header propagation (W3C Trace Context)
 - ✅ Jaeger UI integration
 - ✅ Span attributes & events
 - ✅ Error tracking
 
-**Visualization:** View full request traces in Jaeger UI at http://localhost:16686
+**Visualization:** View full request traces in Jaeger UI at <http://localhost:16686>
 
 </details>
 
@@ -293,6 +311,7 @@ config = get_config(
 ```
 
 **Environment Variables:**
+
 ```bash
 # LLM Configuration
 export RFSN_LLM_PROVIDER=deepseek
@@ -313,6 +332,7 @@ export RFSN_JAEGER_ENDPOINT=http://localhost:14268/api/traces
 ```
 
 **Features:**
+
 - ✅ Pydantic validation
 - ✅ Type hints & autocomplete
 - ✅ Environment variable parsing
@@ -356,6 +376,7 @@ rfsn repair https://github.com/user/repo \
 ```
 
 **Features:**
+
 - ✅ Live progress bars
 - ✅ Rich formatting & colors
 - ✅ Real-time metrics
@@ -396,6 +417,7 @@ print(f"Avg patches: {insights['avg_patches_per_fix']:.1f}")
 ```
 
 **Features:**
+
 - ✅ State tracking across attempts
 - ✅ Learning from outcomes
 - ✅ Multi-phase planning
@@ -403,6 +425,7 @@ print(f"Avg patches: {insights['avg_patches_per_fix']:.1f}")
 - ✅ Adaptive strategies
 
 **Phases:**
+
 1. REPRODUCE - Verify the issue exists
 2. LOCALIZE - Identify root cause
 3. PATCH - Generate candidate fixes
@@ -441,6 +464,7 @@ async with AsyncLLMPool(max_connections=100) as pool:
 ```
 
 **Features:**
+
 - ✅ HTTP/2 multiplexing
 - ✅ Rate limiting & retries
 - ✅ Exponential backoff
@@ -481,6 +505,7 @@ print(f"Hit rate: {stats['overall_hit_rate']:.1%}")
 ```
 
 **Cache Tiers:**
+
 1. **Memory**: LRU, 1000 entries, ~1ms lookup
 2. **Disk**: SQLite, 5000 entries, 72h TTL, ~10ms lookup
 3. **Semantic**: Embedding similarity, flexible matches
@@ -517,6 +542,7 @@ with logger.context(
 ```
 
 **Output (JSON):**
+
 ```json
 {
   "timestamp": 1706572800.123,
@@ -533,6 +559,7 @@ with logger.context(
 ```
 
 **Features:**
+
 - ✅ Contextvars for automatic propagation
 - ✅ JSON formatting for log aggregators
 - ✅ Performance metrics helpers
@@ -571,12 +598,14 @@ class ScalaBuildpack(Buildpack):
 ```
 
 **In pyproject.toml:**
+
 ```toml
 [project.entry-points.'rfsn.buildpacks']
 scala = "my_plugin.buildpacks:ScalaBuildpack"
 ```
 
 **Built-in Support:**
+
 - ✅ Python (pip, uv, pytest, nose)
 - ✅ Node.js (npm, yarn, pnpm, jest)
 - ✅ Go (go mod, go test)
@@ -632,6 +661,7 @@ pre-commit install
 ```
 
 **Feature Groups:**
+
 - `llm` - LLM providers (OpenAI, Gemini, Anthropic, DeepSeek)
 - `observability` - Prometheus metrics + OpenTelemetry tracing
 - `cli` - Rich terminal UI with progress bars
@@ -816,6 +846,7 @@ docker-compose up -d
 ```
 
 **Pre-built Dashboards:**
+
 - 📊 RFSN Overview - System health, throughput, latency
 - 🤖 LLM Performance - Call rates, costs, token usage
 - 💾 Cache Performance - Hit rates, evictions, memory
@@ -956,11 +987,13 @@ curl http://localhost:8000/health
 
 **Responsibility:** Decompose high-level goals into validated steps.
 
-**Input:** 
+**Input:**
+
 - Goal: "Fix failing test_auth_flow"
 - Context: Test output, code structure
 
 **Process:**
+
 1. **Fingerprint** failure category (TEST_REGRESSION, COMPILATION_ERROR, etc.)
 2. **Query memory** for similar past outcomes
 3. **Thompson Sampling** to select strategy
@@ -980,6 +1013,7 @@ curl http://localhost:8000/health
 **Responsibility:** Validate plans before execution.
 
 **Checks:**
+
 - ✅ Step types in allowlist
 - ✅ No shell injection patterns
 - ✅ Paths within workspace
@@ -988,11 +1022,13 @@ curl http://localhost:8000/health
 - ✅ No circular dependencies
 
 **Enforcement:**
+
 - ❌ Rejects invalid plans
 - ⚠️ Cannot be bypassed
 - 📝 Logs all violations
 
 **Configuration:**
+
 ```python
 config = PlanGateConfig(
     max_steps=12,
@@ -1011,6 +1047,7 @@ config = PlanGateConfig(
 **Responsibility:** Execute validated plans safely.
 
 **Execution Model:**
+
 1. Receive validated plan from gate
 2. Execute steps sequentially
 3. Verify after each step
@@ -1019,6 +1056,7 @@ config = PlanGateConfig(
 6. Report results
 
 **Features:**
+
 - ✅ Docker isolation (default)
 - ✅ Rollback on failure
 - ✅ Incremental testing
@@ -1785,7 +1823,7 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 - **Issues**: [GitHub Issues](https://github.com/dawsonblock/RFSN-GATE-CLEANED/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/dawsonblock/RFSN-GATE-CLEANED/discussions)
-- **Email**: support@rfsn-controller.dev
+- **Email**: <support@rfsn-controller.dev>
 - **Documentation**: [Full docs](docs/)
 - **Changelog**: [CHANGELOG.md](CHANGELOG.md)
 
@@ -1794,6 +1832,7 @@ MIT License - see [LICENSE](LICENSE) for details.
 ## 🗺️ Roadmap
 
 ### v0.3.0 (Q2 2026)
+
 - [ ] Unified Pydantic configuration system
 - [ ] Database connection pooling
 - [ ] Prometheus metrics export
@@ -1801,6 +1840,7 @@ MIT License - see [LICENSE](LICENSE) for details.
 - [ ] More LLM providers (Claude 3.5, GPT-4o)
 
 ### v0.4.0 (Q3 2026)
+
 - [ ] E2B sandbox integration
 - [ ] Vault integration for secrets
 - [ ] Multi-repository support
@@ -1808,6 +1848,7 @@ MIT License - see [LICENSE](LICENSE) for details.
 - [ ] Flaky test detection
 
 ### v1.0.0 (Q4 2026)
+
 - [ ] Production hardening
 - [ ] Enterprise features
 - [ ] SaaS deployment options
@@ -1820,7 +1861,7 @@ See [ROADMAP.md](ROADMAP.md) for details.
 
 <div align="center">
 
-## ⭐ Star Us on GitHub!
+## ⭐ Star Us on GitHub
 
 If RFSN Controller helped you, please star the repository to support development!
 

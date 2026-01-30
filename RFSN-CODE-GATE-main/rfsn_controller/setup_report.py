@@ -1,4 +1,5 @@
 """Setup report module for RFSN controller.
+from __future__ import annotations
 
 Creates structured reports about project setup and installation.
 """

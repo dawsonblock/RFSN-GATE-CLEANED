@@ -1,4 +1,5 @@
 """Stall detection for the repair loop.
+from __future__ import annotations
 
 Tracks improvement over iterations and detects when the controller
 is making no progress for an extended period.

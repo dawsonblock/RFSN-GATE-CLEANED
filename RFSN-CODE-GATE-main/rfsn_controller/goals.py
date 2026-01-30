@@ -1,4 +1,5 @@
 """Enhanced goal types beyond just tests.
+from __future__ import annotations
 
 Supports multiple goal types: tests, build, lint, repro, static check, feature.
 """

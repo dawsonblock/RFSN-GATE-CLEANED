@@ -4,10 +4,13 @@ Only approved commands can be executed in the sandbox.
 This prevents malicious or dangerous operations.
 """
 
-from typing import List, Optional, Set
+from __future__ import annotations
+
+from functools import lru_cache
+from typing import Optional
 
 # Approved commands that can be executed in the sandbox
-ALLOWED_COMMANDS: Set[str] = {
+ALLOWED_COMMANDS: set[str] = {
     # Version control
     "git",
     # Python
@@ -89,7 +92,7 @@ ALLOWED_COMMANDS: Set[str] = {
 }
 
 # Commands that are explicitly blocked
-BLOCKED_COMMANDS: Set[str] = {
+BLOCKED_COMMANDS: set[str] = {
     "cd",  # Commands run from repo root; cd is not needed and causes confusion
     "curl",
     "wget",
@@ -115,7 +118,7 @@ BLOCKED_COMMANDS: Set[str] = {
 }
 
 # Dangerous flags that should be blocked
-BLOCKED_FLAGS: List[str] = [
+BLOCKED_FLAGS: list[str] = [
     "--rm",  # rm -rf
     "-rf",  # rm -rf
     "rm -rf",
@@ -136,7 +139,7 @@ BLOCKED_FLAGS: List[str] = [
 ]
 
 # Shell metacharacters that enable command chaining or injection
-BLOCKED_METACHARACTERS: List[str] = [
+BLOCKED_METACHARACTERS: list[str] = [
     ";",  # Command separator
     "|",  # Pipe
     "&",  # Background
@@ -151,6 +154,7 @@ BLOCKED_METACHARACTERS: List[str] = [
 ]
 
 
+@lru_cache(maxsize=512)
 def is_command_allowed(command: str) -> tuple[bool, Optional[str]]:
     """Check if a command is allowed to execute.
 
@@ -226,11 +230,11 @@ def is_command_allowed(command: str) -> tuple[bool, Optional[str]]:
     return True, None
 
 
-def get_allowed_commands() -> Set[str]:
+def get_allowed_commands() -> set[str]:
     """Get the set of allowed commands."""
     return ALLOWED_COMMANDS.copy()
 
 
-def get_blocked_commands() -> Set[str]:
+def get_blocked_commands() -> set[str]:
     """Get the set of blocked commands."""
     return BLOCKED_COMMANDS.copy()

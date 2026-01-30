@@ -60,7 +60,13 @@ class ConnectionPool:
             timeout: Timeout for getting connection (default: 30.0s)
             check_same_thread: SQLite thread checking (default: False)
             **kwargs: Additional arguments passed to sqlite3.connect()
+            
+        Raises:
+            ValueError: If pool_size is less than 1
         """
+        if pool_size < 1:
+            raise ValueError(f"pool_size must be at least 1, got {pool_size}")
+        
         self.db_path = str(db_path)
         self.pool_size = pool_size
         self.timeout = timeout
@@ -135,7 +141,7 @@ class ConnectionPool:
                     # Return to pool
                     try:
                         self.pool.put(conn, block=False)
-                    except:
+                    except Exception:
                         # Pool full, close connection
                         conn.close()
     

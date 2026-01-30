@@ -1,4 +1,5 @@
 """URL validation utilities for security.
+from __future__ import annotations
 
 Enforces strict GitHub URL validation to prevent:
 - Non-repo URLs (like blob/, tree/, commit/)

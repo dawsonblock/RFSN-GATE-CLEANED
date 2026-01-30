@@ -1,4 +1,5 @@
 """Buildpacks for multi-language repository support.
+from __future__ import annotations
 
 This module provides buildpack implementations for various programming
 languages, enabling the RFSN Sandbox Controller to work with any public

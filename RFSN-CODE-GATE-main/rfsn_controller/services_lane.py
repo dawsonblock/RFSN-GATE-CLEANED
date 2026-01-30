@@ -1,4 +1,5 @@
 """Docker Compose services lane for external dependencies.
+from __future__ import annotations
 
 This module provides functionality to manage external services like
 PostgreSQL, Redis, MongoDB, etc. using Docker Compose for testing.

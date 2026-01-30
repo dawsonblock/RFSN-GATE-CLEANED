@@ -1,4 +1,5 @@
 """Test runner integration for the RFSN controller.
+from __future__ import annotations
 
 Implements multi-predicate goal verification:
 - Tests (required)

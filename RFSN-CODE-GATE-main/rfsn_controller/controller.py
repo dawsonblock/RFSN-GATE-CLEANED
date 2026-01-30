@@ -379,6 +379,29 @@ def _evaluate_patch_in_worktree(
 
 
 @dataclass
+class BudgetConfig:
+    """Budget configuration for resource limits."""
+    
+    max_steps: int = 0
+    max_llm_calls: int = 0
+    max_tokens: int = 0
+    max_time_seconds: float = 0
+    max_subprocess_calls: int = 0
+    warning_threshold: float = 0.8
+
+
+@dataclass
+class ContractsConfig:
+    """Contracts configuration for runtime safety checks."""
+    
+    enabled: bool = True
+    shell_execution_enabled: bool = True
+    budget_tracking_enabled: bool = True
+    llm_calling_enabled: bool = True
+    event_logging_enabled: bool = True
+
+
+@dataclass
 class ControllerConfig:
     """Configuration for a controller run."""
 
@@ -457,6 +480,14 @@ class ControllerConfig:
     # Verification durability
     durability_reruns: int = 0  # rerun full tests N additional times after success
     no_eval: bool = False  # Skip final evaluation
+    # Context-related configuration (for create_context compatibility)
+    output_dir: str = ".rfsn"  # Output directory for artifacts
+    events_file: str = "events.jsonl"  # Events log filename
+    plan_file: str = "plan.json"  # Plan filename
+    # Budget configuration (inline for context compatibility)
+    budget: "BudgetConfig" = field(default_factory=lambda: BudgetConfig())
+    # Contracts configuration (inline for context compatibility)
+    contracts: "ContractsConfig" = field(default_factory=lambda: ContractsConfig())
 
 
 def run_controller(cfg: ControllerConfig) -> Dict[str, Any]:

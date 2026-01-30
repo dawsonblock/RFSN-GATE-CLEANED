@@ -1,4 +1,5 @@
 """Gate modules for RFSN Controller.
+from __future__ import annotations
 
 This package contains safety gates that validate and authorize actions:
 - PlanGate: Validates plans before execution

@@ -1,4 +1,5 @@
 """Buildpack base interface and types.
+from __future__ import annotations
 
 Defines the contract that all buildpacks must implement for multi-language
 repository support.

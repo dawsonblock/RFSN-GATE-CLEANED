@@ -1,4 +1,5 @@
 """Planner Layer v2.2 - High-level goal decomposition with advanced features.
+from __future__ import annotations
 
 This module provides a planner that sits ABOVE the controller and decomposes
 high-level goals into structured, ordered plans. The planner:

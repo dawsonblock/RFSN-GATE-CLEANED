@@ -1,4 +1,5 @@
 """.NET buildpack implementation.
+from __future__ import annotations
 
 Handles .NET repositories with dotnet CLI.
 """

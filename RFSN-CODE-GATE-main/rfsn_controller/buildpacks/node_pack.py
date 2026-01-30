@@ -1,4 +1,5 @@
 """Node.js buildpack implementation.
+from __future__ import annotations
 
 Handles Node.js repositories with npm, yarn, or pnpm dependency managers.
 """

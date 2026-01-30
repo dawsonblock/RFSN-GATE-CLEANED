@@ -1,4 +1,5 @@
 """
+from __future__ import annotations
 Proposal Planner for RFSN v5.
 
 Generates structured proposals following the strict RFSN protocol.

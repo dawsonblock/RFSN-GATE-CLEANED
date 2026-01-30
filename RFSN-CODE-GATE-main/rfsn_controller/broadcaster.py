@@ -1,4 +1,5 @@
 """RFSN Progress Broadcaster.
+from __future__ import annotations
 
 Sends real-time events to the local dashboard via HTTP.
 Fire-and-forget architecture to avoid blocking the controller.

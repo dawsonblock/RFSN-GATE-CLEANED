@@ -1,4 +1,5 @@
 """QA system types and schemas.
+from __future__ import annotations
 
 Defines the contract for claim-based adversarial QA:
 - ClaimType: Types of claims a patch can make

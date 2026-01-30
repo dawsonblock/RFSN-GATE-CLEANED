@@ -1,4 +1,5 @@
 """C++ buildpack implementation.
+from __future__ import annotations
 
 Handles C++ repositories with CMake or Make.
 """

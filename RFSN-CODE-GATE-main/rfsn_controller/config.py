@@ -1,335 +1,170 @@
-"""Central configuration for RFSN Controller.
+"""Controller configuration dataclasses.
 
-Provides type-safe configuration using Pydantic with environment variable support.
-
-Usage:
-    from rfsn_controller.config import RFSNConfig, get_config
-    
-    # Load from environment
-    config = get_config()
-    
-    # Or create manually
-    config = RFSNConfig(
-        llm_primary="deepseek-chat",
-        planner_mode="v5",
-        cache_enabled=True
-    )
+This module contains configuration dataclasses extracted from controller.py
+for better modularity and reusability.
 """
 
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Literal, Optional
-from pydantic import BaseModel, Field
-from pydantic_settings import BaseSettings, SettingsConfigDict
-import os
+from dataclasses import dataclass, field
+from typing import List, Optional
 
 
-class LLMConfig(BaseModel):
-    """LLM configuration settings."""
+@dataclass
+class BudgetConfig:
+    """Budget configuration for resource limits."""
     
-    primary: str = Field(
-        "deepseek-chat",
-        description="Primary LLM model for planning and generation"
-    )
-    fallback: str = Field(
-        "gemini-2.0-flash",
-        description="Fallback LLM model when primary fails"
-    )
-    temperature: float = Field(
-        0.2,
-        ge=0.0,
-        le=2.0,
-        description="Temperature for LLM sampling"
-    )
-    max_tokens: int = Field(
-        4096,
-        ge=1,
-        le=32000,
-        description="Maximum tokens per LLM response"
-    )
-    timeout: float = Field(
-        60.0,
-        ge=1.0,
-        description="LLM API timeout in seconds"
-    )
-    max_retries: int = Field(
-        3,
-        ge=0,
-        le=10,
-        description="Maximum API retry attempts"
-    )
+    max_steps: int = 0
+    max_llm_calls: int = 0
+    max_tokens: int = 0
+    max_time_seconds: float = 0
+    max_subprocess_calls: int = 0
+    warning_threshold: float = 0.8
 
 
-class PlannerConfig(BaseModel):
-    """Planner configuration settings."""
+@dataclass
+class ContractsConfig:
+    """Contracts configuration for runtime safety checks."""
     
-    mode: Literal["v4", "v5"] = Field(
-        "v5",
-        description="Planner version to use"
-    )
-    max_plan_steps: int = Field(
-        12,
-        ge=1,
-        le=50,
-        description="Maximum steps in a single plan"
-    )
-    max_iterations: int = Field(
-        50,
-        ge=1,
-        le=200,
-        description="Maximum repair iterations"
-    )
-    max_stuck_iterations: int = Field(
-        3,
-        ge=1,
-        le=10,
-        description="Iterations before considering stuck"
-    )
-    risk_budget: int = Field(
-        3,
-        ge=0,
-        le=10,
-        description="Maximum allowed risk level"
-    )
+    enabled: bool = True
+    shell_execution_enabled: bool = True
+    budget_tracking_enabled: bool = True
+    llm_calling_enabled: bool = True
+    event_logging_enabled: bool = True
 
 
-class CacheConfig(BaseModel):
-    """Cache configuration settings."""
-    
-    enabled: bool = Field(
-        True,
-        description="Enable caching system"
-    )
-    ttl_hours: int = Field(
-        72,
-        ge=1,
-        le=8760,  # 1 year
-        description="Cache TTL in hours"
-    )
-    dir: Path = Field(
-        Path.home() / ".cache" / "rfsn",
-        description="Cache directory path"
-    )
-    max_size_mb: int = Field(
-        1024,
-        ge=10,
-        description="Maximum cache size in MB"
-    )
-    memory_enabled: bool = Field(
-        True,
-        description="Enable in-memory cache tier"
-    )
-    disk_enabled: bool = Field(
-        True,
-        description="Enable disk cache tier"
-    )
-    semantic_enabled: bool = Field(
-        False,
-        description="Enable semantic cache tier (requires sentence-transformers)"
-    )
+@dataclass
+class ControllerConfig:
+    """Configuration for a controller run."""
+
+    github_url: str
+    test_cmd: str = "pytest -q"
+    ref: Optional[str] = None
+    max_steps: int = 12
+    temps: List[float] = field(default_factory=lambda: [0.0, 0.2, 0.4])
+    fix_all: bool = False
+    max_steps_without_progress: int = 10
+    collect_finetuning_data: bool = False
+    model: str = "deepseek-chat"
+    max_minutes: int = 30
+    install_timeout: int = 300
+    focus_timeout: int = 120
+    full_timeout: int = 300
+    max_tool_calls: int = 40
+    docker_image: str = "python:3.11-slim"
+    unsafe_host_exec: bool = False
+    cpu: float = 2.0
+    mem_mb: int = 4096
+    pids: int = 256
+    docker_readonly: bool = False
+    lint_cmd: Optional[str] = None
+    typecheck_cmd: Optional[str] = None
+    repro_cmd: Optional[str] = None
+    verify_cmd: Optional[str] = None
+    dry_run: bool = False
+    project_type: str = "auto"
+    buildpack: str = "auto"
+    enable_sysdeps: bool = False
+    sysdeps_tier: int = 4
+    sysdeps_max_packages: int = 10
+    build_cmd: Optional[str] = None
+    learning_db_path: Optional[str] = None
+    learning_half_life_days: int = 14
+    learning_max_age_days: int = 90
+    learning_max_rows: int = 20000
+    time_mode: str = "frozen"  # frozen|live
+    run_started_at_utc: Optional[str] = None
+    time_seed: Optional[int] = None
+    rng_seed: Optional[int] = None
+    feature_mode: bool = False
+    feature_description: Optional[str] = None
+    acceptance_criteria: List[str] = field(default_factory=list)
+    # Verification configuration for feature mode
+    verify_policy: str = "tests_only"  # tests_only | cmds_then_tests | cmds_only
+    focused_verify_cmds: List[str] = field(default_factory=list)
+    verify_cmds: List[str] = field(default_factory=list)
+    # Hygiene configuration overrides
+    max_lines_changed: Optional[int] = None
+    max_files_changed: Optional[int] = None
+    allow_lockfile_changes: bool = False
+    # Phase budget limits for reliability
+    max_install_attempts: int = 3
+    max_patch_attempts: int = 20
+    max_verification_attempts: int = 5
+    # Verification repeatability
+    repro_times: int = 1  # Run verification N times to ensure reproducibility
+    # Performance optimizations
+    enable_llm_cache: bool = False  # Enable LLM response caching
+    llm_cache_path: Optional[str] = None  # Path to LLM cache database
+    parallel_patches: bool = True  # Generate patches in parallel (faster)
+    ensemble_mode: bool = False  # Use multi-model ensemble
+    incremental_tests: bool = False  # Run only affected tests first
+    enable_telemetry: bool = False  # Enable OpenTelemetry/Prometheus
+    telemetry_port: int = 8080  # Prometheus metrics port
+    # Elite Controller options
+    policy_mode: str = "off"  # off | bandit
+    planner_mode: str = "off"  # off | dag | v2 | v5
+    repo_index: bool = False  # Enable repo indexing
+    seed: int = 1337  # Deterministic seed
+    # Risk & persistence
+    risk_profile: str = "production"  # production | research
+    state_dir: Optional[str] = None  # base host dir; we create <base>/<risk>/<run_id>/
+    # Verification durability
+    durability_reruns: int = 0  # rerun full tests N additional times after success
+    no_eval: bool = False  # Skip final evaluation
+    # Context-related configuration (for create_context compatibility)
+    output_dir: str = ".rfsn"  # Output directory for artifacts
+    events_file: str = "events.jsonl"  # Events log filename
+    plan_file: str = "plan.json"  # Plan filename
+    # Budget configuration (inline for context compatibility)
+    budget: "BudgetConfig" = field(default_factory=lambda: BudgetConfig())
+    # Contracts configuration (inline for context compatibility)
+    contracts: "ContractsConfig" = field(default_factory=lambda: ContractsConfig())
 
 
-class SafetyConfig(BaseModel):
-    """Safety and security configuration."""
-    
-    docker_enabled: bool = Field(
-        True,
-        description="Use Docker sandboxing for code execution"
-    )
-    max_risk_budget: int = Field(
-        3,
-        ge=0,
-        le=10,
-        description="Maximum cumulative risk budget"
-    )
-    shell_allowed: bool = Field(
-        False,
-        description="Allow shell=True in subprocess (NOT RECOMMENDED)"
-    )
-    eval_allowed: bool = Field(
-        False,
-        description="Allow eval() and exec() (NOT RECOMMENDED)"
-    )
-    gate_strict_mode: bool = Field(
-        True,
-        description="Enable strict gate validation"
-    )
-
-
-class ObservabilityConfig(BaseModel):
-    """Observability and monitoring configuration."""
-    
-    metrics_enabled: bool = Field(
-        True,
-        description="Enable Prometheus metrics"
-    )
-    metrics_port: int = Field(
-        9090,
-        ge=1024,
-        le=65535,
-        description="Prometheus metrics port"
-    )
-    tracing_enabled: bool = Field(
-        False,
-        description="Enable distributed tracing"
-    )
-    jaeger_host: str = Field(
-        "localhost",
-        description="Jaeger agent hostname"
-    )
-    jaeger_port: int = Field(
-        6831,
-        ge=1,
-        le=65535,
-        description="Jaeger agent port"
-    )
-    structured_logging: bool = Field(
-        True,
-        description="Use structured JSON logging"
-    )
-    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = Field(
-        "INFO",
-        description="Logging level"
-    )
-
-
-class RFSNConfig(BaseSettings):
-    """Central RFSN Controller configuration.
-    
-    Loads from environment variables with RFSN_ prefix.
-    
-    Example:
-        # Set via environment
-        export RFSN_LLM__PRIMARY="gpt-4"
-        export RFSN_PLANNER__MODE="v5"
-        export RFSN_CACHE__ENABLED="true"
-        
-        # Load config
-        config = RFSNConfig()
-        print(config.llm.primary)  # "gpt-4"
-    """
-    
-    model_config = SettingsConfigDict(
-        env_prefix="RFSN_",
-        env_nested_delimiter="__",
-        case_sensitive=False,
-    )
-    
-    # Component configurations
-    llm: LLMConfig = Field(
-        default_factory=LLMConfig,
-        description="LLM configuration"
-    )
-    planner: PlannerConfig = Field(
-        default_factory=PlannerConfig,
-        description="Planner configuration"
-    )
-    cache: CacheConfig = Field(
-        default_factory=CacheConfig,
-        description="Cache configuration"
-    )
-    safety: SafetyConfig = Field(
-        default_factory=SafetyConfig,
-        description="Safety configuration"
-    )
-    observability: ObservabilityConfig = Field(
-        default_factory=ObservabilityConfig,
-        description="Observability configuration"
-    )
-    
-    # Global settings
-    version: str = Field(
-        "0.2.0",
-        description="RFSN Controller version"
-    )
-    debug: bool = Field(
-        False,
-        description="Enable debug mode"
-    )
-    dry_run: bool = Field(
-        False,
-        description="Dry run mode (no actual changes)"
-    )
-    
-    def validate_environment(self) -> list[str]:
-        """Validate required environment variables and dependencies.
-        
-        Returns:
-            List of warnings/errors
-        """
-        issues = []
-        
-        # Check cache directory
-        if self.cache.enabled and not self.cache.dir.exists():
-            try:
-                self.cache.dir.mkdir(parents=True, exist_ok=True)
-            except Exception as e:
-                issues.append(f"Failed to create cache dir: {e}")
-        
-        # Check semantic cache dependencies
-        if self.cache.semantic_enabled:
-            try:
-                import sentence_transformers
-            except ImportError:
-                issues.append(
-                    "Semantic cache enabled but sentence-transformers not installed. "
-                    "Install with: pip install 'rfsn-controller[semantic]'"
-                )
-        
-        # Check tracing dependencies
-        if self.observability.tracing_enabled:
-            try:
-                import opentelemetry
-            except ImportError:
-                issues.append(
-                    "Tracing enabled but opentelemetry not installed. "
-                    "Install with: pip install 'rfsn-controller[observability]'"
-                )
-        
-        # Security warnings
-        if self.safety.shell_allowed:
-            issues.append(
-                "WARNING: shell=True is enabled. This is a security risk!"
-            )
-        
-        if self.safety.eval_allowed:
-            issues.append(
-                "WARNING: eval/exec is enabled. This is a security risk!"
-            )
-        
-        return issues
-
-
-# Global configuration instance
-_config: RFSNConfig | None = None
-
-
-def get_config(reload: bool = False) -> RFSNConfig:
-    """Get global configuration instance.
+def config_from_cli_args(args) -> ControllerConfig:
+    """Create a ControllerConfig from CLI arguments.
     
     Args:
-        reload: Force reload configuration from environment
+        args: Parsed command line arguments (argparse.Namespace or similar).
         
     Returns:
-        Global RFSNConfig instance
+        ControllerConfig instance populated from CLI args.
     """
-    global _config
+    # Map CLI argument names to config field names
+    config_kwargs = {}
     
-    if _config is None or reload:
-        _config = RFSNConfig()
-        
-        # Validate and print warnings
-        issues = _config.validate_environment()
-        if issues:
-            import sys
-            for issue in issues:
-                print(f"Config warning: {issue}", file=sys.stderr)
+    # Required field
+    if hasattr(args, 'github_url'):
+        config_kwargs['github_url'] = args.github_url
+    elif hasattr(args, 'repo'):
+        config_kwargs['github_url'] = args.repo
+    else:
+        raise ValueError("github_url or repo argument is required")
     
-    return _config
-
-
-def reset_config() -> None:
-    """Reset global configuration (useful for testing)."""
-    global _config
-    _config = None
+    # Map common CLI fields to config fields
+    field_mappings = {
+        'test_cmd': 'test_cmd',
+        'ref': 'ref',
+        'max_steps': 'max_steps',
+        'model': 'model',
+        'max_minutes': 'max_minutes',
+        'docker_image': 'docker_image',
+        'dry_run': 'dry_run',
+        'fix_all': 'fix_all',
+        'buildpack': 'buildpack',
+        'seed': 'seed',
+        'policy_mode': 'policy_mode',
+        'planner_mode': 'planner_mode',
+        'enable_telemetry': 'enable_telemetry',
+        'telemetry_port': 'telemetry_port',
+        'output_dir': 'output_dir',
+    }
+    
+    for cli_name, config_name in field_mappings.items():
+        if hasattr(args, cli_name):
+            value = getattr(args, cli_name)
+            if value is not None:
+                config_kwargs[config_name] = value
+    
+    return ControllerConfig(**config_kwargs)

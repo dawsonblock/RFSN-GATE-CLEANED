@@ -1,4 +1,5 @@
 """
+from __future__ import annotations
 Scoring engine for proposal candidates.
 
 Evaluates multiple candidate proposals and ranks them by quality

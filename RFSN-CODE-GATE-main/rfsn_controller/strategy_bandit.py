@@ -1,4 +1,5 @@
 """Strategy bandit with Thompson Sampling for patch approach selection.
+from __future__ import annotations
 
 Implements:
 - Multi-armed bandit over patch strategies (temperature, prompt style, etc.)

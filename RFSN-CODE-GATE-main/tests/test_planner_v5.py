@@ -88,8 +88,8 @@ class TestProposal:
             hypothesis="Edit file for testing",
             action_type=ActionType.EDIT_FILE,
             target=Target(path="test.py"),
-            change_summary="Edit",
-            rollback_plan="Revert",
+            change_summary="Edit file content",
+            rollback_plan="Revert changes made",
         )
         assert edit.is_mutation()
         
@@ -97,8 +97,8 @@ class TestProposal:
             hypothesis="Read file for testing",
             action_type=ActionType.READ_FILE,
             target=Target(path="test.py"),
-            change_summary="Read",
-            rollback_plan="No changes",
+            change_summary="Read file content",
+            rollback_plan="No changes to revert",
         )
         assert not read.is_mutation()
 
@@ -255,16 +255,16 @@ class TestScoringEngine:
             hypothesis="Fix issue in module.py",
             action_type=ActionType.EDIT_FILE,
             target=Target(path="module.py"),
-            change_summary="Fix",
-            rollback_plan="Revert",
+            change_summary="Fix issue in code",
+            rollback_plan="Revert changes made",
         )
         
         irrelevant = Proposal(
             hypothesis="Fix issue in other.py",
             action_type=ActionType.EDIT_FILE,
             target=Target(path="other.py"),
-            change_summary="Fix",
-            rollback_plan="Revert",
+            change_summary="Fix issue in code",
+            rollback_plan="Revert changes made",
         )
         
         relevant_score = scorer.score_proposal(relevant)
@@ -298,15 +298,15 @@ class TestScoringEngine:
                 hypothesis="Fix in module.py with None check",
                 action_type=ActionType.EDIT_FILE,
                 target=Target(path="module.py"),
-                change_summary="Add None check",
-                rollback_plan="Revert",
+                change_summary="Add None check guard",
+                rollback_plan="Revert changes made",
             ),
             Proposal(
                 hypothesis="Refactor entire codebase",
                 action_type=ActionType.EDIT_FILE,
                 target=Target(path="other.py"),
-                change_summary="Large refactor",
-                rollback_plan="Revert",
+                change_summary="Large refactor change",
+                rollback_plan="Revert changes made",
             ),
         ]
         

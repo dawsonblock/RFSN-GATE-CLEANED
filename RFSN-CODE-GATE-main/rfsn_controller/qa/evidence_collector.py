@@ -1,4 +1,5 @@
 """Evidence collector for QA claims.
+from __future__ import annotations
 
 Controller-driven evidence gathering. NOT an LLM.
 Uses existing tools to collect evidence for challenged claims.

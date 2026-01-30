@@ -1,4 +1,5 @@
 """
+from __future__ import annotations
 RFSN Planner v5 - SWE-bench Optimized Coding Planner
 
 A proposal-only coding planner that operates under strict RFSN authority model.
@@ -18,11 +19,11 @@ Architecture:
 - StateTracker: Maintains planning state
 """
 
-from .proposal import Proposal, ProposalIntent, ActionType, ExpectedEffect, RiskLevel
+from .proposal import Proposal, ProposalIntent, ActionType, ExpectedEffect, RiskLevel, Target, TestExpectation
 from .planner import ProposalPlanner
 from .meta_planner import MetaPlanner, PlannerState
 from .scoring import ScoringEngine, CandidateScore
-from .state_tracker import StateTracker, HypothesisOutcome
+from .state_tracker import StateTracker, HypothesisOutcome, GateRejectionType
 
 __version__ = "5.0.0"
 
@@ -33,6 +34,8 @@ __all__ = [
     "ActionType",
     "ExpectedEffect",
     "RiskLevel",
+    "Target",
+    "TestExpectation",
     # Planners
     "ProposalPlanner",
     "MetaPlanner",
@@ -43,4 +46,5 @@ __all__ = [
     # State tracking
     "StateTracker",
     "HypothesisOutcome",
+    "GateRejectionType",
 ]

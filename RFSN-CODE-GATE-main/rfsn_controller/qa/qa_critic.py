@@ -1,4 +1,5 @@
 """QA Critic for claim evaluation.
+from __future__ import annotations
 
 LLM-based structured critique that evaluates claims about a patch.
 Outputs ACCEPT/CHALLENGE/REJECT verdicts with evidence requests.

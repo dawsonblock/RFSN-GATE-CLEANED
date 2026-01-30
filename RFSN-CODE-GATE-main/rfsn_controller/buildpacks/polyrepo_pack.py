@@ -1,4 +1,5 @@
 """Polyrepo buildpack implementation.
+from __future__ import annotations
 
 Handles polyrepo/monorepo repositories with multiple language support.
 """

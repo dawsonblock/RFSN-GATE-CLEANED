@@ -1,4 +1,5 @@
 """APT package whitelist for safe system dependency installation.
+from __future__ import annotations
 
 Organized in tiers from essential to specialized. Only packages in this
 whitelist can be installed, and only through the safe SYSDEPS phase.

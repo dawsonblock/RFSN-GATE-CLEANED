@@ -1,4 +1,5 @@
 """
+from __future__ import annotations
 State tracking for RFSN Planner v5.
 
 Maintains explicit state across proposal attempts for intelligent recovery.

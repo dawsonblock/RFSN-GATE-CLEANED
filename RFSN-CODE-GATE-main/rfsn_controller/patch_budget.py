@@ -1,4 +1,5 @@
 """Adaptive patch budget control with escalation ladder.
+from __future__ import annotations
 
 Implements the Patch Budget Controller as specified:
 - Surgical mode (default): tiny diffs only

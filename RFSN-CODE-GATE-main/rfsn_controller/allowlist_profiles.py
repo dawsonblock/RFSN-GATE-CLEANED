@@ -1,4 +1,5 @@
 """Language-scoped command allowlists for secure sandbox execution.
+from __future__ import annotations
 
 This module provides language-specific command allowlists that are selected
 based on project detection. This prevents "global allowlist creep" where

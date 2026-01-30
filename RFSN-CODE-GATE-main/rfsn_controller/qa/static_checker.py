@@ -1,4 +1,5 @@
 """Static checker wrapper for QA evidence.
+from __future__ import annotations
 
 Wraps mypy, ruff, and other static analysis tools for use as evidence.
 """

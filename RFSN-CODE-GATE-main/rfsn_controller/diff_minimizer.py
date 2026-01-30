@@ -1,4 +1,5 @@
 """Diff minimization utilities for patch preprocessing.
+from __future__ import annotations
 
 Implements diff shrinking strategies:
 - Drop whitespace-only hunks

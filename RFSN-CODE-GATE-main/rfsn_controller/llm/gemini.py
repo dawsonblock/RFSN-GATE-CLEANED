@@ -1,4 +1,5 @@
 """Gemini API client with structured output enforcement for RFSN controller."""
+from __future__ import annotations
 
 import os
 

@@ -1,4 +1,5 @@
 """Project type detection for automatic setup and testing.
+from __future__ import annotations
 
 Detects project type from repository structure and provides
 appropriate setup and test commands.

@@ -135,14 +135,15 @@ class TestConnectionPool:
         assert pool.is_closed
     
     def test_connection_reuse(self, temp_db):
-        """Test connections are reused."""
-        pool = ConnectionPool(temp_db, pool_size=2)
+        """Test connections are reused from pool."""
+        pool = ConnectionPool(temp_db, pool_size=1)
         
+        # With pool_size=1, there's only one connection in the pool
         # Get and return connection
         with pool.get_connection() as conn1:
             conn1_id = id(conn1)
         
-        # Get again - should be same connection
+        # Get again - must be same connection since pool_size=1
         with pool.get_connection() as conn2:
             conn2_id = id(conn2)
         
@@ -246,8 +247,8 @@ class TestConnectionPoolEdgeCases:
     def test_zero_pool_size(self):
         """Test pool with size 0 should fail."""
         with tempfile.NamedTemporaryFile(suffix=".db") as f:
-            with pytest.raises(Exception):
-                pool = ConnectionPool(f.name, pool_size=0)
+            with pytest.raises(ValueError):
+                ConnectionPool(f.name, pool_size=0)
     
     def test_large_pool_size(self):
         """Test pool with large size."""

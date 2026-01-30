@@ -1,4 +1,5 @@
 """Pipeline phases for the RFSN controller.
+from __future__ import annotations
 
 This module defines the explicit state machine phases for the controller loop.
 Each phase represents a distinct stage in the repair pipeline.

@@ -1,4 +1,5 @@
 """Python buildpack implementation.
+from __future__ import annotations
 
 Handles Python repositories with pip, poetry, or other dependency managers.
 """

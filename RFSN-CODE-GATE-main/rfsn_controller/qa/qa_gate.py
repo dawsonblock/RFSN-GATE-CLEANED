@@ -1,4 +1,5 @@
 """QA Gate for patch acceptance decisions.
+from __future__ import annotations
 
 The single authority for patch acceptance. Implements decision policy:
 - REJECT if functional_fix or no_regression claims fail

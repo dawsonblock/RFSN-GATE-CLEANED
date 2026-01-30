@@ -1,4 +1,5 @@
 """CLI entry point for CGW-based coding agent.
+from __future__ import annotations
 
 This module provides a command-line interface to run the serial decision
 coding agent through the CGW/SSL guard architecture.

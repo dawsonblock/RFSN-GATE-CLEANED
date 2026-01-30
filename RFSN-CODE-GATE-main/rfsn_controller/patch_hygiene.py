@@ -1,4 +1,5 @@
 """Patch hygiene gates for quality control.
+from __future__ import annotations
 
 Ensures patches meet quality standards before acceptance:
 - Max lines changed

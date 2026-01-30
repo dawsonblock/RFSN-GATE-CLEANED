@@ -1,4 +1,5 @@
 """Workspace resolver for monorepo support.
+from __future__ import annotations
 
 This module provides functionality to resolve workspaces in monorepos,
 handling tools like npm workspaces, poetry workspaces, and Go modules.

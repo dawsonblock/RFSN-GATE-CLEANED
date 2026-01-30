@@ -1,4 +1,5 @@
 """
+from __future__ import annotations
 Meta-Planner for RFSN v5.
 
 Strategic layer above proposal generation. Decides which proposal to ask for

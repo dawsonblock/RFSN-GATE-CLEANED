@@ -1,4 +1,5 @@
 """
+from __future__ import annotations
 Proposal data structures for RFSN Planner v5.
 
 Defines the mandatory schema for all proposals submitted to the RFSN gate.

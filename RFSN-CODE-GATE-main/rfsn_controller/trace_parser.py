@@ -1,4 +1,5 @@
 """Multi-language stack trace parsers.
+from __future__ import annotations
 
 Extracts file paths, line numbers, and error context from stack traces
 across different languages (Python, Node, Java, Go, Rust).

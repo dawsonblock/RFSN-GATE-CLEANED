@@ -1,4 +1,5 @@
 """Learning layer for RFSN Controller.
+from __future__ import annotations
 
 This package contains SAFE learning components that operate
 in PROPOSAL SPACE ONLY. Learning can influence:

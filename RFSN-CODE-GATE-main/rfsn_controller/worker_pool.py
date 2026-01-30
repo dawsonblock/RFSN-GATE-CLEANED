@@ -1,4 +1,5 @@
 """Multi-agent worker pool for parallel patch generation.
+from __future__ import annotations
 
 Implements:
 - Stateless worker agents that propose patches

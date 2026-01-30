@@ -1,4 +1,5 @@
 """Rust buildpack implementation.
+from __future__ import annotations
 
 Handles Rust repositories with Cargo.
 """

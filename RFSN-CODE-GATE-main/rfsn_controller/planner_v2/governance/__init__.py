@@ -1,4 +1,5 @@
 """Planner v2 Governance Module.
+from __future__ import annotations
 
 This module provides governance capabilities for plan validation,
 resource budgeting, risk-aware routing, halt conditions, and

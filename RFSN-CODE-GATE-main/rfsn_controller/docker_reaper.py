@@ -11,7 +11,7 @@ import logging
 import subprocess
 import time
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 logger = logging.getLogger(__name__)
@@ -58,7 +58,7 @@ class DockerReaper:
         self.label_filter = label_filter
         self.max_age_hours = max_age_hours
         self.dry_run = dry_run
-        self.cutoff_time = datetime.now() - timedelta(hours=max_age_hours)
+        self.cutoff_time = datetime.now(timezone.utc) - timedelta(hours=max_age_hours)
 
     def list_containers(self) -> list[ContainerInfo]:
         """
@@ -126,17 +126,21 @@ class DockerReaper:
         reaped_count = 0
         
         for container in containers:
-            if container.created_at < self.cutoff_time:
+            # Make both datetimes comparable (handle naive vs aware)
+            created_at = container.created_at
+            if created_at.tzinfo is None:
+                created_at = created_at.replace(tzinfo=timezone.utc)
+            if created_at < self.cutoff_time:
                 if self.dry_run:
                     logger.info(
                         f"[DRY RUN] Would reap container {container.id} "
-                        f"({container.names}), age: {datetime.now() - container.created_at}"
+                        f"({container.names}), age: {datetime.now(timezone.utc) - created_at}"
                     )
                 else:
                     try:
                         logger.info(
                             f"Reaping container {container.id} ({container.names}), "
-                            f"age: {datetime.now() - container.created_at}"
+                            f"age: {datetime.now(timezone.utc) - created_at}"
                         )
                         subprocess.run(
                             ["docker", "rm", "-f", container.id],

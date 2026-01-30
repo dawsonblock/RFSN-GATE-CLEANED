@@ -1,4 +1,5 @@
 """Helper functions to parse test output and error traces."""
+from __future__ import annotations
 
 import hashlib
 import re

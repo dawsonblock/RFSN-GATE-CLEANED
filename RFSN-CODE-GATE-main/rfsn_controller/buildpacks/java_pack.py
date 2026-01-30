@@ -1,4 +1,5 @@
 """Java buildpack implementation.
+from __future__ import annotations
 
 Handles Java repositories with Maven or Gradle.
 """

@@ -1,4 +1,5 @@
 """Strict model output validation.
+from __future__ import annotations
 
 Validates model JSON responses and diffs:
 - Schema validation for mode/tool_request/patch

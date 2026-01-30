@@ -172,7 +172,10 @@ class TestPlanner:
     @pytest.fixture
     def context(self, tmp_path):
         """Create a test context."""
-        config = ControllerConfig(output_dir=str(tmp_path / ".rfsn"))
+        config = ControllerConfig(
+            github_url="https://github.com/test/repo",
+            output_dir=str(tmp_path / ".rfsn"),
+        )
         return create_context(config)
     
     def test_generate_repair_plan(self, context) -> None:

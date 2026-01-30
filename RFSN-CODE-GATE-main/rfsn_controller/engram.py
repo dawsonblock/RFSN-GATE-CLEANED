@@ -1,4 +1,5 @@
 """
+from __future__ import annotations
 Engram: Neural N-gram Memory Module for Code Repetition Caching.
 
 Based on "Engram Architecture Demo Implementation".

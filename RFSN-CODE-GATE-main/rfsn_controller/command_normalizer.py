@@ -1,4 +1,5 @@
 """Command normalization and shell idiom detection.
+from __future__ import annotations
 
 This module provides functions to detect shell idioms in commands and
 prevent the model from wasting quota on commands that cannot execute

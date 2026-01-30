@@ -1,4 +1,5 @@
 """Go buildpack implementation.
+from __future__ import annotations
 
 Handles Go repositories with go modules.
 """

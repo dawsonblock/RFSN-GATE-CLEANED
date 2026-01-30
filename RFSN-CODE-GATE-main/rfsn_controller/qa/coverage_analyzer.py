@@ -1,4 +1,5 @@
 """Coverage analyzer for QA evidence.
+from __future__ import annotations
 
 Parses pytest-cov output to detect:
 - Which files are touched by a patch
@@ -286,9 +287,10 @@ class CoverageAnalyzer:
         cov_cmd = f"{test_cmd} --cov --cov-report=json:{output_path} -q"
 
         try:
+            import shlex
             subprocess.run(
-                cov_cmd,
-                shell=True,
+                shlex.split(cov_cmd),
+                shell=False,
                 capture_output=True,
                 text=True,
                 timeout=self.timeout_seconds,

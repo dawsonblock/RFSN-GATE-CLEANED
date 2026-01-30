@@ -1,4 +1,5 @@
 """QA Orchestrator for unified QA workflow.
+from __future__ import annotations
 
 Coordinates claim extraction, critique, evidence collection, and gating
 in the controller repair loop.

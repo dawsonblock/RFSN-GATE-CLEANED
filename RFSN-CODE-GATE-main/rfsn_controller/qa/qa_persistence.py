@@ -1,4 +1,5 @@
 """Persistence for QA claim outcomes.
+from __future__ import annotations
 
 Stores claim-level outcomes for learning:
 - Which claims tend to fail for given failure signatures

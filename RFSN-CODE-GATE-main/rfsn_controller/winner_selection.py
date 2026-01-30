@@ -1,4 +1,5 @@
 """Winner selection by score (not first-pass-wins).
+from __future__ import annotations
 
 Implements scoring-based selection for multiple successful patches:
 - Smallest lines changed

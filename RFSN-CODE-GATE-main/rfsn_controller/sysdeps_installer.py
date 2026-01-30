@@ -1,4 +1,5 @@
 """System dependency installation phase.
+from __future__ import annotations
 
 Safely installs APT packages from a curated whitelist during the SYSDEPS phase.
 """

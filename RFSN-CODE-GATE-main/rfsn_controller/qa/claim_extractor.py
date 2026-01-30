@@ -1,4 +1,5 @@
 """Claim extractor for patch attempts.
+from __future__ import annotations
 
 Extracts structured claims from patch context. Rules-based, no LLM.
 
