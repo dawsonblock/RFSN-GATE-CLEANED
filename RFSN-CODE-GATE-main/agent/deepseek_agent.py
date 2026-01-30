@@ -829,6 +829,16 @@ def _exec_edit(state: AgentState, proposal: Proposal) -> ExecResult:
             metrics={"validation_error": error, "diff_preview": diff[:500]},
         )
     
+    # Validate patch produces valid Python syntax
+    is_valid, error = _validate_patch_syntax(diff, workdir)
+    if not is_valid:
+        logger.warning("Patch syntax validation failed", error=error)
+        return ExecResult(
+            status="fail",
+            summary=f"Syntax error: {error}",
+            metrics={"syntax_error": error, "diff_preview": diff[:500]},
+        )
+    
     # Try to repair common patch issues
     diff = _repair_patch(diff)
     
@@ -941,6 +951,106 @@ def _validate_patch(diff: str) -> tuple[bool, str]:
         return False, "No meaningful changes (only whitespace differences)"
     
     return True, ""
+
+
+def _validate_patch_syntax(diff: str, workdir: Path) -> tuple[bool, str]:
+    """Validate that Python patches produce valid syntax.
+    
+    Applies the patch virtually and parses the result as AST.
+    
+    Returns:
+        Tuple of (is_valid, error_message)
+    """
+    import ast
+    
+    # Extract files from diff
+    files = _extract_files_from_diff(diff)
+    if not files:
+        return True, ""  # Can't validate without file info
+    
+    for file_path in files:
+        # Only validate Python files
+        if not file_path.endswith(".py"):
+            continue
+        
+        full_path = workdir / file_path
+        if not full_path.exists():
+            continue
+        
+        try:
+            original = full_path.read_text()
+            patched = _simulate_patch(original, diff, file_path)
+            
+            if patched is None:
+                continue  # Could not simulate patch
+            
+            # Try to parse as Python AST
+            ast.parse(patched)
+        except SyntaxError as e:
+            return False, f"Patch creates syntax error in {file_path}: {e.msg} at line {e.lineno}"
+        except Exception:
+            pass  # Non-Python file or other issue, skip validation
+    
+    return True, ""
+
+
+def _simulate_patch(original: str, diff: str, file_path: str) -> str | None:
+    """Simulate applying a patch to content without actually writing.
+    
+    Returns:
+        Patched content or None if simulation failed
+    """
+    lines = original.splitlines(keepends=True)
+    diff_lines = diff.split("\n")
+    
+    # Find hunks for this file
+    in_file = False
+    hunks = []
+    current_hunk = None
+    
+    for line in diff_lines:
+        if line.startswith("--- a/") or line.startswith("--- "):
+            in_file = file_path in line
+        elif line.startswith("+++ b/") or line.startswith("+++ "):
+            in_file = file_path in line
+        elif line.startswith("@@") and in_file:
+            # Parse hunk header: @@ -start,len +start,len @@
+            import re
+            match = re.match(r"@@ -(\d+)", line)
+            if match:
+                start_line = int(match.group(1))
+                current_hunk = {"start": start_line - 1, "removals": [], "additions": []}
+                hunks.append(current_hunk)
+        elif current_hunk is not None and in_file:
+            if line.startswith("-") and not line.startswith("---"):
+                current_hunk["removals"].append(line[1:])
+            elif line.startswith("+") and not line.startswith("+++"):
+                current_hunk["additions"].append(line[1:])
+            elif line.startswith(" "):
+                pass  # Context line
+    
+    if not hunks:
+        return None
+    
+    # Apply hunks (simplified - just replace removals with additions)
+    result_lines = list(lines)
+    offset = 0
+    
+    for hunk in hunks:
+        start = hunk["start"] + offset
+        removals = len(hunk["removals"])
+        additions = hunk["additions"]
+        
+        # Remove old lines and insert new ones
+        del result_lines[start:start + removals]
+        for i, add_line in enumerate(additions):
+            if not add_line.endswith("\n"):
+                add_line += "\n"
+            result_lines.insert(start + i, add_line)
+        
+        offset += len(additions) - removals
+    
+    return "".join(result_lines)
 
 
 def _try_structured_edit(state: AgentState, proposal: Proposal, diff: str) -> ExecResult | None:
@@ -1155,10 +1265,7 @@ def _exec_run_tests(state: AgentState, proposal: Proposal) -> ExecResult:
         passed = result.returncode == 0
         
         if not passed:
-            failures = []
-            for line in result.stdout.split("\n"):
-                if "FAILED" in line:
-                    failures.append({"nodeid": line.strip(), "message": line.strip()})
+            failures = _extract_test_failures(result.stdout + result.stderr)
             
             from agent.types import TestFailure
             state.last_failures = [
@@ -1184,6 +1291,69 @@ def _exec_run_tests(state: AgentState, proposal: Proposal) -> ExecResult:
         return ExecResult(status="fail", summary="Test run timed out (5 min)")
     except Exception as e:
         return ExecResult(status="fail", summary=f"Test run failed: {e}")
+
+
+def _extract_test_failures(output: str) -> list[dict]:
+    """Extract detailed failure information from pytest output.
+    
+    Returns:
+        List of dictionaries with 'nodeid' and 'message' keys
+    """
+    failures = []
+    lines = output.split("\n")
+    
+    current_test = None
+    current_message = []
+    in_failure_block = False
+    
+    for i, line in enumerate(lines):
+        # Detect FAILED lines
+        if "FAILED" in line and "::" in line:
+            # Save previous failure
+            if current_test:
+                failures.append({
+                    "nodeid": current_test,
+                    "message": "\n".join(current_message[-10:])  # Last 10 lines
+                })
+            
+            # Extract test name
+            parts = line.split()
+            for part in parts:
+                if "::" in part:
+                    current_test = part.strip()
+                    break
+            current_message = []
+            in_failure_block = True
+        
+        # Capture assertion errors
+        elif "AssertionError" in line or "assert " in line.lower():
+            current_message.append(line.strip())
+        
+        # Capture error lines
+        elif line.strip().startswith("E "):
+            current_message.append(line.strip()[2:])  # Remove "E " prefix
+        
+        # Capture the actual error message
+        elif "Error:" in line or "Exception:" in line:
+            current_message.append(line.strip())
+    
+    # Don't forget the last failure
+    if current_test:
+        failures.append({
+            "nodeid": current_test,
+            "message": "\n".join(current_message[-10:])
+        })
+    
+    # Fallback: simple FAILED line extraction
+    if not failures:
+        for line in lines:
+            if "FAILED" in line:
+                failures.append({
+                    "nodeid": line.strip(),
+                    "message": line.strip()
+                })
+    
+    return failures
 
 
 def _exec_finalize(state: AgentState, proposal: Proposal) -> ExecResult:

@@ -4,7 +4,7 @@
 name: swebench_lite
 
 budgets:
-  max_rounds: 12  # Increased for complex multi-step fixes
+  max_rounds: 12 # Increased for complex multi-step fixes
   max_patch_attempts: 30
   max_test_runs: 50
   max_model_calls: 150
@@ -15,9 +15,10 @@ patch_search:
   max_diff_lines: 300
 
 tests:
-  stage_cap: 2  # Don't always run full suite
+  stage_cap: 2 # Don't always run full suite
   require_full_suite_for_finalize: false
-  forbid_test_modifications: true  # Force source-only edits
+  forbid_test_modifications: true # Force source-only edits
+  timeout_seconds: 300 # 5 minute timeout for test runs
 
 evidence:
   require_citations_for_edits: true

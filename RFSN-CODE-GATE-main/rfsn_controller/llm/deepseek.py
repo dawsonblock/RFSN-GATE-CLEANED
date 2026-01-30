@@ -1,12 +1,85 @@
 """DeepSeek API client with structured output enforcement for RFSN controller."""
 from __future__ import annotations
 
+import hashlib
 import json
 import os
+import sqlite3
+from pathlib import Path
+from typing import Optional
 
 # Lazy import: only import openai when actually calling the model
 # This allows the controller to be imported even if openai is not installed
 _openai = None
+
+# =============================================================================
+# LLM RESPONSE CACHING
+# =============================================================================
+# Set RFSN_LLM_CACHE=1 to enable caching, or RFSN_LLM_CACHE=/path/to/cache.db
+_cache_db: Optional[sqlite3.Connection] = None
+_cache_enabled: bool = os.environ.get("RFSN_LLM_CACHE", "0") not in ("0", "")
+
+
+def _get_cache_db() -> Optional[sqlite3.Connection]:
+    """Get or create the cache database connection."""
+    global _cache_db
+    if not _cache_enabled:
+        return None
+    if _cache_db is None:
+        cache_path = os.environ.get("RFSN_LLM_CACHE", "")
+        if cache_path in ("1", "true", "yes"):
+            cache_path = str(Path.home() / ".cache" / "rfsn" / "llm_cache.db")
+        Path(cache_path).parent.mkdir(parents=True, exist_ok=True)
+        _cache_db = sqlite3.connect(cache_path, check_same_thread=False)
+        _cache_db.execute("""
+            CREATE TABLE IF NOT EXISTS cache (
+                key TEXT PRIMARY KEY,
+                response TEXT,
+                created_at REAL,
+                hit_count INTEGER DEFAULT 0
+            )
+        """)
+        _cache_db.commit()
+    return _cache_db
+
+
+def _cache_key(prompt: str, temperature: float) -> str:
+    """Generate a cache key from prompt and temperature."""
+    content = f"{prompt}|{temperature}"
+    return hashlib.sha256(content.encode()).hexdigest()
+
+
+def _cache_get(key: str) -> Optional[dict]:
+    """Get a cached response."""
+    db = _get_cache_db()
+    if db is None:
+        return None
+    try:
+        cursor = db.execute("SELECT response FROM cache WHERE key = ?", (key,))
+        row = cursor.fetchone()
+        if row:
+            db.execute("UPDATE cache SET hit_count = hit_count + 1 WHERE key = ?", (key,))
+            db.commit()
+            return json.loads(row[0])
+    except Exception:
+        pass
+    return None
+
+
+def _cache_set(key: str, response: dict) -> None:
+    """Store a response in cache."""
+    db = _get_cache_db()
+    if db is None:
+        return
+    try:
+        import time
+        db.execute(
+            "INSERT OR REPLACE INTO cache (key, response, created_at, hit_count) VALUES (?, ?, ?, 0)",
+            (key, json.dumps(response), time.time())
+        )
+        db.commit()
+    except Exception:
+        pass
 
 
 def _ensure_openai_imported():
@@ -299,12 +372,20 @@ def call_model(model_input: str, temperature: float = 0.0) -> dict:
     """
     import time
     
+    # Check cache first (only for temperature=0 to avoid stale creative responses)
+    if temperature == 0.0:
+        cache_k = _cache_key(model_input, temperature)
+        cached = _cache_get(cache_k)
+        if cached is not None:
+            return cached
+    
     _ensure_openai_imported()  # Ensure SDK is available before making the call
 
     # Retry with exponential backoff for transient failures
     max_retries = 3
     base_delay = 1.0
     last_exception = None
+    cache_k = _cache_key(model_input, temperature) if temperature == 0.0 else None
     
     for attempt in range(max_retries + 1):
         start_time = time.time()
@@ -361,6 +442,10 @@ def call_model(model_input: str, temperature: float = 0.0) -> dict:
                 )
             except ImportError:
                 pass  # Events module not available
+            
+            # Cache successful response (only for temperature=0)
+            if cache_k is not None:
+                _cache_set(cache_k, result)
             
             return result
             
