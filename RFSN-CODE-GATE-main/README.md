@@ -1,21 +1,32 @@
 <div align="center">
 
+```
+██████╗ ███████╗███████╗███╗   ██╗
+██╔══██╗██╔════╝██╔════╝████╗  ██║
+██████╔╝█████╗  ███████╗██╔██╗ ██║
+██╔══██╗██╔══╝  ╚════██║██║╚██╗██║
+██║  ██║██║     ███████║██║ ╚████║
+╚═╝  ╚═╝╚═╝     ╚══════╝╚═╝  ╚═══╝
+       AUTONOMOUS CODE REPAIR
+```
+
 # 🤖 RFSN Controller
 
-### *Autonomous Code Repair Agent with AI-Powered Hierarchical Planning*
+### *AI-Powered Autonomous Code Repair Agent*
 
-[![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
-[![Version](https://img.shields.io/badge/version-0.3.0-green.svg)](CHANGELOG.md)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-226%20passing-brightgreen.svg)](#-testing)
-[![Coverage](https://img.shields.io/badge/coverage-90%25-green.svg)](#-testing)
-[![Code Style](https://img.shields.io/badge/code%20style-ruff-black)](https://github.com/astral-sh/ruff)
-[![Planner](https://img.shields.io/badge/planner-v5%20ready-purple.svg)](#-planner-v5)
-[![Observability](https://img.shields.io/badge/observability-metrics%20%2B%20tracing-orange.svg)](#-observability)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/downloads/)
+[![Version](https://img.shields.io/badge/version-0.3.0-success.svg?style=for-the-badge)](CHANGELOG.md)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
+[![Tests](https://img.shields.io/badge/tests-226%20passing-brightgreen.svg?style=for-the-badge)](tests/)
 
-**Fix bugs autonomously. Learn from failures. Scale with confidence.**
+[![Code Style](https://img.shields.io/badge/code%20style-ruff-black?style=flat-square)](https://github.com/astral-sh/ruff)
+[![Planner](https://img.shields.io/badge/planner-v5-purple.svg?style=flat-square)](#-planner-v5)
+[![Coverage](https://img.shields.io/badge/coverage-90%25-green.svg?style=flat-square)](#testing)
+[![Observability](https://img.shields.io/badge/observability-metrics%20%2B%20tracing-orange.svg?style=flat-square)](#observability)
 
-[Features](#-key-features) • [Quick Start](#-quick-start) • [Architecture](#%EF%B8%8F-architecture) • [Documentation](#-documentation) • [Examples](#-examples)
+**🔧 Fix bugs autonomously** • **📚 Learn from failures** • **🛡️ Scale with confidence**
+
+[🚀 Quick Start](#-quick-start) • [✨ Features](#-key-features) • [🏗️ Architecture](#%EF%B8%8F-architecture) • [📖 Docs](#-documentation) • [💡 Examples](#-examples)
 
 </div>
 
