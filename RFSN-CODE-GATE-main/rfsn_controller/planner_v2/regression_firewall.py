@@ -10,7 +10,6 @@ import hashlib
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional, Set
 
 
 @dataclass
@@ -19,36 +18,36 @@ class ToxicSignature:
     signature_hash: str
     failure_type: str
     revert_count: int = 1
-    files: List[str] = field(default_factory=list)
+    files: list[str] = field(default_factory=list)
     timestamp: float = 0.0
 
 
 class RegressionFirewall:
     """Blocks patches that match known toxic signatures."""
     
-    def __init__(self, storage_path: Optional[Path] = None):
+    def __init__(self, storage_path: Path | None = None):
         self._storage_path = storage_path
-        self._signatures: Dict[str, ToxicSignature] = {}
-        self._file_index: Dict[str, Set[str]] = {} # Reverse index: filename -> {sig_hashes}
+        self._signatures: dict[str, ToxicSignature] = {}
+        self._file_index: dict[str, set[str]] = {} # Reverse index: filename -> {sig_hashes}
         
         if storage_path and storage_path.exists():
             self._load()
             
-    def compute_signature(self, files: List[str], diff_content: str) -> str:
+    def compute_signature(self, files: list[str], diff_content: str) -> str:
         """Compute a hash signature for a patch."""
         # Clean diff content (ignore line numbers/timestamps)
         # This is a simplified signature
         content = "".join(sorted(files)) + diff_content
         return hashlib.sha256(content.encode()).hexdigest()
         
-    def is_toxic(self, files: List[str], diff_content: str) -> bool:
+    def is_toxic(self, files: list[str], diff_content: str) -> bool:
         """Check if a patch signature is known to be toxic."""
         sig = self.compute_signature(files, diff_content)
         return sig in self._signatures
         
     def record_toxicity(
         self,
-        files: List[str],
+        files: list[str],
         diff_content: str,
         failure_type: str,
     ):
@@ -106,7 +105,7 @@ class RegressionFirewall:
             return
             
         try:
-            with open(self._storage_path, "r") as f:
+            with open(self._storage_path) as f:
                 data = json.load(f)
                 
             for sig, t_dict in data.items():
@@ -124,7 +123,7 @@ class RegressionFirewall:
         except Exception:
             pass
 
-    def get_toxic_history(self, allowed_files: List[str]) -> List[str]:
+    def get_toxic_history(self, allowed_files: list[str]) -> list[str]:
         """Get summary of toxic history for files.
         
         Args:

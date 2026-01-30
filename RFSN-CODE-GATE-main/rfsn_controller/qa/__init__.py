@@ -1,6 +1,13 @@
 """QA package for claim-based adversarial verification."""
 from __future__ import annotations
 
+from .claim_extractor import ClaimExtractor, PatchContext, create_claim_extractor
+from .coverage_analyzer import CoverageAnalyzer, CoverageReport, create_coverage_analyzer
+from .evidence_collector import EvidenceCollector, create_evidence_collector
+from .qa_critic import QACritic, create_qa_critic
+from .qa_gate import GateDecision, QAGate, create_qa_gate
+from .qa_orchestrator import QAConfig, QAOrchestrator, QAResult, create_qa_orchestrator
+from .qa_persistence import QAPersistence, create_qa_persistence
 from .qa_types import (
     Claim,
     ClaimType,
@@ -14,14 +21,7 @@ from .qa_types import (
     TestResultEvidence,
     Verdict,
 )
-from .claim_extractor import ClaimExtractor, PatchContext, create_claim_extractor
-from .qa_critic import QACritic, create_qa_critic
-from .evidence_collector import EvidenceCollector, create_evidence_collector
-from .qa_gate import QAGate, GateDecision, create_qa_gate
-from .qa_persistence import QAPersistence, create_qa_persistence
-from .qa_orchestrator import QAOrchestrator, QAConfig, QAResult, create_qa_orchestrator
 from .static_checker import StaticChecker, StaticCheckResult, create_static_checker
-from .coverage_analyzer import CoverageAnalyzer, CoverageReport, create_coverage_analyzer
 
 __all__ = [
     # Types

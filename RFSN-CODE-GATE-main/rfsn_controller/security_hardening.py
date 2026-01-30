@@ -12,14 +12,13 @@ from __future__ import annotations
 import re
 import time
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Set, Tuple
 
 # ============================================================================
 # ESCAPE DETECTION - Inspired by Firecracker's strict input validation
 # ============================================================================
 
 # Regex patterns that might indicate shell escape attempts
-ESCAPE_PATTERNS: List[re.Pattern[str]] = [
+ESCAPE_PATTERNS: list[re.Pattern[str]] = [
     # Backtick command substitution (even if blocked by metacharacters)
     re.compile(r"`[^`]+`"),
     # $() command substitution variations
@@ -51,7 +50,7 @@ ESCAPE_PATTERNS: List[re.Pattern[str]] = [
 ]
 
 # Arguments that could enable privilege escalation or sandbox escape
-DANGEROUS_ARGUMENTS: Dict[str, List[str]] = {
+DANGEROUS_ARGUMENTS: dict[str, list[str]] = {
     "python": ["-c", "--command"],  # Could execute arbitrary code
     "python3": ["-c", "--command"],
     "node": ["-e", "--eval"],
@@ -64,7 +63,7 @@ DANGEROUS_ARGUMENTS: Dict[str, List[str]] = {
 }
 
 
-def detect_escape_attempts(command: str) -> Tuple[bool, Optional[str]]:
+def detect_escape_attempts(command: str) -> tuple[bool, str | None]:
     """Detect potential shell escape attempts in a command.
 
     Inspired by Firecracker's strict validation of all inputs.
@@ -113,11 +112,11 @@ class RateLimiter:
     max_commands_per_hour: int = 500
     max_concurrent_commands: int = 5
 
-    _minute_window: List[float] = field(default_factory=list)
-    _hour_window: List[float] = field(default_factory=list)
+    _minute_window: list[float] = field(default_factory=list)
+    _hour_window: list[float] = field(default_factory=list)
     _active_commands: int = 0
 
-    def acquire(self) -> Tuple[bool, Optional[str]]:
+    def acquire(self) -> tuple[bool, str | None]:
         """Try to acquire a rate limit slot.
 
         Returns:
@@ -156,7 +155,7 @@ class RateLimiter:
 # ============================================================================
 
 # Commands that might invoke dangerous syscalls
-SYSCALL_RESTRICTED_COMMANDS: Dict[str, str] = {
+SYSCALL_RESTRICTED_COMMANDS: dict[str, str] = {
     "strace": "syscall tracing not allowed",
     "ltrace": "library tracing not allowed",
     "ptrace": "process tracing not allowed",
@@ -177,7 +176,7 @@ SYSCALL_RESTRICTED_COMMANDS: Dict[str, str] = {
 }
 
 # Argument patterns that could enable dangerous behaviors
-SYSCALL_RESTRICTED_ARGS: List[Tuple[re.Pattern[str], str]] = [
+SYSCALL_RESTRICTED_ARGS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"--privileged"), "privileged mode not allowed"),
     (re.compile(r"--cap-add"), "capability addition not allowed"),
     (re.compile(r"--security-opt"), "security option modification not allowed"),
@@ -188,7 +187,7 @@ SYSCALL_RESTRICTED_ARGS: List[Tuple[re.Pattern[str], str]] = [
 ]
 
 
-def check_syscall_restrictions(command: str) -> Tuple[bool, Optional[str]]:
+def check_syscall_restrictions(command: str) -> tuple[bool, str | None]:
     """Check if a command would require restricted syscalls.
 
     Inspired by Firecracker's seccomp filter approach.
@@ -222,7 +221,7 @@ def check_syscall_restrictions(command: str) -> Tuple[bool, Optional[str]]:
 # ============================================================================
 
 
-def security_check(command: str, rate_limiter: Optional[RateLimiter] = None) -> Tuple[bool, Optional[str]]:
+def security_check(command: str, rate_limiter: RateLimiter | None = None) -> tuple[bool, str | None]:
     """Perform comprehensive security checks on a command.
 
     Combines:
@@ -274,7 +273,7 @@ class IsolationConfig:
 
     # Network control
     network_enabled: bool = True
-    allowed_hosts: Set[str] = field(default_factory=set)  # Empty = all allowed
+    allowed_hosts: set[str] = field(default_factory=set)  # Empty = all allowed
 
     # Filesystem isolation
     read_only_root: bool = False
@@ -285,7 +284,7 @@ class IsolationConfig:
     max_cpu_percent: float = 200.0  # 2 CPUs
     max_memory_mb: int = 4096
 
-    def to_docker_args(self) -> List[str]:
+    def to_docker_args(self) -> list[str]:
         """Convert to Docker run arguments."""
         args = []
 

@@ -11,7 +11,6 @@ import json
 import logging
 import os
 import sqlite3
-from typing import Dict, List, Optional, Tuple
 
 from .qa_types import ClaimType, QAAttempt, Verdict
 
@@ -80,7 +79,7 @@ class QAPersistence:
         attempt: QAAttempt,
         *,
         failure_signature: str = "",
-        diff_stats: Optional[Dict[str, int]] = None,
+        diff_stats: dict[str, int] | None = None,
         timestamp: int = 0,
     ) -> None:
         """Record a complete QA attempt.
@@ -145,7 +144,7 @@ class QAPersistence:
         self,
         claim_type: ClaimType,
         failure_signature: str,
-        evidence_types: List[str],
+        evidence_types: list[str],
         timestamp: int,
     ) -> None:
         """Record negative memory for a rejected claim."""
@@ -172,7 +171,7 @@ class QAPersistence:
         failure_signature: str,
         *,
         min_rejections: int = 2,
-    ) -> List[Tuple[str, int]]:
+    ) -> list[tuple[str, int]]:
         """Query claim types that frequently fail for a failure signature.
         
         Args:
@@ -196,7 +195,7 @@ class QAPersistence:
         claim_type: ClaimType,
         *,
         limit: int = 100,
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """Query success rate for a claim type.
         
         Args:

@@ -58,3 +58,11 @@ htmlcov/
 # LLM caches
 *.db
 llm_cache.db
+
+# Evaluation data (ephemeral)
+eval_runs/
+eval_cache/
+eval_results/
+
+# Ruff cache
+.ruff_cache/

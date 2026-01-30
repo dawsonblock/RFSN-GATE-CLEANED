@@ -24,7 +24,7 @@ import json
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 class PlanGateError(Exception):
     """Raised when a plan violates gate constraints."""
     
-    def __init__(self, message: str, step_id: Optional[str] = None):
+    def __init__(self, message: str, step_id: str | None = None):
         self.step_id = step_id
         super().__init__(f"[PlanGate] {message}" + (f" (step: {step_id})" if step_id else ""))
 
@@ -46,7 +46,7 @@ class StepGateError(Exception):
 
 
 # Default allowed step types - these are SAFE operations
-DEFAULT_ALLOWED_STEP_TYPES: Set[str] = {
+DEFAULT_ALLOWED_STEP_TYPES: set[str] = {
     # Read-only operations
     "search_repo",
     "read_file",
@@ -102,17 +102,17 @@ class PlanGateConfig:
     """Configuration for PlanGate."""
     
     # Step type constraints
-    allowed_step_types: Set[str] = field(default_factory=lambda: DEFAULT_ALLOWED_STEP_TYPES.copy())
+    allowed_step_types: set[str] = field(default_factory=lambda: DEFAULT_ALLOWED_STEP_TYPES.copy())
     max_steps: int = 12
     
     # Path constraints
-    workspace_root: Optional[Path] = None
-    allowed_path_globs: List[str] = field(default_factory=lambda: ["**/*.py", "**/*.js", "**/*.ts", "**/*.md"])
-    forbidden_path_patterns: List[str] = field(default_factory=lambda: FORBIDDEN_PATH_PATTERNS.copy())
+    workspace_root: Path | None = None
+    allowed_path_globs: list[str] = field(default_factory=lambda: ["**/*.py", "**/*.js", "**/*.ts", "**/*.md"])
+    forbidden_path_patterns: list[str] = field(default_factory=lambda: FORBIDDEN_PATH_PATTERNS.copy())
     
     # Shell constraints (stricter is safer)
     allow_shell_in_tools: bool = False
-    shell_injection_patterns: List[str] = field(default_factory=lambda: SHELL_INJECTION_PATTERNS.copy())
+    shell_injection_patterns: list[str] = field(default_factory=lambda: SHELL_INJECTION_PATTERNS.copy())
     
     # Validation strictness
     strict_mode: bool = True
@@ -136,16 +136,16 @@ class PlanGate:
         gate.validate_step(step_dict)
     """
     
-    def __init__(self, config: Optional[PlanGateConfig] = None):
+    def __init__(self, config: PlanGateConfig | None = None):
         """Initialize PlanGate.
         
         Args:
             config: Gate configuration. Uses defaults if not provided.
         """
         self.config = config or PlanGateConfig()
-        self._validated_plan_id: Optional[str] = None
+        self._validated_plan_id: str | None = None
     
-    def validate_plan(self, plan: Dict[str, Any]) -> bool:
+    def validate_plan(self, plan: dict[str, Any]) -> bool:
         """Validate an entire plan before execution.
         
         This MUST be called before any step execution.
@@ -179,7 +179,7 @@ class PlanGate:
             raise PlanGateError("Plan has no steps")
         
         # Validate each step
-        seen_ids: Set[str] = set()
+        seen_ids: set[str] = set()
         for step in steps:
             self._validate_step_structure(step, seen_ids)
             seen_ids.add(step.get("id", step.get("step_id", "")))
@@ -193,7 +193,7 @@ class PlanGate:
         logger.info("Plan validated successfully: %d steps", len(steps))
         return True
     
-    def validate_step(self, step: Dict[str, Any]) -> bool:
+    def validate_step(self, step: dict[str, Any]) -> bool:
         """Validate a single step before execution.
         
         Called for each step, even after plan validation,
@@ -227,7 +227,7 @@ class PlanGate:
         
         return True
     
-    def _validate_step_structure(self, step: Dict[str, Any], seen_ids: Set[str]) -> None:
+    def _validate_step_structure(self, step: dict[str, Any], seen_ids: set[str]) -> None:
         """Validate step structure and required fields."""
         step_id = step.get("id", step.get("step_id"))
         
@@ -265,11 +265,11 @@ class PlanGate:
                 else:
                     logger.warning("Step %s missing expected outcome", step_id)
     
-    def _validate_dependency_graph(self, steps: List[Dict[str, Any]]) -> None:
+    def _validate_dependency_graph(self, steps: list[dict[str, Any]]) -> None:
         """Validate that dependency graph is acyclic."""
         # Build adjacency list
         step_ids = {s.get("id", s.get("step_id", "")) for s in steps}
-        deps: Dict[str, List[str]] = {}
+        deps: dict[str, list[str]] = {}
         
         for step in steps:
             step_id = step.get("id", step.get("step_id", ""))
@@ -304,7 +304,7 @@ class PlanGate:
                 if dfs(step_id):
                     raise PlanGateError("Dependency graph contains cycles")
     
-    def _check_shell_injection(self, step: Dict[str, Any], step_id: str) -> None:
+    def _check_shell_injection(self, step: dict[str, Any], step_id: str) -> None:
         """Check for shell injection patterns in step inputs."""
         inputs = step.get("inputs", {})
         
@@ -331,12 +331,12 @@ class PlanGate:
                     step_id
                 )
     
-    def _check_path_safety(self, step: Dict[str, Any], step_id: str) -> None:
+    def _check_path_safety(self, step: dict[str, Any], step_id: str) -> None:
         """Check that file paths are within allowed workspace."""
         inputs = step.get("inputs", {})
         
         # Collect all path-like values
-        paths_to_check: List[str] = []
+        paths_to_check: list[str] = []
         
         for key in ["file", "path", "target_file", "files", "allowed_files"]:
             val = inputs.get(key)
@@ -380,11 +380,11 @@ class PlanGate:
         logger.info("Registering step type: %s", step_type)
         self.config.allowed_step_types.add(step_type)
     
-    def get_allowed_step_types(self) -> Set[str]:
+    def get_allowed_step_types(self) -> set[str]:
         """Get the set of allowed step types (read-only)."""
         return self.config.allowed_step_types.copy()
     
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Serialize gate config for audit logging."""
         return {
             "allowed_step_types": sorted(self.config.allowed_step_types),
@@ -395,7 +395,7 @@ class PlanGate:
         }
 
 
-def validate_learned_artifact(artifact: Dict[str, Any]) -> bool:
+def validate_learned_artifact(artifact: dict[str, Any]) -> bool:
     """Check if a learned artifact attempts to modify gates.
     
     This is called when loading learned policies. If the policy

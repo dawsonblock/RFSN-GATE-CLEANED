@@ -7,7 +7,6 @@ This prevents malicious or dangerous operations.
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import Optional
 
 # Approved commands that can be executed in the sandbox
 ALLOWED_COMMANDS: set[str] = {
@@ -155,7 +154,7 @@ BLOCKED_METACHARACTERS: list[str] = [
 
 
 @lru_cache(maxsize=512)
-def is_command_allowed(command: str) -> tuple[bool, Optional[str]]:
+def is_command_allowed(command: str) -> tuple[bool, str | None]:
     """Check if a command is allowed to execute.
 
     Args:
@@ -202,7 +201,7 @@ def is_command_allowed(command: str) -> tuple[bool, Optional[str]]:
     # Check for shell metacharacters
     for meta in BLOCKED_METACHARACTERS:
         if meta in command:
-            return False, f"Shell metacharacter blocked: {repr(meta)}"
+            return False, f"Shell metacharacter blocked: {meta!r}"
 
     # Check for API key exposure attempts
     sensitive_keys = ["API_KEY", "SECRET", "TOKEN", "PASSWORD"]

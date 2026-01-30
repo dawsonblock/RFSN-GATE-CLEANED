@@ -32,7 +32,7 @@ from rfsn_controller.structured_logging import get_logger
 logger = get_logger(__name__)
 
 
-def setup_repo(task: "SWEBenchTask", workdir: Path) -> bool:
+def setup_repo(task: SWEBenchTask, workdir: Path) -> bool:
     """Clone and checkout repository for a SWE-bench task.
     
     Args:
@@ -392,12 +392,12 @@ class EvalRunner:
                     return await self.run_task(task)
             
             tasks_coros = [run_with_semaphore(task) for task in tasks]
-            results = await asyncio.gather(*tasks_coros, return_exceptions=True)
+            raw_results = await asyncio.gather(*tasks_coros, return_exceptions=True)
             
             # Convert exceptions to failed results
-            for i, result in enumerate(results):
-                if isinstance(result, Exception):
-                    results[i] = EvalResult(
+            for i, result in enumerate(raw_results):
+                if isinstance(result, BaseException):
+                    results.append(EvalResult(
                         task_id=tasks[i].task_id,
                         success=False,
                         resolution_time=0.0,
@@ -406,7 +406,9 @@ class EvalRunner:
                         tests_passed=0,
                         tests_failed=0,
                         error_message=str(result),
-                    )
+                    ))
+                else:
+                    results.append(result)
         else:
             # Serial execution
             for task in tasks:

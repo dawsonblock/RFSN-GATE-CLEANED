@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import List
 
 from .verifier import VerifyResult
 
@@ -70,7 +69,7 @@ ERROR_PATTERNS = {
 }
 
 
-def _classify_error(blob: str) -> List[str]:
+def _classify_error(blob: str) -> list[str]:
     """Classify the error type(s) from the error output.
 
     Args:
@@ -107,7 +106,7 @@ def _extract_error_context(blob: str) -> dict:
     return context
 
 
-def _choose_intent_from_categories(categories: List[str], context: dict) -> tuple[str, str, float]:
+def _choose_intent_from_categories(categories: list[str], context: dict) -> tuple[str, str, float]:
     """Choose intent and subgoal based on error categories.
 
     Args:

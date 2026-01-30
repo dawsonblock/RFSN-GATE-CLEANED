@@ -6,7 +6,6 @@ Handles C++ repositories with CMake or Make.
 
 import hashlib
 import re
-from typing import List, Optional
 
 from .base import (
     Buildpack,
@@ -27,7 +26,7 @@ class CppBuildpack(Buildpack):
         super().__init__()
         self._buildpack_type = BuildpackType.CPP
 
-    def detect(self, ctx: BuildpackContext) -> Optional[DetectResult]:
+    def detect(self, ctx: BuildpackContext) -> DetectResult | None:
         """Detect if this is a C++ repository."""
         cpp_indicators = [
             "CMakeLists.txt",
@@ -41,9 +40,7 @@ class CppBuildpack(Buildpack):
 
         found_indicators = []
         for indicator in cpp_indicators:
-            if indicator in ctx.files:
-                found_indicators.append(indicator)
-            elif any(f == indicator or f.endswith("/" + indicator) for f in ctx.repo_tree):
+            if indicator in ctx.files or any(f == indicator or f.endswith("/" + indicator) for f in ctx.repo_tree):
                 found_indicators.append(indicator)
 
         # Also check for .cpp or .hpp files
@@ -70,13 +67,13 @@ class CppBuildpack(Buildpack):
         """Return the Docker image for C++."""
         return "gcc:13"
 
-    def sysdeps_whitelist(self) -> List[str]:
+    def sysdeps_whitelist(self) -> list[str]:
         """Return C++-specific system dependencies."""
         common = ["build-essential", "pkg-config", "git", "ca-certificates"]
         cpp_extras = ["cmake", "make", "libssl-dev", "libboost-all-dev"]
         return common + cpp_extras
 
-    def install_plan(self, ctx: BuildpackContext) -> List[Step]:
+    def install_plan(self, ctx: BuildpackContext) -> list[Step]:
         """Generate C++ installation steps."""
         steps = []
 
@@ -103,7 +100,7 @@ class CppBuildpack(Buildpack):
 
         return steps
 
-    def test_plan(self, ctx: BuildpackContext, focus_file: Optional[str] = None) -> TestPlan:
+    def test_plan(self, ctx: BuildpackContext, focus_file: str | None = None) -> TestPlan:
         """Generate C++ test execution plan."""
         if "CMakeLists.txt" in ctx.files:
             argv = ["ctest", "--test-dir", "build", "--output-on-failure"]
@@ -151,6 +148,6 @@ class CppBuildpack(Buildpack):
             error_message=error_message,
         )
 
-    def focus_plan(self, failure: FailureInfo) -> Optional[TestPlan]:
+    def focus_plan(self, failure: FailureInfo) -> TestPlan | None:
         """Generate focused test plan based on failure."""
         return None  # C++ test focusing is complex

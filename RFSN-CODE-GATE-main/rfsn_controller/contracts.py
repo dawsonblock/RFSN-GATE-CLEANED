@@ -14,10 +14,11 @@ from __future__ import annotations
 
 import logging
 import threading
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Set, Union
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -53,10 +54,10 @@ class ContractViolation(Exception):
     def __init__(
         self,
         contract_name: str,
-        constraint: Union[ContractConstraint, str],
+        constraint: ContractConstraint | str,
         operation: str,
-        details: Optional[str] = None,
-        context: Optional[Dict[str, Any]] = None,
+        details: str | None = None,
+        context: dict[str, Any] | None = None,
     ):
         """Initialize contract violation.
         
@@ -72,7 +73,7 @@ class ContractViolation(Exception):
         self.operation = operation
         self.details = details
         self.context = context or {}
-        self.timestamp = datetime.now(timezone.utc).isoformat()
+        self.timestamp = datetime.now(UTC).isoformat()
         
         message = f"Contract '{contract_name}' violated: {self.constraint}"
         if details:
@@ -82,7 +83,7 @@ class ContractViolation(Exception):
         
         super().__init__(message)
     
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert violation to dictionary for logging/serialization."""
         return {
             "contract_name": self.contract_name,
@@ -128,11 +129,11 @@ class FeatureContract:
     name: str
     version: str
     description: str
-    required_tools: Set[str] = field(default_factory=set)
-    optional_tools: Set[str] = field(default_factory=set)
-    constraints: Set[ContractConstraint] = field(default_factory=set)
+    required_tools: set[str] = field(default_factory=set)
+    optional_tools: set[str] = field(default_factory=set)
+    constraints: set[ContractConstraint] = field(default_factory=set)
     enabled: bool = True
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
     
     def __post_init__(self) -> None:
         """Validate contract after initialization."""
@@ -161,7 +162,7 @@ class FeatureContract:
         """Check if contract uses a tool (required or optional)."""
         return tool in self.required_tools or tool in self.optional_tools
     
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert contract to dictionary for serialization."""
         return {
             "name": self.name,
@@ -175,7 +176,7 @@ class FeatureContract:
         }
     
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "FeatureContract":
+    def from_dict(cls, data: dict[str, Any]) -> FeatureContract:
         """Create contract from dictionary."""
         constraints = set()
         for c in data.get("constraints", []):
@@ -212,9 +213,9 @@ class ContractRegistry:
     
     def __init__(self) -> None:
         """Initialize the contract registry."""
-        self._contracts: Dict[str, FeatureContract] = {}
+        self._contracts: dict[str, FeatureContract] = {}
         self._lock = threading.Lock()
-        self._listeners: List[Callable[[str, FeatureContract], None]] = []
+        self._listeners: list[Callable[[str, FeatureContract], None]] = []
     
     def register(
         self,
@@ -277,22 +278,22 @@ class ContractRegistry:
             
             return True
     
-    def get(self, name: str) -> Optional[FeatureContract]:
+    def get(self, name: str) -> FeatureContract | None:
         """Get a contract by name."""
         with self._lock:
             return self._contracts.get(name)
     
-    def get_enabled(self) -> List[FeatureContract]:
+    def get_enabled(self) -> list[FeatureContract]:
         """Get all enabled contracts."""
         with self._lock:
             return [c for c in self._contracts.values() if c.enabled]
     
-    def get_all(self) -> List[FeatureContract]:
+    def get_all(self) -> list[FeatureContract]:
         """Get all registered contracts."""
         with self._lock:
             return list(self._contracts.values())
     
-    def get_by_constraint(self, constraint: ContractConstraint) -> List[FeatureContract]:
+    def get_by_constraint(self, constraint: ContractConstraint) -> list[FeatureContract]:
         """Get contracts that have a specific constraint."""
         with self._lock:
             return [
@@ -300,7 +301,7 @@ class ContractRegistry:
                 if c.enabled and c.has_constraint(constraint)
             ]
     
-    def get_by_tool(self, tool: str) -> List[FeatureContract]:
+    def get_by_tool(self, tool: str) -> list[FeatureContract]:
         """Get contracts that use a specific tool."""
         with self._lock:
             return [
@@ -357,8 +358,8 @@ class ContractRegistry:
     def check_dependencies(
         self,
         contract: FeatureContract,
-        available_tools: Set[str],
-    ) -> List[str]:
+        available_tools: set[str],
+    ) -> list[str]:
         """Check if all required tools are available.
         
         Args:
@@ -407,7 +408,7 @@ class ContractValidator:
             registry: The contract registry to validate against.
         """
         self._registry = registry
-        self._violation_handlers: List[Callable[[ContractViolation], None]] = []
+        self._violation_handlers: list[Callable[[ContractViolation], None]] = []
     
     @property
     def registry(self) -> ContractRegistry:
@@ -462,7 +463,7 @@ class ContractValidator:
     
     def validate_shell_execution(
         self,
-        argv: List[str],
+        argv: list[str],
         shell: bool = False,
         operation: str = "shell_execution",
     ) -> None:
@@ -567,7 +568,7 @@ class ContractValidator:
     def validate_operation(
         self,
         operation: str,
-        context: Optional[Dict[str, Any]] = None,
+        context: dict[str, Any] | None = None,
     ) -> None:
         """Generic operation validation against all applicable contracts.
         
@@ -594,7 +595,7 @@ class ContractValidator:
     def is_operation_allowed(
         self,
         operation: str,
-        context: Optional[Dict[str, Any]] = None,
+        context: dict[str, Any] | None = None,
     ) -> bool:
         """Check if an operation is allowed without raising.
         
@@ -735,9 +736,9 @@ def register_standard_contracts(registry: ContractRegistry) -> None:
 # Global Registry
 # =============================================================================
 
-_global_registry: Optional[ContractRegistry] = None
-_global_validator: Optional[ContractValidator] = None
-_global_lock = threading.Lock()
+_global_registry: ContractRegistry | None = None
+_global_validator: ContractValidator | None = None
+_global_lock = threading.RLock()  # RLock allows reentrant acquisition
 
 
 def get_global_registry() -> ContractRegistry:
@@ -773,7 +774,7 @@ def set_global_validator(validator: ContractValidator) -> None:
 
 
 def validate_shell_execution_global(
-    argv: List[str],
+    argv: list[str],
     shell: bool = False,
     operation: str = "shell_execution",
 ) -> None:

@@ -5,7 +5,7 @@ import json
 import os
 import time
 from dataclasses import dataclass
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
 
 def _sha256_bytes(b: bytes) -> str:
@@ -24,13 +24,13 @@ class AuditEntry:
     run_id: str
     ts_unix: int
     repo: str
-    commit: Optional[str]
+    commit: str | None
     goal: str
-    profile: Optional[str]
-    status: Optional[str]
-    manifest_sha256: Optional[str]
-    signature_sha256: Optional[str]
-    published_to: Optional[str]
+    profile: str | None
+    status: str | None
+    manifest_sha256: str | None
+    signature_sha256: str | None
+    published_to: str | None
     prev_hash: str
     entry_hash: str
 
@@ -40,7 +40,7 @@ def compute_prev_hash_from_log(log_path: str) -> str:
         return "0" * 64
     # Read last non-empty line
     last = ""
-    with open(log_path, "r", encoding="utf-8") as f:
+    with open(log_path, encoding="utf-8") as f:
         for line in f:
             if line.strip():
                 last = line
@@ -53,7 +53,7 @@ def compute_prev_hash_from_log(log_path: str) -> str:
         return "0" * 64
 
 
-def compute_entry_hash(payload: Dict[str, Any], prev_hash: str) -> str:
+def compute_entry_hash(payload: dict[str, Any], prev_hash: str) -> str:
     # Hash over (prev_hash + canonical(payload))
     base = {"prev_hash": prev_hash, "payload": payload}
     return _sha256_bytes(_json_canonical(base))
@@ -64,14 +64,14 @@ def build_entry_payload(
     run_id: str,
     repo: str,
     goal: str,
-    profile: Optional[str] = None,
-    status: Optional[str] = None,
-    commit: Optional[str] = None,
-    manifest_sha256: Optional[str] = None,
-    signature_sha256: Optional[str] = None,
-    published_to: Optional[str] = None,
-    ts_unix: Optional[int] = None,
-) -> Dict[str, Any]:
+    profile: str | None = None,
+    status: str | None = None,
+    commit: str | None = None,
+    manifest_sha256: str | None = None,
+    signature_sha256: str | None = None,
+    published_to: str | None = None,
+    ts_unix: int | None = None,
+) -> dict[str, Any]:
     return {
         "run_id": run_id,
         "ts_unix": int(ts_unix if ts_unix is not None else time.time()),
@@ -89,7 +89,7 @@ def build_entry_payload(
 def append_audit_log_local(
     *,
     log_path: str,
-    payload: Dict[str, Any],
+    payload: dict[str, Any],
 ) -> AuditEntry:
     os.makedirs(os.path.dirname(log_path) or ".", exist_ok=True)
     prev_hash = compute_prev_hash_from_log(log_path)
@@ -120,14 +120,14 @@ def append_audit_log_local(
     )
 
 
-def verify_audit_log_local(log_path: str) -> Tuple[bool, str]:
+def verify_audit_log_local(log_path: str) -> tuple[bool, str]:
     if not os.path.exists(log_path):
         return False, f"Audit log not found: {log_path}"
 
     prev_expected = "0" * 64
     line_no = 0
 
-    with open(log_path, "r", encoding="utf-8") as f:
+    with open(log_path, encoding="utf-8") as f:
         for line in f:
             line_no += 1
             line = line.strip()

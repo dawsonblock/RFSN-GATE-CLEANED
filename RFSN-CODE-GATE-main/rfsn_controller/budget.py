@@ -17,9 +17,9 @@ from __future__ import annotations
 import logging
 import threading
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Callable, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -29,8 +29,8 @@ def _log_budget_event(event_type: str, resource: str, current: int, limit: int) 
     """Log budget events to the global event logger if available."""
     try:
         from .events import (
-            log_budget_warning_global,
             log_budget_exceeded_global,
+            log_budget_warning_global,
         )
         
         if event_type == "warning":
@@ -63,7 +63,7 @@ class BudgetExceeded(Exception):
         resource: str,
         current: int,
         limit: int,
-        message: Optional[str] = None,
+        message: str | None = None,
     ):
         self.resource = resource
         self.current = current
@@ -109,14 +109,14 @@ class Budget:
     _llm_calls: int = field(default=0, repr=False)
     _tokens: int = field(default=0, repr=False)
     _subprocess_calls: int = field(default=0, repr=False)
-    _start_time: Optional[float] = field(default=None, repr=False)
+    _start_time: float | None = field(default=None, repr=False)
     
     # Thread safety
     _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
     
     # Optional callbacks for state changes
-    _on_warning: Optional[Callable[[str, int, int], None]] = field(default=None, repr=False)
-    _on_exceeded: Optional[Callable[[str, int, int], None]] = field(default=None, repr=False)
+    _on_warning: Callable[[str, int, int], None] | None = field(default=None, repr=False)
+    _on_exceeded: Callable[[str, int, int], None] | None = field(default=None, repr=False)
     
     def __post_init__(self) -> None:
         """Initialize the start time for time tracking."""
@@ -247,7 +247,7 @@ class Budget:
         return time.time() - self._start_time
     
     @property
-    def remaining_steps(self) -> Optional[int]:
+    def remaining_steps(self) -> int | None:
         """Remaining steps, or None if unlimited."""
         if self.max_steps <= 0:
             return None
@@ -255,7 +255,7 @@ class Budget:
             return max(0, self.max_steps - self._steps)
     
     @property
-    def remaining_llm_calls(self) -> Optional[int]:
+    def remaining_llm_calls(self) -> int | None:
         """Remaining LLM calls, or None if unlimited."""
         if self.max_llm_calls <= 0:
             return None
@@ -263,7 +263,7 @@ class Budget:
             return max(0, self.max_llm_calls - self._llm_calls)
     
     @property
-    def remaining_tokens(self) -> Optional[int]:
+    def remaining_tokens(self) -> int | None:
         """Remaining tokens, or None if unlimited."""
         if self.max_tokens <= 0:
             return None
@@ -271,14 +271,14 @@ class Budget:
             return max(0, self.max_tokens - self._tokens)
     
     @property
-    def remaining_time_seconds(self) -> Optional[float]:
+    def remaining_time_seconds(self) -> float | None:
         """Remaining time in seconds, or None if unlimited."""
         if self.max_time_seconds <= 0:
             return None
         return max(0.0, self.max_time_seconds - self.elapsed_seconds)
     
     @property
-    def remaining_subprocess_calls(self) -> Optional[int]:
+    def remaining_subprocess_calls(self) -> int | None:
         """Remaining subprocess calls, or None if unlimited."""
         if self.max_subprocess_calls <= 0:
             return None
@@ -318,7 +318,7 @@ class Budget:
             return BudgetState.WARNING
         return BudgetState.ACTIVE
     
-    def get_resource_states(self) -> Dict[str, BudgetState]:
+    def get_resource_states(self) -> dict[str, BudgetState]:
         """Get the state of each tracked resource.
         
         Returns:
@@ -346,7 +346,7 @@ class Budget:
             
             return states
     
-    def get_usage_summary(self) -> Dict[str, Dict[str, float]]:
+    def get_usage_summary(self) -> dict[str, dict[str, float]]:
         """Get a summary of resource usage.
         
         Returns:
@@ -511,11 +511,11 @@ def create_budget(
 
 
 # Singleton for global budget access (optional pattern for simple integrations)
-_global_budget: Optional[Budget] = None
+_global_budget: Budget | None = None
 _global_budget_lock = threading.Lock()
 
 
-def get_global_budget() -> Optional[Budget]:
+def get_global_budget() -> Budget | None:
     """Get the global budget instance, if set.
     
     Returns:
@@ -525,7 +525,7 @@ def get_global_budget() -> Optional[Budget]:
         return _global_budget
 
 
-def set_global_budget(budget: Optional[Budget]) -> None:
+def set_global_budget(budget: Budget | None) -> None:
     """Set the global budget instance.
     
     Args:

@@ -9,30 +9,27 @@ This module tests:
 - Integration with controller and existing features
 """
 
-import pytest
 import threading
-import time
-from typing import List
+
+import pytest
 
 from rfsn_controller.contracts import (
-    FeatureContract,
-    ContractViolation,
     ContractConstraint,
     ContractRegistry,
     ContractValidator,
-    create_shell_execution_contract,
+    ContractViolation,
+    FeatureContract,
     create_budget_tracking_contract,
-    create_llm_calling_contract,
     create_event_logging_contract,
-    register_standard_contracts,
+    create_llm_calling_contract,
+    create_shell_execution_contract,
     get_global_registry,
     get_global_validator,
-    set_global_registry,
-    set_global_validator,
+    register_standard_contracts,
     reset_global_contracts,
+    set_global_registry,
     validate_shell_execution_global,
 )
-
 
 # =============================================================================
 # FeatureContract Tests
@@ -487,7 +484,7 @@ class TestContractRegistry:
     def test_listener_notification(self):
         """Test that listeners are notified on registration."""
         registry = ContractRegistry()
-        notifications: List[tuple] = []
+        notifications: list[tuple] = []
         
         def listener(action: str, contract: FeatureContract) -> None:
             notifications.append((action, contract.name))
@@ -854,27 +851,25 @@ class TestContractIntegration:
         reset_global_contracts()
     
     def test_config_contract_config(self):
-        """Test ContractConfig in config module."""
-        from rfsn_controller.config import ContractConfig, ControllerConfig
+        """Test ContractsConfig in config module."""
+        from rfsn_controller.config import ContractsConfig
         
-        config = ContractConfig()
+        config = ContractsConfig()
         
         assert config.enabled is True
         assert config.shell_execution_enabled is True
         assert config.budget_tracking_enabled is True
         assert config.llm_calling_enabled is True
         assert config.event_logging_enabled is True
-        assert config.strict_mode is False
-        assert config.log_violations is True
     
     def test_config_in_controller_config(self):
         """Test contracts field in ControllerConfig."""
-        from rfsn_controller.config import ControllerConfig, ContractConfig
+        from rfsn_controller.config import ContractsConfig, ControllerConfig
         
-        config = ControllerConfig()
+        config = ControllerConfig(github_url="https://github.com/test/repo")
         
         assert hasattr(config, "contracts")
-        assert isinstance(config.contracts, ContractConfig)
+        assert isinstance(config.contracts, ContractsConfig)
     
     def test_context_has_contract_fields(self):
         """Test ControllerContext has contract registry and validator attributes."""
@@ -885,15 +880,18 @@ class TestContractIntegration:
         assert hasattr(ControllerContext, "contract_validator")
     
     def test_contract_config_in_controller_config(self):
-        """Test that ContractConfig can be set in ControllerConfig."""
-        from rfsn_controller.config import ControllerConfig, ContractConfig
+        """Test that ContractsConfig can be set in ControllerConfig."""
+        from rfsn_controller.config import ContractsConfig, ControllerConfig
         
-        contracts_config = ContractConfig(
+        contracts_config = ContractsConfig(
             enabled=True,
             shell_execution_enabled=False,
             budget_tracking_enabled=True,
         )
-        config = ControllerConfig(contracts=contracts_config)
+        config = ControllerConfig(
+            github_url="https://github.com/test/repo",
+            contracts=contracts_config,
+        )
         
         assert config.contracts.enabled is True
         assert config.contracts.shell_execution_enabled is False
@@ -901,7 +899,6 @@ class TestContractIntegration:
     
     def test_exec_utils_imports_contracts(self):
         """Test that exec_utils has contract integration code."""
-        import ast
         from pathlib import Path
         
         # Read exec_utils.py and verify it imports contracts

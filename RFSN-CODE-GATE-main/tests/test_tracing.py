@@ -1,18 +1,20 @@
 """Tests for OpenTelemetry tracing module."""
 
+from unittest.mock import Mock
+
 import pytest
-from unittest.mock import Mock, patch
+
 from rfsn_controller.tracing import (
-    init_tracing,
+    HAS_OPENTELEMETRY,
     get_tracer,
+    init_tracing,
     is_tracing_enabled,
-    trace_span,
+    shutdown_tracing,
     trace_function,
     trace_llm_call,
     trace_proposal,
+    trace_span,
     trace_test_execution,
-    shutdown_tracing,
-    HAS_OPENTELEMETRY,
 )
 
 
@@ -92,7 +94,7 @@ class TestTraceSpan:
         init_tracing()
         
         with pytest.raises(ValueError):
-            with trace_span("test_operation") as span:
+            with trace_span("test_operation"):
                 raise ValueError("Test error")
         
         shutdown_tracing()

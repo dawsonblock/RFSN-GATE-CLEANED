@@ -1,11 +1,11 @@
 """Integration tests for Planner v5."""
 
+
 import pytest
-from pathlib import Path
 
 from rfsn_controller.planner_v5_adapter import (
-    PlannerV5Adapter,
     ControllerAction,
+    PlannerV5Adapter,
 )
 
 
@@ -159,15 +159,15 @@ class TestPlannerV5StateTracking:
             pytest.skip("Planner v5 not available")
 
         # First call
-        action1 = adapter.get_next_action()
+        adapter.get_next_action()
 
         # Provide feedback
         feedback = {"success": False, "tests_failed": 3}
-        action2 = adapter.get_next_action(controller_feedback=feedback)
+        adapter.get_next_action(controller_feedback=feedback)
 
         # State should be maintained
         assert adapter.state_tracker is not None
-        assert adapter.state_tracker.iteration >= 1
+        assert adapter.state_tracker.current_iteration >= 1
 
     def test_hypothesis_tracking(self, adapter):
         """Test hypothesis tracking in state."""
@@ -198,7 +198,7 @@ class TestPlannerV5CLI:
         result = subprocess.run(
             ["python", "-m", "rfsn_controller.cli", "--help"],
             capture_output=True,
-            text=True,
+            text=True, check=False,
         )
 
         # Check that v5 is in help text

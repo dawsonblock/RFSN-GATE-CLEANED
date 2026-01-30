@@ -6,7 +6,6 @@ Handles Rust repositories with Cargo.
 
 import hashlib
 import re
-from typing import List, Optional
 
 from .base import (
     Buildpack,
@@ -27,15 +26,13 @@ class RustBuildpack(Buildpack):
         super().__init__()
         self._buildpack_type = BuildpackType.RUST
 
-    def detect(self, ctx: BuildpackContext) -> Optional[DetectResult]:
+    def detect(self, ctx: BuildpackContext) -> DetectResult | None:
         """Detect if this is a Rust repository."""
         rust_indicators = ["Cargo.toml", "Cargo.lock", "rust-toolchain", "rust-toolchain.toml"]
 
         found_indicators = []
         for indicator in rust_indicators:
-            if indicator in ctx.files:
-                found_indicators.append(indicator)
-            elif any(f == indicator or f.endswith("/" + indicator) for f in ctx.repo_tree):
+            if indicator in ctx.files or any(f == indicator or f.endswith("/" + indicator) for f in ctx.repo_tree):
                 found_indicators.append(indicator)
 
         if not found_indicators:
@@ -57,13 +54,13 @@ class RustBuildpack(Buildpack):
         """Return the Docker image for Rust."""
         return "rust:1.76-slim"
 
-    def sysdeps_whitelist(self) -> List[str]:
+    def sysdeps_whitelist(self) -> list[str]:
         """Return Rust-specific system dependencies."""
         common = ["build-essential", "pkg-config", "git", "ca-certificates"]
         rust_extras = ["libssl-dev", "cmake"]
         return common + rust_extras
 
-    def install_plan(self, ctx: BuildpackContext) -> List[Step]:
+    def install_plan(self, ctx: BuildpackContext) -> list[Step]:
         """Generate Rust installation steps."""
         steps = []
 
@@ -83,7 +80,7 @@ class RustBuildpack(Buildpack):
 
         return steps
 
-    def test_plan(self, ctx: BuildpackContext, focus_file: Optional[str] = None) -> TestPlan:
+    def test_plan(self, ctx: BuildpackContext, focus_file: str | None = None) -> TestPlan:
         """Generate Rust test execution plan."""
         if focus_file:
             argv = ["cargo", "test", "--", focus_file]
@@ -131,7 +128,7 @@ class RustBuildpack(Buildpack):
             error_message=error_message,
         )
 
-    def focus_plan(self, failure: FailureInfo) -> Optional[TestPlan]:
+    def focus_plan(self, failure: FailureInfo) -> TestPlan | None:
         """Generate focused test plan based on failure."""
         if not failure.failing_tests:
             return None

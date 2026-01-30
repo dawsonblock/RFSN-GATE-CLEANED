@@ -26,20 +26,20 @@ Usage:
 from __future__ import annotations
 
 import functools
-from typing import Any, Optional
 from collections.abc import Callable
 from contextlib import contextmanager
+from typing import Any
 
 try:
     from opentelemetry import trace
+    from opentelemetry.exporter.jaeger.thrift import JaegerExporter
+    from opentelemetry.sdk.resources import SERVICE_NAME, Resource
     from opentelemetry.sdk.trace import TracerProvider
     from opentelemetry.sdk.trace.export import (
         BatchSpanProcessor,
         ConsoleSpanExporter,
     )
-    from opentelemetry.exporter.jaeger.thrift import JaegerExporter
-    from opentelemetry.sdk.resources import SERVICE_NAME, Resource
-    from opentelemetry.trace import Status, StatusCode, Span
+    from opentelemetry.trace import Span, Status, StatusCode
     
     HAS_OPENTELEMETRY = True
 except ImportError:

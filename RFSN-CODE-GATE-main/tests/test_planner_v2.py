@@ -8,13 +8,10 @@ Tests cover:
 """
 
 import json
-import pytest
 
 from rfsn_controller.planner_v2 import (
     ControllerAdapter,
     ControllerOutcome,
-    ControllerTaskSpec,
-    DecompositionPrior,
     MemoryAdapter,
     Plan,
     PlannerV2,
@@ -24,7 +21,6 @@ from rfsn_controller.planner_v2 import (
     StepLifecycle,
     StepStatus,
 )
-
 
 # =============================================================================
 # Schema Tests

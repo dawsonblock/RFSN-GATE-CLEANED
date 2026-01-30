@@ -5,10 +5,7 @@ Simple CLI for printing plan DAG, step statuses, and dependencies.
 
 from __future__ import annotations
 
-from typing import Optional
-
 from .schema import Plan, PlanState, StepStatus
-
 
 # Box drawing characters for tree
 PIPE = "│"
@@ -17,7 +14,7 @@ ELBOW = "└"
 DASH = "─"
 
 
-def print_plan_dag(plan: Plan, state: Optional[PlanState] = None) -> str:
+def print_plan_dag(plan: Plan, state: PlanState | None = None) -> str:
     """Print plan DAG with statuses and dependencies.
     
     Args:
@@ -41,7 +38,7 @@ def print_plan_dag(plan: Plan, state: Optional[PlanState] = None) -> str:
     lines.append("")
     
     # Build dependency mapping
-    deps_map = {s.step_id: s.dependencies for s in plan.steps}
+    {s.step_id: s.dependencies for s in plan.steps}
     
     # Find root steps (no dependencies)
     roots = [s for s in plan.steps if not s.dependencies]

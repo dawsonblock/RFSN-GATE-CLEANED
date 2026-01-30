@@ -9,10 +9,8 @@ from __future__ import annotations
 
 import logging
 import subprocess
-import time
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
-from typing import Optional
+from datetime import UTC, datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +56,7 @@ class DockerReaper:
         self.label_filter = label_filter
         self.max_age_hours = max_age_hours
         self.dry_run = dry_run
-        self.cutoff_time = datetime.now(timezone.utc) - timedelta(hours=max_age_hours)
+        self.cutoff_time = datetime.now(UTC) - timedelta(hours=max_age_hours)
 
     def list_containers(self) -> list[ContainerInfo]:
         """
@@ -73,7 +71,7 @@ class DockerReaper:
                 "--filter", f"label={self.label_filter}",
                 "--format", "{{.ID}}\t{{.CreatedAt}}\t{{.Status}}\t{{.Names}}"
             ]
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30, check=False)
             
             if result.returncode != 0:
                 logger.error(f"Failed to list containers: {result.stderr}")
@@ -129,24 +127,24 @@ class DockerReaper:
             # Make both datetimes comparable (handle naive vs aware)
             created_at = container.created_at
             if created_at.tzinfo is None:
-                created_at = created_at.replace(tzinfo=timezone.utc)
+                created_at = created_at.replace(tzinfo=UTC)
             if created_at < self.cutoff_time:
                 if self.dry_run:
                     logger.info(
                         f"[DRY RUN] Would reap container {container.id} "
-                        f"({container.names}), age: {datetime.now(timezone.utc) - created_at}"
+                        f"({container.names}), age: {datetime.now(UTC) - created_at}"
                     )
                 else:
                     try:
                         logger.info(
                             f"Reaping container {container.id} ({container.names}), "
-                            f"age: {datetime.now(timezone.utc) - created_at}"
+                            f"age: {datetime.now(UTC) - created_at}"
                         )
                         subprocess.run(
                             ["docker", "rm", "-f", container.id],
                             capture_output=True,
                             text=True,
-                            timeout=60
+                            timeout=60, check=False
                         )
                         reaped_count += 1
                     except subprocess.TimeoutExpired:
@@ -183,7 +181,7 @@ class DockerReaper:
                         subprocess.run(
                             ["docker", "rm", "-f", container.id],
                             capture_output=True,
-                            timeout=60
+                            timeout=60, check=False
                         )
                         reaped_count += 1
                     except Exception as e:

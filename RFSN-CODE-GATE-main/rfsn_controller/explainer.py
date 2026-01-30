@@ -6,13 +6,13 @@ summaries explaining WHAT changed and WHY.
 
 from __future__ import annotations
 
-from typing import Dict, Any, List
+from typing import Any
 
 
 class Explainer:
     """Generates explanations for plan execution."""
     
-    def explain_plan(self, plan_summary: Dict[str, Any], steps: List[Dict[str, Any]]) -> str:
+    def explain_plan(self, plan_summary: dict[str, Any], steps: list[dict[str, Any]]) -> str:
         """Generate a full markdown explanation of the plan."""
         lines = [
             f"# Execution Report: {plan_summary.get('goal', 'Unknown Goal')}",
@@ -29,7 +29,7 @@ class Explainer:
             
         return "\n".join(lines)
         
-    def _explain_step(self, step: Dict[str, Any]) -> str:
+    def _explain_step(self, step: dict[str, Any]) -> str:
         """Explain a single step."""
         title = step.get("title", "Unknown Step")
         intent = step.get("intent", "")

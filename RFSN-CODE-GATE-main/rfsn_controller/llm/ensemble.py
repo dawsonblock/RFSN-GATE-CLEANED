@@ -11,7 +11,7 @@ from __future__ import annotations
 import asyncio
 import os
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from .async_client import (
     AsyncLLMResponse,
@@ -41,7 +41,7 @@ class ModelConfig:
 
 
 # Default model configurations
-DEFAULT_MODELS: List[ModelConfig] = [
+DEFAULT_MODELS: list[ModelConfig] = [
     ModelConfig(
         name="deepseek-chat",
         provider="deepseek",
@@ -73,7 +73,7 @@ DEFAULT_MODELS: List[ModelConfig] = [
 ]
 
 
-def get_available_models() -> List[ModelConfig]:
+def get_available_models() -> list[ModelConfig]:
     """Get list of models that have API keys configured."""
     return [m for m in DEFAULT_MODELS if m.is_available()]
 
@@ -89,10 +89,10 @@ class ScoredResponse:
     response: AsyncLLMResponse
     model: str
     score: float
-    scores: Dict[str, float] = field(default_factory=dict)
+    scores: dict[str, float] = field(default_factory=dict)
     
     @property
-    def patch(self) -> Optional[str]:
+    def patch(self) -> str | None:
         """Extract patch diff if present."""
         data = self.response.to_dict()
         if data.get("mode") == "patch":
@@ -100,7 +100,7 @@ class ScoredResponse:
         return None
 
 
-def score_response(response: AsyncLLMResponse) -> Tuple[float, Dict[str, float]]:
+def score_response(response: AsyncLLMResponse) -> tuple[float, dict[str, float]]:
     """Score an LLM response for quality.
     
     Scoring criteria:
@@ -112,7 +112,7 @@ def score_response(response: AsyncLLMResponse) -> Tuple[float, Dict[str, float]]
     Returns:
         (total_score, component_scores) tuple.
     """
-    scores: Dict[str, float] = {}
+    scores: dict[str, float] = {}
     
     try:
         data = response.to_dict()
@@ -202,8 +202,8 @@ class EnsembleResult:
     """Result from ensemble model call."""
     
     best: ScoredResponse
-    all_responses: List[ScoredResponse]
-    failed_models: List[str]
+    all_responses: list[ScoredResponse]
+    failed_models: list[str]
     
     @property
     def consensus(self) -> bool:
@@ -219,7 +219,7 @@ async def call_model_by_provider(
     model: ModelConfig,
     prompt: str,
     temperature: float,
-    system_prompt: Optional[str] = None,
+    system_prompt: str | None = None,
 ) -> AsyncLLMResponse:
     """Call a model based on its provider.
     
@@ -256,9 +256,9 @@ async def call_model_by_provider(
 async def call_ensemble(
     prompt: str,
     *,
-    models: Optional[List[ModelConfig]] = None,
+    models: list[ModelConfig] | None = None,
     temperature: float = 0.0,
-    system_prompt: Optional[str] = None,
+    system_prompt: str | None = None,
     max_models: int = 3,
     timeout: float = 30.0,
 ) -> EnsembleResult:
@@ -308,12 +308,12 @@ async def call_ensemble(
     results = await asyncio.gather(*tasks, return_exceptions=True)
     
     # Score responses
-    scored_responses: List[ScoredResponse] = []
-    failed_models: List[str] = []
+    scored_responses: list[ScoredResponse] = []
+    failed_models: list[str] = []
     
-    for model, result in zip(models, results):
+    for model, result in zip(models, results, strict=False):
         if isinstance(result, Exception):
-            failed_models.append(f"{model.name}: {str(result)}")
+            failed_models.append(f"{model.name}: {result!s}")
             continue
         
         score, score_breakdown = score_response(result)
@@ -355,7 +355,7 @@ def call_ensemble_sync(
     prompt: str,
     temperature: float = 0.0,
     max_models: int = 3,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Synchronous wrapper for ensemble call.
     
     Returns the best response as a dict.

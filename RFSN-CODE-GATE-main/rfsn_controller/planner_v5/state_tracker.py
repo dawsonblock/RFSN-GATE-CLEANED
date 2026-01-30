@@ -7,7 +7,6 @@ Maintains explicit state across proposal attempts for intelligent recovery.
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional
 from uuid import UUID
 
 
@@ -38,8 +37,8 @@ class HypothesisTrial:
     proposal_id: UUID
     hypothesis: str
     outcome: HypothesisOutcome
-    rejection_reason: Optional[str] = None
-    rejection_type: Optional[GateRejectionType] = None
+    rejection_reason: str | None = None
+    rejection_type: GateRejectionType | None = None
     iteration: int = 0
 
 
@@ -52,7 +51,7 @@ class StateTracker:
     """
 
     # Reproduction
-    repro_command: Optional[str] = None  # Best known command to reproduce failure
+    repro_command: str | None = None  # Best known command to reproduce failure
     reproduction_confirmed: bool = False
 
     # Failures
@@ -85,7 +84,7 @@ class StateTracker:
 
     # Convergence detection
     consecutive_failures: int = 0  # Same failure pattern
-    last_failure_signature: Optional[str] = None
+    last_failure_signature: str | None = None
     stuck_threshold: int = 2  # Pivot to localization after N same failures
 
     def record_hypothesis(
@@ -93,8 +92,8 @@ class StateTracker:
         proposal_id: UUID,
         hypothesis: str,
         outcome: HypothesisOutcome,
-        rejection_reason: Optional[str] = None,
-        rejection_type: Optional[GateRejectionType] = None,
+        rejection_reason: str | None = None,
+        rejection_type: GateRejectionType | None = None,
     ):
         """Record the outcome of a hypothesis trial."""
         trial = HypothesisTrial(
@@ -188,13 +187,13 @@ class StateTracker:
         self.suspect_symbols.append((file, symbol, confidence))
         self.suspect_symbols.sort(key=lambda x: x[2], reverse=True)
 
-    def get_top_suspect_file(self) -> Optional[str]:
+    def get_top_suspect_file(self) -> str | None:
         """Get the most likely suspect file."""
         if not self.suspect_files:
             return None
         return self.suspect_files[0][0]
 
-    def get_top_suspect_symbol(self) -> Optional[tuple[str, str]]:
+    def get_top_suspect_symbol(self) -> tuple[str, str] | None:
         """Get the most likely suspect symbol (file, symbol)."""
         if not self.suspect_symbols:
             return None

@@ -15,8 +15,8 @@ import math
 import os
 import random
 import sqlite3
-from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Set, Tuple
+from dataclasses import dataclass
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -27,11 +27,11 @@ class FailureFeatures:
 
     error_class: str  # e.g., "AssertionError", "TypeError"
     stack_signature: str  # Hash of stack trace locations
-    touched_files: List[str]  # Files modified by the patch
-    test_file: Optional[str]  # Failing test file
+    touched_files: list[str]  # Files modified by the patch
+    test_file: str | None  # Failing test file
     error_message_prefix: str  # First 100 chars of error
     
-    def as_dict(self) -> Dict[str, Any]:
+    def as_dict(self) -> dict[str, Any]:
         return {
             "error_class": self.error_class,
             "stack_signature": self.stack_signature,
@@ -118,7 +118,7 @@ class StrategyBandit:
     def __init__(
         self,
         *,
-        strategies: Optional[List[str]] = None,
+        strategies: list[str] | None = None,
         exploration_bonus: float = 0.1,
         decay_factor: float = 0.99,
     ):
@@ -130,14 +130,14 @@ class StrategyBandit:
             decay_factor: Decay applied to old observations.
         """
         strategy_list = strategies or self.DEFAULT_STRATEGIES
-        self.arms: Dict[str, StrategyArm] = {
+        self.arms: dict[str, StrategyArm] = {
             name: StrategyArm(name=name) for name in strategy_list
         }
         self.exploration_bonus = exploration_bonus
         self.decay_factor = decay_factor
         self.total_pulls = 0
     
-    def select_strategy(self, *, exclude: Optional[Set[str]] = None) -> str:
+    def select_strategy(self, *, exclude: set[str] | None = None) -> str:
         """Select a strategy using Thompson Sampling.
         
         Args:
@@ -192,7 +192,7 @@ class StrategyBandit:
             self.arms[strategy].pulls,
         )
     
-    def get_stats(self) -> Dict[str, Dict[str, float]]:
+    def get_stats(self) -> dict[str, dict[str, float]]:
         """Get statistics for all arms.
         
         Returns:
@@ -306,7 +306,7 @@ class NegativeMemoryStore:
         *,
         min_failures: int = 2,
         limit: int = 10,
-    ) -> List[Tuple[str, int]]:
+    ) -> list[tuple[str, int]]:
         """Get strategies that frequently fail for an error class.
         
         Args:
@@ -360,7 +360,7 @@ class NegativeMemoryStore:
         error_class: str,
         *,
         threshold: int = 3,
-    ) -> Set[str]:
+    ) -> set[str]:
         """Get set of strategies to avoid for an error class.
         
         Args:
@@ -386,7 +386,7 @@ def extract_failure_features(
     stderr: str,
     stdout: str,
     patch_diff: str,
-    test_file: Optional[str] = None,
+    test_file: str | None = None,
 ) -> FailureFeatures:
     """Extract features from a test failure for negative memory.
     
@@ -459,8 +459,8 @@ class LearningOrchestrator:
     def __init__(
         self,
         *,
-        bandit: Optional[StrategyBandit] = None,
-        negative_store: Optional[NegativeMemoryStore] = None,
+        bandit: StrategyBandit | None = None,
+        negative_store: NegativeMemoryStore | None = None,
         avoidance_threshold: int = 3,
     ):
         """Initialize orchestrator.
@@ -477,7 +477,7 @@ class LearningOrchestrator:
     def select_strategy(
         self,
         *,
-        error_class: Optional[str] = None,
+        error_class: str | None = None,
     ) -> str:
         """Select strategy with negative memory awareness.
         
@@ -508,7 +508,7 @@ class LearningOrchestrator:
         *,
         strategy: str,
         success: bool,
-        features: Optional[FailureFeatures] = None,
+        features: FailureFeatures | None = None,
         patch_hash: str = "",
         timestamp: int = 0,
     ) -> None:

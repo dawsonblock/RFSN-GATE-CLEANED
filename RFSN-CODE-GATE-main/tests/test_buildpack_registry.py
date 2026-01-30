@@ -1,6 +1,5 @@
 """Tests for buildpack plugin registry system."""
 
-import pytest
 
 
 def test_buildpack_registry_initialization():
@@ -44,7 +43,7 @@ def test_get_nonexistent_buildpack():
 
 def test_register_buildpack():
     """Test register_buildpack adds custom buildpack."""
-    from rfsn_controller.buildpack_registry import register_buildpack, get_buildpack
+    from rfsn_controller.buildpack_registry import get_buildpack, register_buildpack
     from rfsn_controller.buildpacks.base import Buildpack, BuildpackContext, DetectResult
 
     class TestBuildpack(Buildpack):

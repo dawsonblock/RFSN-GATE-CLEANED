@@ -10,13 +10,12 @@ This module tests:
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
-from typing import Dict, List
 
 import pytest
 
 from rfsn_controller.exec_utils import (
+    SAFE_ENV_VARS,
     ExecResult,
     _get_safe_env,
     _validate_argv,
@@ -24,9 +23,7 @@ from rfsn_controller.exec_utils import (
     parse_command_string,
     safe_run,
     safe_run_string,
-    SAFE_ENV_VARS,
 )
-
 
 # =============================================================================
 # _validate_argv Tests

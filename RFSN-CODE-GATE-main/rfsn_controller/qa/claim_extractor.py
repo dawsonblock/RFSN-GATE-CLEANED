@@ -11,13 +11,12 @@ Rules:
 """
 
 from dataclasses import dataclass
-from typing import List, Optional
 
 from .qa_types import (
-    Claim,
-    ClaimType,
     DEFAULT_REQUIRED_EVIDENCE,
     MAX_CLAIMS_PER_ATTEMPT,
+    Claim,
+    ClaimType,
 )
 
 
@@ -26,21 +25,21 @@ class PatchContext:
     """Context for claim extraction."""
 
     # Failure info
-    failing_tests: List[str]
-    error_signatures: List[str] = None  # type: ignore
+    failing_tests: list[str]
+    error_signatures: list[str] = None  # type: ignore
 
     # Patch info
     diff_lines: int = 0
     files_changed: int = 0
-    touched_files: List[str] = None  # type: ignore
+    touched_files: list[str] = None  # type: ignore
 
     # Intent
     is_bugfix: bool = True
     is_feature: bool = False
 
     # Optional context
-    issue_text: Optional[str] = None
-    requirement_text: Optional[str] = None
+    issue_text: str | None = None
+    requirement_text: str | None = None
 
     # Thresholds
     surgical_max_lines: int = 80
@@ -75,7 +74,7 @@ class ClaimExtractor:
     def __init__(
         self,
         *,
-        always_emit: Optional[List[ClaimType]] = None,
+        always_emit: list[ClaimType] | None = None,
         max_claims: int = MAX_CLAIMS_PER_ATTEMPT,
     ):
         """Initialize extractor.
@@ -91,7 +90,7 @@ class ClaimExtractor:
         ]
         self.max_claims = max_claims
 
-    def extract(self, context: PatchContext) -> List[Claim]:
+    def extract(self, context: PatchContext) -> list[Claim]:
         """Extract claims from patch context.
         
         Args:
@@ -100,7 +99,7 @@ class ClaimExtractor:
         Returns:
             List of claims (max self.max_claims).
         """
-        claims: List[Claim] = []
+        claims: list[Claim] = []
         claim_counter = 0
 
         def add_claim(claim_type: ClaimType, text: str) -> None:
@@ -165,12 +164,12 @@ class ClaimExtractor:
     def extract_from_diff(
         self,
         diff: str,
-        failing_tests: List[str],
+        failing_tests: list[str],
         *,
-        issue_text: Optional[str] = None,
+        issue_text: str | None = None,
         surgical_max_lines: int = 80,
         surgical_max_files: int = 3,
-    ) -> List[Claim]:
+    ) -> list[Claim]:
         """Convenience method to extract claims from a diff string.
         
         Args:

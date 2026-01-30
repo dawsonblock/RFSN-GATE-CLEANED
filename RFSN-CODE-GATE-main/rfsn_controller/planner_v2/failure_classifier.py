@@ -9,8 +9,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from enum import Enum, auto
-from typing import List, Optional, Tuple
+from enum import Enum
 
 
 class FailureType(Enum):
@@ -34,7 +33,7 @@ class FailureReport:
     
     failure_type: FailureType
     confidence: float
-    evidence: List[str] = field(default_factory=list)
+    evidence: list[str] = field(default_factory=list)
     primary_error: str = ""
     
     def to_dict(self):
@@ -102,7 +101,7 @@ class FailureClassifier:
             primary_error="Unknown failure pattern"
         )
 
-    def refine_classification(self, report: FailureReport, verified_history: List[dict]) -> FailureReport:
+    def refine_classification(self, report: FailureReport, verified_history: list[dict]) -> FailureReport:
         """Refine classification based on historical verification (e.g. flaky tests).
         
         Args:

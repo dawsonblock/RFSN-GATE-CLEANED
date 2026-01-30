@@ -18,7 +18,7 @@ import asyncio
 import statistics
 import time
 from dataclasses import dataclass, field
-from typing import Any, Dict, List
+from typing import Any
 
 
 @dataclass
@@ -27,7 +27,7 @@ class BenchmarkResult:
     
     name: str
     iterations: int
-    times_ms: List[float] = field(default_factory=list)
+    times_ms: list[float] = field(default_factory=list)
     
     @property
     def mean_ms(self) -> float:
@@ -49,7 +49,7 @@ class BenchmarkResult:
     def stdev_ms(self) -> float:
         return statistics.stdev(self.times_ms) if len(self.times_ms) > 1 else 0.0
     
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "name": self.name,
             "iterations": self.iterations,
@@ -184,7 +184,7 @@ def benchmark_plan_cache() -> BenchmarkResult:
     return result
 
 
-def run_benchmarks() -> List[BenchmarkResult]:
+def run_benchmarks() -> list[BenchmarkResult]:
     """Run all benchmarks."""
     results = []
     
@@ -210,7 +210,7 @@ def run_benchmarks() -> List[BenchmarkResult]:
     return results
 
 
-def print_summary(results: List[BenchmarkResult]) -> None:
+def print_summary(results: list[BenchmarkResult]) -> None:
     """Print benchmark summary."""
     print("\n" + "=" * 60)
     print("BENCHMARK SUMMARY")
@@ -227,7 +227,7 @@ def print_summary(results: List[BenchmarkResult]) -> None:
 def main():
     parser = argparse.ArgumentParser(description="RFSN Controller Benchmark")
     parser.add_argument("--iterations", type=int, default=100, help="Iterations per benchmark")
-    _args = parser.parse_args()  # noqa: F841
+    _args = parser.parse_args()
     
     results = run_benchmarks()
     print_summary(results)

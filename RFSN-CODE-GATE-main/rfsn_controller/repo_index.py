@@ -17,11 +17,10 @@ import json
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
-
+from typing import Any
 
 # Language detection by extension
-LANGUAGE_MAP: Dict[str, str] = {
+LANGUAGE_MAP: dict[str, str] = {
     ".py": "python",
     ".js": "javascript",
     ".ts": "typescript",
@@ -43,7 +42,7 @@ LANGUAGE_MAP: Dict[str, str] = {
 }
 
 # Directories to skip when indexing
-SKIP_DIRS: Set[str] = {
+SKIP_DIRS: set[str] = {
     "__pycache__",
     ".git",
     ".svn",
@@ -71,9 +70,9 @@ class FileInfo:
     path: str
     size: int
     mtime: float
-    language: Optional[str] = None
+    language: str | None = None
     
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "path": self.path,
             "size": self.size,
@@ -91,7 +90,7 @@ class SymbolInfo:
     file: str
     line: int
     
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "name": self.name,
             "kind": self.kind,
@@ -111,13 +110,13 @@ class RepoIndex:
     """
     
     root: str
-    files: List[FileInfo] = field(default_factory=list)
-    import_graph: Dict[str, Set[str]] = field(default_factory=dict)
-    symbols: List[SymbolInfo] = field(default_factory=list)
+    files: list[FileInfo] = field(default_factory=list)
+    import_graph: dict[str, set[str]] = field(default_factory=dict)
+    symbols: list[SymbolInfo] = field(default_factory=list)
     _hash: str = ""
     
     @classmethod
-    def build(cls, root: str, max_files: int = 10000) -> "RepoIndex":
+    def build(cls, root: str, max_files: int = 10000) -> RepoIndex:
         """Build a new index from a repository root.
         
         Args:
@@ -187,7 +186,7 @@ class RepoIndex:
         except (SyntaxError, UnicodeDecodeError):
             return
         
-        imports: Set[str] = set()
+        imports: set[str] = set()
         
         for node in ast.walk(tree):
             # Collect imports
@@ -199,14 +198,7 @@ class RepoIndex:
                     imports.add(node.module.split(".")[0])
             
             # Collect top-level functions and classes
-            elif isinstance(node, ast.FunctionDef) and self._is_top_level(node, tree):
-                self.symbols.append(SymbolInfo(
-                    name=node.name,
-                    kind="function",
-                    file=rel_path,
-                    line=node.lineno,
-                ))
-            elif isinstance(node, ast.AsyncFunctionDef) and self._is_top_level(node, tree):
+            elif isinstance(node, ast.FunctionDef) and self._is_top_level(node, tree) or isinstance(node, ast.AsyncFunctionDef) and self._is_top_level(node, tree):
                 self.symbols.append(SymbolInfo(
                     name=node.name,
                     kind="function",
@@ -233,7 +225,7 @@ class RepoIndex:
         content = json.dumps(self.to_json(), sort_keys=True)
         return hashlib.sha256(content.encode()).hexdigest()[:16]
     
-    def get_import_graph(self) -> Dict[str, Set[str]]:
+    def get_import_graph(self) -> dict[str, set[str]]:
         """Get the import dependency graph.
         
         Returns:
@@ -241,7 +233,7 @@ class RepoIndex:
         """
         return self.import_graph.copy()
     
-    def search_symbols(self, name: str) -> List[SymbolInfo]:
+    def search_symbols(self, name: str) -> list[SymbolInfo]:
         """Search for symbols by name substring.
         
         Args:
@@ -253,7 +245,7 @@ class RepoIndex:
         name_lower = name.lower()
         return [s for s in self.symbols if name_lower in s.name.lower()]
     
-    def get_files_by_language(self, language: str) -> List[FileInfo]:
+    def get_files_by_language(self, language: str) -> list[FileInfo]:
         """Get all files of a specific language.
         
         Args:
@@ -264,7 +256,7 @@ class RepoIndex:
         """
         return [f for f in self.files if f.language == language]
     
-    def to_json(self) -> Dict[str, Any]:
+    def to_json(self) -> dict[str, Any]:
         """Convert index to JSON-serializable dict.
         
         Returns:
@@ -280,7 +272,7 @@ class RepoIndex:
             "symbols": [s.to_dict() for s in self.symbols],
         }
     
-    def to_compact_json(self, max_files: int = 50, max_symbols: int = 100) -> Dict[str, Any]:
+    def to_compact_json(self, max_files: int = 50, max_symbols: int = 100) -> dict[str, Any]:
         """Get a compact representation for LLM context.
         
         Args:
@@ -308,7 +300,7 @@ class RepoIndex:
             json.dump(self.to_json(), f, indent=2)
     
     @classmethod
-    def load(cls, path: str) -> "RepoIndex":
+    def load(cls, path: str) -> RepoIndex:
         """Load an index from a JSON file.
         
         Args:

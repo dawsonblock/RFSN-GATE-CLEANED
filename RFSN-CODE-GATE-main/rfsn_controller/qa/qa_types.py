@@ -10,7 +10,7 @@ Defines the contract for claim-based adversarial QA:
 import json
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 class ClaimType(Enum):
@@ -49,9 +49,9 @@ class Claim:
     id: str
     type: ClaimType
     text: str
-    required_evidence: List[EvidenceType] = field(default_factory=list)
+    required_evidence: list[EvidenceType] = field(default_factory=list)
 
-    def as_dict(self) -> Dict[str, Any]:
+    def as_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "type": self.type.value,
@@ -63,7 +63,7 @@ class Claim:
         return json.dumps(self.as_dict())
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> "Claim":
+    def from_dict(cls, d: dict[str, Any]) -> "Claim":
         return cls(
             id=d["id"],
             type=ClaimType(d["type"]),
@@ -77,16 +77,16 @@ class Evidence:
     """Evidence collected to support or refute a claim."""
 
     type: EvidenceType
-    data: Dict[str, Any] = field(default_factory=dict)
+    data: dict[str, Any] = field(default_factory=dict)
 
-    def as_dict(self) -> Dict[str, Any]:
+    def as_dict(self) -> dict[str, Any]:
         return {
             "type": self.type.value,
             "data": self.data,
         }
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> "Evidence":
+    def from_dict(cls, d: dict[str, Any]) -> "Evidence":
         return cls(
             type=EvidenceType(d["type"]),
             data=d.get("data", {}),
@@ -99,8 +99,8 @@ class TestResultEvidence:
 
     command: str
     exit_code: int
-    failing_tests: List[str] = field(default_factory=list)
-    passing_tests: List[str] = field(default_factory=list)
+    failing_tests: list[str] = field(default_factory=list)
+    passing_tests: list[str] = field(default_factory=list)
     duration_ms: int = 0
 
     def to_evidence(self) -> Evidence:
@@ -120,9 +120,9 @@ class TestResultEvidence:
 class DeltaMapEvidence:
     """Evidence from test delta comparison."""
 
-    fixed: List[str] = field(default_factory=list)      # fail→pass
-    regressed: List[str] = field(default_factory=list)  # pass→fail
-    still_failing: List[str] = field(default_factory=list)  # fail→fail
+    fixed: list[str] = field(default_factory=list)      # fail→pass
+    regressed: list[str] = field(default_factory=list)  # pass→fail
+    still_failing: list[str] = field(default_factory=list)  # fail→fail
 
     def to_evidence(self) -> Evidence:
         return Evidence(
@@ -148,8 +148,8 @@ class PolicyCheckEvidence:
     """Evidence from hygiene/policy checks."""
 
     is_valid: bool
-    violations: List[str] = field(default_factory=list)
-    diff_stats: Dict[str, int] = field(default_factory=dict)  # lines_added, lines_removed, files_changed
+    violations: list[str] = field(default_factory=list)
+    diff_stats: dict[str, int] = field(default_factory=dict)  # lines_added, lines_removed, files_changed
 
     def to_evidence(self) -> Evidence:
         return Evidence(
@@ -168,7 +168,7 @@ class StaticCheckEvidence:
 
     tool: str  # mypy, ruff, flake8
     exit_code: int
-    issues: List[Dict[str, Any]] = field(default_factory=list)
+    issues: list[dict[str, Any]] = field(default_factory=list)
 
     def to_evidence(self) -> Evidence:
         return Evidence(
@@ -188,10 +188,10 @@ class ClaimVerdict:
     claim_id: str
     verdict: Verdict
     reason: str = ""
-    evidence_request: Optional[str] = None  # What evidence is needed for CHALLENGE
-    risk_flags: List[str] = field(default_factory=list)
+    evidence_request: str | None = None  # What evidence is needed for CHALLENGE
+    risk_flags: list[str] = field(default_factory=list)
 
-    def as_dict(self) -> Dict[str, Any]:
+    def as_dict(self) -> dict[str, Any]:
         return {
             "claim_id": self.claim_id,
             "verdict": self.verdict.value,
@@ -201,7 +201,7 @@ class ClaimVerdict:
         }
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> "ClaimVerdict":
+    def from_dict(cls, d: dict[str, Any]) -> "ClaimVerdict":
         return cls(
             claim_id=d["claim_id"],
             verdict=Verdict(d["verdict"]),
@@ -216,16 +216,16 @@ class QAAttempt:
     """Complete QA evaluation for a patch attempt."""
 
     attempt_id: str
-    claims: List[Claim] = field(default_factory=list)
-    verdicts: List[ClaimVerdict] = field(default_factory=list)
-    evidence: List[Evidence] = field(default_factory=list)
+    claims: list[Claim] = field(default_factory=list)
+    verdicts: list[ClaimVerdict] = field(default_factory=list)
+    evidence: list[Evidence] = field(default_factory=list)
 
     # Final decision
     accepted: bool = False
-    rejection_reason: Optional[str] = None
-    escalation_tags: List[str] = field(default_factory=list)
+    rejection_reason: str | None = None
+    escalation_tags: list[str] = field(default_factory=list)
 
-    def as_dict(self) -> Dict[str, Any]:
+    def as_dict(self) -> dict[str, Any]:
         return {
             "attempt_id": self.attempt_id,
             "claims": [c.as_dict() for c in self.claims],
@@ -236,7 +236,7 @@ class QAAttempt:
             "escalation_tags": self.escalation_tags,
         }
 
-    def get_verdict(self, claim_id: str) -> Optional[ClaimVerdict]:
+    def get_verdict(self, claim_id: str) -> ClaimVerdict | None:
         """Get verdict for a specific claim."""
         for v in self.verdicts:
             if v.claim_id == claim_id:
@@ -266,7 +266,7 @@ class QAAttempt:
 MAX_CLAIMS_PER_ATTEMPT = 6
 
 # Default required evidence for each claim type
-DEFAULT_REQUIRED_EVIDENCE: Dict[ClaimType, List[EvidenceType]] = {
+DEFAULT_REQUIRED_EVIDENCE: dict[ClaimType, list[EvidenceType]] = {
     ClaimType.FUNCTIONAL_FIX: [EvidenceType.TEST_RESULT],
     ClaimType.NO_REGRESSION: [EvidenceType.TEST_RESULT, EvidenceType.DELTA_MAP],
     ClaimType.SCOPE_MINIMALITY: [EvidenceType.POLICY_CHECK],

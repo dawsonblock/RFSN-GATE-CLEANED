@@ -10,7 +10,7 @@ import os
 import subprocess
 import time
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 @dataclass
@@ -19,20 +19,20 @@ class ServiceConfig:
 
     name: str
     image: str
-    ports: Dict[str, str] = field(default_factory=dict)
-    environment: Dict[str, str] = field(default_factory=dict)
-    volumes: Dict[str, str] = field(default_factory=dict)
-    command: Optional[str] = None
-    healthcheck: Optional[Dict[str, Any]] = None
-    depends_on: List[str] = field(default_factory=list)
+    ports: dict[str, str] = field(default_factory=dict)
+    environment: dict[str, str] = field(default_factory=dict)
+    volumes: dict[str, str] = field(default_factory=dict)
+    command: str | None = None
+    healthcheck: dict[str, Any] | None = None
+    depends_on: list[str] = field(default_factory=list)
 
-    def to_compose(self) -> Dict[str, Any]:
+    def to_compose(self) -> dict[str, Any]:
         """Convert to Docker Compose format.
 
         Returns:
             Dictionary in Docker Compose service format.
         """
-        service: Dict[str, Any] = {
+        service: dict[str, Any] = {
             "image": self.image,
         }
 
@@ -278,7 +278,7 @@ class DockerComposeManager:
         self.project_name = project_name
         self.time_mode = time_mode
         self.compose_file = os.path.join(work_dir, "docker-compose.yml")
-        self.services: List[ServiceConfig] = []
+        self.services: list[ServiceConfig] = []
         self._running = False
 
     def add_service(self, service: ServiceConfig) -> None:
@@ -414,7 +414,7 @@ class DockerComposeManager:
         Returns:
             YAML content for docker-compose.yml.
         """
-        compose: Dict[str, Any] = {
+        compose: dict[str, Any] = {
             "version": "3.8",
             "services": {},
         }
@@ -435,7 +435,7 @@ class DockerComposeManager:
         with open(self.compose_file, "w") as f:
             f.write(compose_content)
 
-    def up(self, detached: bool = True) -> Dict[str, Any]:
+    def up(self, detached: bool = True) -> dict[str, Any]:
         """Start services using Docker Compose.
 
         Args:
@@ -460,7 +460,7 @@ class DockerComposeManager:
                 cwd=self.work_dir,
                 capture_output=True,
                 text=True,
-                timeout=60,
+                timeout=60, check=False,
             )
 
             self._running = result.returncode == 0
@@ -484,7 +484,7 @@ class DockerComposeManager:
                 "exit_code": -1,
             }
 
-    def down(self, volumes: bool = False) -> Dict[str, Any]:
+    def down(self, volumes: bool = False) -> dict[str, Any]:
         """Stop and remove services.
 
         Args:
@@ -507,7 +507,7 @@ class DockerComposeManager:
                 cwd=self.work_dir,
                 capture_output=True,
                 text=True,
-                timeout=60,
+                timeout=60, check=False,
             )
 
             self._running = False
@@ -531,7 +531,7 @@ class DockerComposeManager:
                 "exit_code": -1,
             }
 
-    def logs(self, service: Optional[str] = None, tail: int = 100) -> Dict[str, Any]:
+    def logs(self, service: str | None = None, tail: int = 100) -> dict[str, Any]:
         """Get logs from services.
 
         Args:
@@ -561,7 +561,7 @@ class DockerComposeManager:
                 cwd=self.work_dir,
                 capture_output=True,
                 text=True,
-                timeout=30,
+                timeout=30, check=False,
             )
 
             return {
@@ -575,7 +575,7 @@ class DockerComposeManager:
                 "error": "Timeout getting logs",
             }
 
-    def ps(self) -> Dict[str, Any]:
+    def ps(self) -> dict[str, Any]:
         """List running services.
 
         Returns:
@@ -589,7 +589,7 @@ class DockerComposeManager:
                 cwd=self.work_dir,
                 capture_output=True,
                 text=True,
-                timeout=30,
+                timeout=30, check=False,
             )
 
             return {
@@ -603,7 +603,7 @@ class DockerComposeManager:
                 "error": "Timeout listing services",
             }
 
-    def wait_for_healthy(self, timeout: int = 60) -> Dict[str, Any]:
+    def wait_for_healthy(self, timeout: int = 60) -> dict[str, Any]:
         """Wait for all services to become healthy.
 
         Args:
@@ -636,7 +636,7 @@ class DockerComposeManager:
                             cmd,
                             capture_output=True,
                             text=True,
-                            timeout=5,
+                            timeout=5, check=False,
                         )
 
                         if result.returncode != 0 or result.stdout.strip() != "healthy":
@@ -656,7 +656,7 @@ class DockerComposeManager:
             "error": f"Timeout waiting for services ({timeout}s)",
         }
 
-    def get_service_env(self, service_name: str) -> Dict[str, str]:
+    def get_service_env(self, service_name: str) -> dict[str, str]:
         """Get environment variables for a service.
 
         Args:
@@ -672,8 +672,8 @@ class DockerComposeManager:
         return {}
 
     def get_service_url(
-        self, service_name: str, default_port: Optional[int] = None
-    ) -> Optional[str]:
+        self, service_name: str, default_port: int | None = None
+    ) -> str | None:
         """Get connection URL for a service.
 
         Args:
@@ -708,7 +708,7 @@ class DockerComposeManager:
             pass
 
 
-def detect_required_services(repo_dir: str) -> List[str]:
+def detect_required_services(repo_dir: str) -> list[str]:
     """Detect required services from repository configuration.
 
     Args:
@@ -747,7 +747,7 @@ def detect_required_services(repo_dir: str) -> List[str]:
         file_path = os.path.join(repo_dir, filename)
         if os.path.exists(file_path):
             try:
-                with open(file_path, "r") as f:
+                with open(file_path) as f:
                     content = f.read().lower()
 
                 for indicator in indicators:
@@ -761,7 +761,7 @@ def detect_required_services(repo_dir: str) -> List[str]:
     return services
 
 
-def create_services_manager(repo_dir: str, services: List[str]) -> DockerComposeManager:
+def create_services_manager(repo_dir: str, services: list[str]) -> DockerComposeManager:
     """Create a Docker Compose manager with detected services.
 
     Args:

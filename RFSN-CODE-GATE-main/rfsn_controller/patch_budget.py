@@ -10,7 +10,6 @@ Implements the Patch Budget Controller as specified:
 import logging
 from dataclasses import dataclass, field
 from enum import IntEnum
-from typing import Optional, Set, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +24,7 @@ class BudgetTier(IntEnum):
 
 
 # Tier limits: (max_lines, max_files)
-TIER_LIMITS: dict[BudgetTier, Tuple[int, int]] = {
+TIER_LIMITS: dict[BudgetTier, tuple[int, int]] = {
     BudgetTier.SURGICAL: (80, 3),
     BudgetTier.MODERATE: (150, 5),
     BudgetTier.EXPANDED: (300, 8),
@@ -53,11 +52,11 @@ class PatchBudgetController:
 
     current_tier: BudgetTier = BudgetTier.SURGICAL
     consecutive_stagnant: int = 0
-    last_failing_tests: Set[str] = field(default_factory=set)
+    last_failing_tests: set[str] = field(default_factory=set)
     user_ceiling_override: bool = False
     stagnation_threshold: int = 2
 
-    def get_limits(self) -> Tuple[int, int]:
+    def get_limits(self) -> tuple[int, int]:
         """Get current (max_lines, max_files) limits.
 
         Returns:
@@ -67,7 +66,7 @@ class PatchBudgetController:
 
     def record_attempt(
         self,
-        failing_tests: Set[str],
+        failing_tests: set[str],
         success: bool,
     ) -> None:
         """Record a patch attempt and update stagnation tracking.
@@ -192,7 +191,7 @@ def create_patch_budget_controller(
     *,
     user_ceiling_override: bool = False,
     stagnation_threshold: int = 2,
-    initial_tier: Optional[BudgetTier] = None,
+    initial_tier: BudgetTier | None = None,
 ) -> PatchBudgetController:
     """Factory function to create a PatchBudgetController.
 

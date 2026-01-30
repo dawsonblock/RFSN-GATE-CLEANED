@@ -15,7 +15,7 @@ import os
 import threading
 import time
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Set
+from typing import Any
 
 # ============================================================================
 # FILE CACHE
@@ -30,12 +30,12 @@ class CachedFile:
     size: int
     mtime: float
     hash: str
-    compressed: Optional[bytes] = None
+    compressed: bytes | None = None
     cached_at: float = 0.0
     hits: int = 0
     
     @classmethod
-    def from_file(cls, path: str, content: str) -> "CachedFile":
+    def from_file(cls, path: str, content: str) -> CachedFile:
         """Create a cached file from content."""
         stat = os.stat(path) if os.path.exists(path) else None
         content_hash = hashlib.sha256(content.encode()).hexdigest()[:16]
@@ -90,12 +90,12 @@ class SmartFileCache:
         self.max_memory_mb = max_memory_mb
         self.default_ttl = default_ttl
         
-        self._cache: Dict[str, CachedFile] = {}
-        self._access_order: List[str] = []
+        self._cache: dict[str, CachedFile] = {}
+        self._access_order: list[str] = []
         self._lock = threading.Lock()
         self._memory_used = 0
     
-    def get(self, path: str, max_age: Optional[float] = None) -> Optional[str]:
+    def get(self, path: str, max_age: float | None = None) -> str | None:
         """Get a file from cache if available and fresh.
         
         Args:
@@ -191,7 +191,7 @@ class SmartFileCache:
             self._access_order.clear()
             self._memory_used = 0
     
-    def stats(self) -> Dict[str, Any]:
+    def stats(self) -> dict[str, Any]:
         """Get cache statistics."""
         with self._lock:
             total_hits = sum(c.hits for c in self._cache.values())
@@ -204,7 +204,7 @@ class SmartFileCache:
 
 
 # Global file cache
-_file_cache: Optional[SmartFileCache] = None
+_file_cache: SmartFileCache | None = None
 
 
 def get_file_cache() -> SmartFileCache:
@@ -223,7 +223,7 @@ def smart_read_file(
     path: str,
     max_bytes: int = 120_000,
     use_cache: bool = True,
-) -> Optional[str]:
+) -> str | None:
     """Smart file reading with caching.
     
     Args:
@@ -245,7 +245,7 @@ def smart_read_file(
     
     # Read from disk
     try:
-        with open(abs_path, "r", encoding="utf-8", errors="ignore") as f:
+        with open(abs_path, encoding="utf-8", errors="ignore") as f:
             content = f.read(max_bytes)
         
         # Cache the full content
@@ -258,10 +258,10 @@ def smart_read_file(
 
 
 def smart_read_multiple(
-    paths: List[str],
+    paths: list[str],
     max_bytes_per_file: int = 60_000,
     use_cache: bool = True,
-) -> Dict[str, Optional[str]]:
+) -> dict[str, str | None]:
     """Read multiple files efficiently.
     
     Args:
@@ -290,14 +290,14 @@ class GitFileTracker:
     
     repo_dir: str
     
-    _known_files: Dict[str, str] = field(default_factory=dict)  # path -> hash
-    _modified_files: Set[str] = field(default_factory=set)
+    _known_files: dict[str, str] = field(default_factory=dict)  # path -> hash
+    _modified_files: set[str] = field(default_factory=set)
     
     def __post_init__(self):
         self._known_files = {}
         self._modified_files = set()
     
-    def scan_status(self) -> Set[str]:
+    def scan_status(self) -> set[str]:
         """Get list of modified files from git status.
         
         Returns:
@@ -311,7 +311,7 @@ class GitFileTracker:
                 cwd=self.repo_dir,
                 capture_output=True,
                 text=True,
-                timeout=30,
+                timeout=30, check=False,
             )
             
             if result.returncode != 0:
@@ -330,7 +330,7 @@ class GitFileTracker:
         except Exception:
             return set()
     
-    def get_file_hash(self, path: str) -> Optional[str]:
+    def get_file_hash(self, path: str) -> str | None:
         """Get git hash for a file.
         
         Args:
@@ -347,7 +347,7 @@ class GitFileTracker:
                 cwd=self.repo_dir,
                 capture_output=True,
                 text=True,
-                timeout=10,
+                timeout=10, check=False,
             )
             
             if result.returncode == 0:
@@ -386,7 +386,7 @@ def read_files_from_diff(
     repo_dir: str,
     context_lines: int = 10,
     max_bytes: int = 60_000,
-) -> Dict[str, str]:
+) -> dict[str, str]:
     """Read only the files mentioned in a diff.
     
     Args:
@@ -442,7 +442,7 @@ def clear_all_caches() -> None:
         _file_cache.clear()
 
 
-def get_cache_stats() -> Dict[str, Any]:
+def get_cache_stats() -> dict[str, Any]:
     """Get statistics for all caches."""
     cache = get_file_cache()
     return {

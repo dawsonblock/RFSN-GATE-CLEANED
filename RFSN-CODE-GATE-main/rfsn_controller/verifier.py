@@ -10,7 +10,6 @@ Implements multi-predicate goal verification:
 
 import os
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
 
 from .parsers import error_signature, parse_pytest_failures
 from .sandbox import Sandbox, docker_test, run_cmd
@@ -24,13 +23,13 @@ class VerifyResult:
     exit_code: int
     stdout: str
     stderr: str
-    failing_tests: List[str] = field(default_factory=list)
+    failing_tests: list[str] = field(default_factory=list)
     sig: str = ""
     predicate_name: str = "tests"  # Name of the verification predicate
     skipped: bool = False  # Whether verification was skipped
     # Test delta tracking
-    tests_fixed: List[str] = field(default_factory=list)  # fail → pass
-    tests_regressed: List[str] = field(default_factory=list)  # pass → fail
+    tests_fixed: list[str] = field(default_factory=list)  # fail → pass
+    tests_regressed: list[str] = field(default_factory=list)  # pass → fail
 
 
 @dataclass
@@ -38,7 +37,7 @@ class VerifySummary:
     """Summary of all verification checks."""
 
     all_passed: bool
-    results: List[VerifyResult]
+    results: list[VerifyResult]
     total_checks: int
     passed_checks: int
     failed_checks: int
@@ -113,10 +112,10 @@ class Verifier:
         self,
         sb: Sandbox,
         test_cmd: str,
-        lint_cmd: Optional[str] = None,
-        typecheck_cmd: Optional[str] = None,
-        repro_cmd: Optional[str] = None,
-        verify_cmd: Optional[str] = None,
+        lint_cmd: str | None = None,
+        typecheck_cmd: str | None = None,
+        repro_cmd: str | None = None,
+        verify_cmd: str | None = None,
         docker_image: str = "python:3.11-slim",
         cpu: float = 2.0,
         mem_mb: int = 4096,
@@ -156,7 +155,7 @@ class Verifier:
     def verify_all(
         self,
         timeout_sec: int = 120,
-        focus_test_file: Optional[str] = None,
+        focus_test_file: str | None = None,
     ) -> VerifySummary:
         """Run all enabled verification predicates in order (fast-to-slow).
 
@@ -388,7 +387,7 @@ def run_tests(
 
 def get_default_python_commands(
     repo_dir: str,
-) -> Dict[str, Optional[str]]:
+) -> dict[str, str | None]:
     """Get default verification commands for Python projects.
 
     Args:

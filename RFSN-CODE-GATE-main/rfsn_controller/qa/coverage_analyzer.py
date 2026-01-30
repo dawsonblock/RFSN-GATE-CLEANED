@@ -13,7 +13,7 @@ import os
 import re
 import subprocess
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -22,10 +22,10 @@ logger = logging.getLogger(__name__)
 class CoverageReport:
     """Coverage analysis for touched files."""
 
-    touched_files: List[str] = field(default_factory=list)
-    covered_files: List[str] = field(default_factory=list)
-    untested_files: List[str] = field(default_factory=list)
-    coverage_map: Dict[str, float] = field(default_factory=dict)  # file -> coverage %
+    touched_files: list[str] = field(default_factory=list)
+    covered_files: list[str] = field(default_factory=list)
+    untested_files: list[str] = field(default_factory=list)
+    coverage_map: dict[str, float] = field(default_factory=dict)  # file -> coverage %
     total_coverage: float = 0.0
     confidence: str = "unknown"  # "high", "medium", "low", "unknown"
 
@@ -33,7 +33,7 @@ class CoverageReport:
     def has_untested_changes(self) -> bool:
         return len(self.untested_files) > 0
 
-    def as_evidence_data(self) -> Dict[str, Any]:
+    def as_evidence_data(self) -> dict[str, Any]:
         return {
             "touched_files": self.touched_files,
             "covered_files": self.covered_files,
@@ -63,9 +63,9 @@ class CoverageAnalyzer:
     def __init__(
         self,
         *,
-        cwd: Optional[str] = None,
+        cwd: str | None = None,
         timeout_seconds: int = 60,
-        cov_report_path: Optional[str] = None,
+        cov_report_path: str | None = None,
         enable_cache: bool = True,
     ):
         """Initialize analyzer.
@@ -80,14 +80,14 @@ class CoverageAnalyzer:
         self.timeout_seconds = timeout_seconds
         self.cov_report_path = cov_report_path
         self.enable_cache = enable_cache
-        self._cached_coverage_data: Optional[Dict[str, Any]] = None
+        self._cached_coverage_data: dict[str, Any] | None = None
         self._cache_loaded: bool = False
 
     def analyze_patch(
         self,
-        touched_files: List[str],
+        touched_files: list[str],
         *,
-        coverage_data: Optional[Dict[str, Any]] = None,
+        coverage_data: dict[str, Any] | None = None,
     ) -> CoverageReport:
         """Analyze coverage for files touched by a patch.
         
@@ -113,9 +113,9 @@ class CoverageAnalyzer:
                 confidence="unknown",
             )
 
-        covered: List[str] = []
-        untested: List[str] = []
-        coverage_map: Dict[str, float] = {}
+        covered: list[str] = []
+        untested: list[str] = []
+        coverage_map: dict[str, float] = {}
 
         # Check coverage for each touched file
         for file_path in source_files:
@@ -166,7 +166,7 @@ class CoverageAnalyzer:
                 return True
         return False
 
-    def _load_coverage_data(self) -> Optional[Dict[str, Any]]:
+    def _load_coverage_data(self) -> dict[str, Any] | None:
         """Load coverage data from JSON report or run coverage.
         
         Uses cached data if available and caching is enabled.
@@ -218,8 +218,8 @@ class CoverageAnalyzer:
     def _get_file_coverage(
         self,
         file_path: str,
-        coverage_data: Dict[str, Any],
-    ) -> Optional[float]:
+        coverage_data: dict[str, Any],
+    ) -> float | None:
         """Get coverage percentage for a file.
         
         Args:
@@ -250,7 +250,7 @@ class CoverageAnalyzer:
 
         return None
 
-    def _extract_coverage_pct(self, file_data: Dict[str, Any]) -> float:
+    def _extract_coverage_pct(self, file_data: dict[str, Any]) -> float:
         """Extract coverage percentage from file data."""
         # Format 1: {"summary": {"percent_covered": X}}
         if "summary" in file_data:
@@ -274,7 +274,7 @@ class CoverageAnalyzer:
         test_cmd: str = "pytest",
         *,
         output_path: str = "coverage.json",
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Run coverage and return data.
         
         Args:
@@ -294,7 +294,7 @@ class CoverageAnalyzer:
                 capture_output=True,
                 text=True,
                 timeout=self.timeout_seconds,
-                cwd=self.cwd,
+                cwd=self.cwd, check=False,
             )
 
             if os.path.exists(output_path):
@@ -312,9 +312,9 @@ def create_coverage_analyzer(**kwargs) -> CoverageAnalyzer:
 
 
 def coverage_evidence_fn(
-    touched_files: List[str],
-    coverage_data: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
+    touched_files: list[str],
+    coverage_data: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """Create coverage evidence for EvidenceCollector.
     
     Args:

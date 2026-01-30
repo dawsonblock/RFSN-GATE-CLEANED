@@ -19,17 +19,18 @@ Usage:
 
 from __future__ import annotations
 
-from typing import Any, Optional
 from dataclasses import dataclass
+from typing import Any
 
 try:
-    from .planner_v5 import MetaPlanner, StateTracker, Proposal
+    from .planner_v5 import ActionType, MetaPlanner, Proposal, StateTracker
     HAS_PLANNER_V5 = True
 except ImportError:
     HAS_PLANNER_V5 = False
     MetaPlanner = None  # type: ignore
     StateTracker = None  # type: ignore
     Proposal = None  # type: ignore
+    ActionType = None  # type: ignore
 
 
 @dataclass
@@ -37,10 +38,10 @@ class ControllerAction:
     """Action translated from Planner v5 proposal for controller."""
     
     action_type: str  # "edit_file", "run_tests", "read_file", etc.
-    target_path: Optional[str] = None
-    content: Optional[str] = None
-    test_path: Optional[str] = None
-    command: Optional[str] = None
+    target_path: str | None = None
+    content: str | None = None
+    test_path: str | None = None
+    command: str | None = None
     metadata: dict[str, Any] | None = None
 
 
@@ -78,13 +79,13 @@ class PlannerV5Adapter:
             self.state_tracker = None
             self.meta_planner = None
         
-        self.last_proposal: Optional[Proposal] = None
+        self.last_proposal: Proposal | None = None
     
     def get_next_action(
         self,
-        controller_feedback: Optional[dict] = None,
-        gate_rejection: Optional[tuple[str, str]] = None
-    ) -> Optional[ControllerAction]:
+        controller_feedback: dict | None = None,
+        gate_rejection: tuple[str, str] | None = None
+    ) -> ControllerAction | None:
         """Get next action from Planner v5.
         
         Args:
@@ -124,7 +125,10 @@ class PlannerV5Adapter:
         """
         # Extract action info from proposal
         action_type = proposal.action_type
-        target_path = proposal.target.get("path") if proposal.target else None
+        # Get the string value from the enum
+        action_type_str = action_type.value if hasattr(action_type, 'value') else str(action_type)
+        # Target is a Target dataclass with .path attribute, not a dict
+        target_path = proposal.target.path if proposal.target else None
         
         # Build metadata
         metadata = {
@@ -134,8 +138,8 @@ class PlannerV5Adapter:
             "risk_level": proposal.risk_level,
         }
         
-        # Translate to controller action
-        if action_type == "edit_file":
+        # Translate to controller action using string comparison
+        if action_type_str == "edit_file":
             return ControllerAction(
                 action_type="edit_file",
                 target_path=target_path,
@@ -143,21 +147,21 @@ class PlannerV5Adapter:
                 metadata=metadata
             )
         
-        elif action_type == "run_tests":
+        elif action_type_str == "run_tests":
             return ControllerAction(
                 action_type="run_tests",
                 test_path=target_path,
                 metadata=metadata
             )
         
-        elif action_type == "read_file":
+        elif action_type_str == "read_file":
             return ControllerAction(
                 action_type="read_file",
                 target_path=target_path,
                 metadata=metadata
             )
         
-        elif action_type == "run_command":
+        elif action_type_str == "run_command":
             return ControllerAction(
                 action_type="run_command",
                 command=proposal.change_summary,  # Command stored here
@@ -165,9 +169,9 @@ class PlannerV5Adapter:
             )
         
         else:
-            # Generic action
+            # Generic action - use string value
             return ControllerAction(
-                action_type=action_type,
+                action_type=action_type_str,
                 target_path=target_path,
                 metadata=metadata
             )

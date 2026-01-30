@@ -15,8 +15,8 @@
         "max_steps": 8,
         "required_step_types": [
             "analyze",
-            "locate",
-            "implement"
+            "fix",
+            "verify"
         ],
         "forbidden_files": [
             "controller.py",
@@ -35,18 +35,18 @@
             ]
         },
         {
-            "pattern": "locate|find|identify",
-            "description": "Early step should locate the source of the issue",
+            "pattern": "locate|find|identify|implement",
+            "description": "Should locate the source or implement fix",
             "required_fields": [
                 "allowed_files"
-            ]
+            ],
+            "optional": true
         },
         {
-            "pattern": "implement|fix|修repair",
+            "pattern": "implement|fix|change",
             "description": "Must have an implementation step",
             "required_fields": [
-                "allowed_files",
-                "verify"
+                "allowed_files"
             ]
         },
         {

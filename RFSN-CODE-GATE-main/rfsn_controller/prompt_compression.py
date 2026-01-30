@@ -6,15 +6,14 @@ Reduces token count while preserving semantic meaning.
 from __future__ import annotations
 
 import re
-from typing import Dict, List, Optional, Tuple
 
 
 def compress_prompt(
     prompt: str,
     *,
-    max_tokens: Optional[int] = None,
+    max_tokens: int | None = None,
     aggressive: bool = False,
-) -> Tuple[str, Dict[str, int]]:
+) -> tuple[str, dict[str, int]]:
     """Compress a prompt to reduce token count.
     
     Techniques used:
@@ -70,8 +69,8 @@ def compress_prompt(
     
     # 4. Deduplicate repeated error messages
     lines = compressed.split('\n')
-    seen_errors: Dict[str, int] = {}
-    deduped_lines: List[str] = []
+    seen_errors: dict[str, int] = {}
+    deduped_lines: list[str] = []
     
     for line in lines:
         # Check if it's an error/traceback line

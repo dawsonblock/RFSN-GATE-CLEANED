@@ -1,7 +1,24 @@
 """Tests for multi-tier cache system."""
 
 import tempfile
+
 import pytest
+
+# These tests have timing issues in parallel execution due to SQLite/multiprocess contention
+pytestmark = [pytest.mark.timeout(60)]
+
+
+@pytest.fixture(autouse=True)
+def reset_global_cache():
+    """Reset global cache before each test to ensure isolation."""
+    import rfsn_controller.multi_tier_cache as cache_module
+    # Reset global cache
+    cache_module._global_cache = None
+    yield
+    # Cleanup after test
+    if cache_module._global_cache is not None:
+        cache_module._global_cache.close()
+        cache_module._global_cache = None
 
 
 def test_multi_tier_cache_initialization():
@@ -103,11 +120,15 @@ def test_cache_clear():
 
 def test_cached_decorator():
     """Test @cached decorator."""
+    import uuid
+
     from rfsn_controller.multi_tier_cache import cached
 
     call_count = [0]
+    # Use unique key prefix to avoid disk cache collisions
+    unique_prefix = f"test_func_{uuid.uuid4().hex[:8]}"
 
-    @cached(ttl_seconds=3600, key_prefix="test_func")
+    @cached(ttl_seconds=3600, key_prefix=unique_prefix)
     def expensive_function(x, y):
         call_count[0] += 1
         return x + y

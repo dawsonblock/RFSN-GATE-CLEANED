@@ -95,7 +95,7 @@ packages = ["rfsn_controller"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
-addopts = "-v --strict-markers"
+addopts = "-v --strict-markers --timeout=30"
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "integration: marks tests as integration tests requiring network",
@@ -103,6 +103,8 @@ markers = [
     "security: marks tests as security-related tests",
     "scanner: marks tests for shell scanner",
     "asyncio: marks tests as async tests",
+    "benchmark: marks tests as performance benchmarks",
+    "performance: marks tests as performance tests",
 ]
 filterwarnings = [
     "ignore:Using `@model_validator` with mode='after'.*:DeprecationWarning:google\\.genai\\.types",

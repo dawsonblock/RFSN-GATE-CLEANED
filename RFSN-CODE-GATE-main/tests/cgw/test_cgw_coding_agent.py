@@ -9,14 +9,10 @@ This test module validates the serial decision architecture:
 """
 
 import time
-from unittest.mock import MagicMock, patch
 
 import pytest
 
-from cgw_ssl_guard import SimpleEventBus, ThalamusGate, CGWRuntime
-from cgw_ssl_guard.monitors import SerialityMonitor
-from cgw_ssl_guard.types import Candidate
-
+from cgw_ssl_guard import SimpleEventBus, ThalamusGate
 from cgw_ssl_guard.coding_agent import (
     ActionPayload,
     AgentConfig,
@@ -24,7 +20,6 @@ from cgw_ssl_guard.coding_agent import (
     BlockingExecutor,
     CodingAction,
     CodingAgentRuntime,
-    CycleResult,
     ExecutionResult,
     ExecutorConfig,
     IdleProposalGenerator,
@@ -32,6 +27,8 @@ from cgw_ssl_guard.coding_agent import (
     ProposalContext,
     SafetyProposalGenerator,
 )
+from cgw_ssl_guard.monitors import SerialityMonitor
+from cgw_ssl_guard.types import Candidate
 
 
 class TestSerialityGuarantee:

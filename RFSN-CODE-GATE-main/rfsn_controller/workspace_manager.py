@@ -14,7 +14,6 @@ import shutil
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
 from .structured_logging import get_logger
 
@@ -113,7 +112,7 @@ class WorkspaceManager:
             target = (self.repo_dir / path).resolve()
             
         if not target.is_relative_to(self.repo_dir):
-            logger.error(f"Path traversal blocked", path=path, target=str(target))
+            logger.error("Path traversal blocked", path=path, target=str(target))
             raise ValueError(f"Security Violation: Path traversal attempt blocked: {path}")
             
         return str(target)
@@ -138,7 +137,7 @@ class WorkspaceManager:
             # Strip trailing slashes and wildcards for comparison
             check_pref = pref.rstrip("/").rstrip("*")
             if p.startswith(check_pref + "/") or p == check_pref:
-                logger.debug(f"Path rejected as unsafe", path=p, prefix=pref)
+                logger.debug("Path rejected as unsafe", path=p, prefix=pref)
                 return False
             
         return True
@@ -147,7 +146,7 @@ class WorkspaceManager:
         self, 
         args: list[str], 
         timeout: int = 60,
-        cwd: Optional[str] = None
+        cwd: str | None = None
     ) -> GitResult:
         """
         Execute a git command safely.
@@ -164,20 +163,20 @@ class WorkspaceManager:
         work_dir = Path(cwd) if cwd else self.repo_dir
         
         try:
-            logger.debug(f"Running git command", args=args, cwd=str(work_dir))
+            logger.debug("Running git command", args=args, cwd=str(work_dir))
             
             result = subprocess.run(
                 cmd,
                 cwd=str(work_dir),
                 capture_output=True,
                 text=True,
-                timeout=timeout
+                timeout=timeout, check=False
             )
             
             success = result.returncode == 0
             
             if not success:
-                logger.warning(f"Git command failed", args=args, stderr=result.stderr)
+                logger.warning("Git command failed", args=args, stderr=result.stderr)
             
             return GitResult(
                 returncode=result.returncode,
@@ -187,7 +186,7 @@ class WorkspaceManager:
             )
             
         except subprocess.TimeoutExpired:
-            logger.error(f"Git command timed out", args=args, timeout=timeout)
+            logger.error("Git command timed out", args=args, timeout=timeout)
             return GitResult(
                 returncode=-1,
                 stdout="",
@@ -195,7 +194,7 @@ class WorkspaceManager:
                 success=False
             )
         except Exception as e:
-            logger.error(f"Git command error", args=args, error=str(e))
+            logger.error("Git command error", args=args, error=str(e))
             return GitResult(
                 returncode=-1,
                 stdout="",
@@ -233,11 +232,11 @@ class WorkspaceManager:
         ])
         
         if not result.success:
-            logger.error(f"Failed to create worktree", path=str(wt_path), error=result.stderr)
+            logger.error("Failed to create worktree", path=str(wt_path), error=result.stderr)
             raise RuntimeError(f"Failed to create worktree: {result.stderr}")
         
         self.worktrees.append(wt_path)
-        logger.info(f"Created worktree", path=str(wt_path), branch=branch)
+        logger.info("Created worktree", path=str(wt_path), branch=branch)
         
         return str(wt_path)
 
@@ -251,7 +250,7 @@ class WorkspaceManager:
         wt_path = Path(worktree_path)
         
         if wt_path not in self.worktrees:
-            logger.warning(f"Worktree not managed by this instance", path=str(wt_path))
+            logger.warning("Worktree not managed by this instance", path=str(wt_path))
             return
         
         try:
@@ -260,16 +259,16 @@ class WorkspaceManager:
             
             if result.success:
                 self.worktrees.remove(wt_path)
-                logger.info(f"Removed worktree", path=str(wt_path))
+                logger.info("Removed worktree", path=str(wt_path))
             else:
-                logger.error(f"Failed to remove worktree via git", path=str(wt_path), error=result.stderr)
+                logger.error("Failed to remove worktree via git", path=str(wt_path), error=result.stderr)
                 # Fallback: remove directory manually
                 if wt_path.exists():
                     shutil.rmtree(wt_path, ignore_errors=True)
                     self.worktrees.remove(wt_path)
                     
         except Exception as e:
-            logger.error(f"Error removing worktree", path=str(wt_path), error=str(e))
+            logger.error("Error removing worktree", path=str(wt_path), error=str(e))
 
     def cleanup(self):
         """
@@ -285,9 +284,9 @@ class WorkspaceManager:
         if self.root.exists() and self.root != self.repo_dir:
             try:
                 shutil.rmtree(self.root, ignore_errors=True)
-                logger.info(f"Cleaned up workspace", root=str(self.root))
+                logger.info("Cleaned up workspace", root=str(self.root))
             except Exception as e:
-                logger.error(f"Error cleaning up workspace", root=str(self.root), error=str(e))
+                logger.error("Error cleaning up workspace", root=str(self.root), error=str(e))
 
     def get_file_tree(self, include_hidden: bool = False) -> list[str]:
         """
@@ -312,7 +311,7 @@ class WorkspaceManager:
         
         return files
 
-    def get_diff(self, file_path: Optional[str] = None) -> str:
+    def get_diff(self, file_path: str | None = None) -> str:
         """
         Get git diff for the repository or specific file.
         

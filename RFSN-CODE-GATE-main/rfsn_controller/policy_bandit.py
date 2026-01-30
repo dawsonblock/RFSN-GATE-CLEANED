@@ -6,12 +6,11 @@ actions are most likely to succeed based on past outcomes.
 
 from __future__ import annotations
 
-
 import random
 import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 
 @dataclass
@@ -56,7 +55,7 @@ class BanditArm:
         """Get the mean of the posterior distribution."""
         return self.alpha / (self.alpha + self.beta)
     
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to JSON-serializable dict."""
         return {
             "name": self.name,
@@ -67,7 +66,7 @@ class BanditArm:
         }
     
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "BanditArm":
+    def from_dict(cls, data: dict[str, Any]) -> BanditArm:
         """Create from dictionary."""
         return cls(
             name=data["name"],
@@ -104,7 +103,7 @@ class ContextFeatures:
     last_outcome: str = "none"  # success, fail, none
     step_number: int = 0
     
-    def to_vector(self) -> List[float]:
+    def to_vector(self) -> list[float]:
         """Convert to numeric feature vector."""
         # Simple one-hot encoding
         mode_map = {"analysis": 0, "repair": 1, "refactor": 2, "feature": 3}
@@ -134,7 +133,7 @@ class ThompsonBandit:
     def __init__(
         self,
         seed: int = 1337,
-        arm_names: Optional[List[str]] = None,
+        arm_names: list[str] | None = None,
     ) -> None:
         """Initialize the bandit.
         
@@ -144,7 +143,7 @@ class ThompsonBandit:
         """
         self.seed = seed
         self.rng = random.Random(seed)
-        self.arms: Dict[str, BanditArm] = {}
+        self.arms: dict[str, BanditArm] = {}
         
         # Initialize arms
         arm_names = arm_names or DEFAULT_ARMS
@@ -153,8 +152,8 @@ class ThompsonBandit:
     
     def choose(
         self,
-        available: Optional[List[str]] = None,
-        context: Optional[ContextFeatures] = None,
+        available: list[str] | None = None,
+        context: ContextFeatures | None = None,
     ) -> str:
         """Choose the best arm using Thompson Sampling.
         
@@ -168,7 +167,7 @@ class ThompsonBandit:
         candidates = available or list(self.arms.keys())
         
         # Sample from each arm's posterior
-        samples: List[Tuple[str, float]] = []
+        samples: list[tuple[str, float]] = []
         for name in candidates:
             if name not in self.arms:
                 # Create new arm with default priors
@@ -184,8 +183,8 @@ class ThompsonBandit:
     def choose_top_k(
         self,
         k: int,
-        available: Optional[List[str]] = None,
-    ) -> List[str]:
+        available: list[str] | None = None,
+    ) -> list[str]:
         """Choose top k arms by Thompson Sampling.
         
         Args:
@@ -197,7 +196,7 @@ class ThompsonBandit:
         """
         candidates = available or list(self.arms.keys())
         
-        samples: List[Tuple[str, float]] = []
+        samples: list[tuple[str, float]] = []
         for name in candidates:
             if name not in self.arms:
                 self.arms[name] = BanditArm(name=name)
@@ -220,7 +219,7 @@ class ThompsonBandit:
         
         self.arms[arm].update(reward)
     
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get statistics about all arms.
         
         Returns:
@@ -295,7 +294,7 @@ class ThompsonBandit:
         
         conn.close()
     
-    def to_json(self) -> Dict[str, Any]:
+    def to_json(self) -> dict[str, Any]:
         """Convert to JSON-serializable dict."""
         return {
             "seed": self.seed,
@@ -303,7 +302,7 @@ class ThompsonBandit:
         }
     
     @classmethod
-    def from_json(cls, data: Dict[str, Any]) -> "ThompsonBandit":
+    def from_json(cls, data: dict[str, Any]) -> ThompsonBandit:
         """Create from JSON data."""
         bandit = cls(seed=data.get("seed", 1337))
         for name, arm_data in data.get("arms", {}).items():
@@ -312,7 +311,7 @@ class ThompsonBandit:
 
 
 def create_policy(
-    db_path: Optional[str] = None,
+    db_path: str | None = None,
     seed: int = 1337,
 ) -> ThompsonBandit:
     """Create a configured policy instance.

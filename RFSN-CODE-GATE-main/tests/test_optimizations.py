@@ -1,19 +1,20 @@
 """Tests for optimization modules."""
 
-import pytest
 import tempfile
-from pathlib import Path
 import time
+from pathlib import Path
 
-from rfsn_controller.file_cache import FileCache, cached_read_file
-from rfsn_controller.early_stop_optimizer import (
-    EarlyStopOptimizer,
-    EarlyStopConfig,
-)
+import pytest
+
 from rfsn_controller.batch_file_ops import (
-    batch_read_files,
     async_batch_read_files,
+    batch_read_files,
 )
+from rfsn_controller.early_stop_optimizer import (
+    EarlyStopConfig,
+    EarlyStopOptimizer,
+)
+from rfsn_controller.file_cache import FileCache
 
 
 class TestFileCache:

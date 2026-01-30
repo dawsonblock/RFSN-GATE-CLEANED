@@ -11,10 +11,9 @@ from __future__ import annotations
 
 import json
 import time
-from dataclasses import dataclass, asdict
-from datetime import datetime
+from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from .structured_logging import get_logger
 
@@ -28,8 +27,8 @@ class EvidenceEntry:
     type: str
     data: dict[str, Any]
     timestamp: float
-    phase: Optional[str] = None
-    patch_id: Optional[int] = None
+    phase: str | None = None
+    patch_id: int | None = None
     
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
@@ -67,7 +66,7 @@ class EvidenceManager:
         './evidence/summary.json'
     """
 
-    def __init__(self, output_dir: Path, run_id: Optional[str] = None):
+    def __init__(self, output_dir: Path, run_id: str | None = None):
         """
         Initialize the evidence manager.
         
@@ -84,14 +83,14 @@ class EvidenceManager:
         self.run_dir = self.output_dir / self.run_id
         self.run_dir.mkdir(exist_ok=True)
         
-        logger.info(f"Evidence manager initialized", run_id=self.run_id, output_dir=str(self.run_dir))
+        logger.info("Evidence manager initialized", run_id=self.run_id, output_dir=str(self.run_dir))
 
     def add_evidence(
         self, 
         event_type: str, 
         data: dict[str, Any],
-        phase: Optional[str] = None,
-        patch_id: Optional[int] = None
+        phase: str | None = None,
+        patch_id: int | None = None
     ):
         """
         Add a piece of evidence to the log.
@@ -112,7 +111,7 @@ class EvidenceManager:
         self.evidence_log.append(entry)
         self._persist_entry(entry)
         
-        logger.debug(f"Evidence added", event_type=event_type, phase=phase, patch_id=patch_id)
+        logger.debug("Evidence added", event_type=event_type, phase=phase, patch_id=patch_id)
 
     def add_llm_call(
         self,
@@ -123,7 +122,7 @@ class EvidenceManager:
         tokens: int,
         latency_ms: float,
         cost_usd: float = 0.0,
-        phase: Optional[str] = None
+        phase: str | None = None
     ):
         """Add evidence for an LLM API call."""
         self.add_evidence(
@@ -146,7 +145,7 @@ class EvidenceManager:
         content: str,
         test_passed: bool,
         test_output: str,
-        phase: Optional[str] = None
+        phase: str | None = None
     ):
         """Add evidence for a patch application and test result."""
         self.add_evidence(
@@ -166,7 +165,7 @@ class EvidenceManager:
         rationale: str,
         alternatives: list[str],
         selected: str,
-        phase: Optional[str] = None
+        phase: str | None = None
     ):
         """Add evidence for a planning or strategy decision."""
         self.add_evidence(
@@ -186,7 +185,7 @@ class EvidenceManager:
         args: dict[str, Any],
         result: Any,
         success: bool,
-        phase: Optional[str] = None
+        phase: str | None = None
     ):
         """Add evidence for a tool execution."""
         self.add_evidence(
@@ -207,7 +206,7 @@ class EvidenceManager:
             with open(log_file, "a") as f:
                 f.write(json.dumps(entry.to_dict()) + "\n")
         except Exception as e:
-            logger.error(f"Failed to persist evidence entry", error=str(e))
+            logger.error("Failed to persist evidence entry", error=str(e))
 
     def export_summary(self) -> str:
         """
@@ -232,11 +231,11 @@ class EvidenceManager:
             with open(summary_path, "w") as f:
                 json.dump(summary, f, indent=2)
             
-            logger.info(f"Evidence summary exported", path=str(summary_path), events=len(self.evidence_log))
+            logger.info("Evidence summary exported", path=str(summary_path), events=len(self.evidence_log))
             return str(summary_path)
             
         except Exception as e:
-            logger.error(f"Failed to export evidence summary", error=str(e))
+            logger.error("Failed to export evidence summary", error=str(e))
             return ""
 
     def _count_by_type(self) -> dict[str, int]:

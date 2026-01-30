@@ -24,18 +24,16 @@ Usage:
 
 from __future__ import annotations
 
-from prometheus_client import (
-    Counter,
-    Histogram,
-    Gauge,
-    Info,
-    start_http_server,
-    CollectorRegistry,
-    REGISTRY,
-)
-from typing import Optional
 import time
 
+from prometheus_client import (
+    REGISTRY,
+    Counter,
+    Gauge,
+    Histogram,
+    Info,
+    start_http_server,
+)
 
 # =============================================================================
 # Proposal Metrics
@@ -358,8 +356,8 @@ def initialize_system_info(version: str, python_version: str) -> None:
 # Context Manager Tracking (Convenience Wrappers)
 # =============================================================================
 
+from collections.abc import Generator
 from contextlib import contextmanager
-from typing import Generator
 
 
 @contextmanager
@@ -433,7 +431,7 @@ def track_patch_application(phase: str) -> Generator[None, None, None]:
         yield
         success = True
     finally:
-        duration = time.time() - start_time
+        time.time() - start_time
         if success:
             patches_applied.labels(phase=phase).inc()
         else:

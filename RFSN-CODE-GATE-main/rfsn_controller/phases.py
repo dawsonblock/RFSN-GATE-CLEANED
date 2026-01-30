@@ -6,7 +6,6 @@ Each phase represents a distinct stage in the repair pipeline.
 """
 
 from enum import Enum
-from typing import Optional
 
 
 class Phase(Enum):
@@ -40,7 +39,7 @@ class Phase(Enum):
 class PhaseTransition:
     """Track phase transitions and metadata."""
 
-    def __init__(self, from_phase: Optional[Phase], to_phase: Phase, reason: str = ""):
+    def __init__(self, from_phase: Phase | None, to_phase: Phase, reason: str = ""):
         self.from_phase = from_phase
         self.to_phase = to_phase
         self.reason = reason

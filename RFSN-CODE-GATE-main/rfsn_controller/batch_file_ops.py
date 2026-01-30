@@ -7,9 +7,8 @@ Useful for reading multiple files, checking multiple paths, etc.
 from __future__ import annotations
 
 import asyncio
-from pathlib import Path
-from typing import Any, Callable, Optional
 import concurrent.futures
+from pathlib import Path
 
 
 class BatchFileReader:
@@ -22,7 +21,7 @@ class BatchFileReader:
             max_workers: Maximum parallel workers
         """
         self.max_workers = max_workers
-        self._executor: Optional[concurrent.futures.ThreadPoolExecutor] = None
+        self._executor: concurrent.futures.ThreadPoolExecutor | None = None
     
     def __enter__(self):
         self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers)
@@ -33,7 +32,7 @@ class BatchFileReader:
             self._executor.shutdown(wait=True)
             self._executor = None
     
-    def read_files(self, filepaths: list[str | Path]) -> dict[str, Optional[str]]:
+    def read_files(self, filepaths: list[str | Path]) -> dict[str, str | None]:
         """Read multiple files in parallel.
         
         Args:
@@ -45,7 +44,7 @@ class BatchFileReader:
         if not self._executor:
             raise RuntimeError("BatchFileReader must be used as context manager")
         
-        def read_single(filepath: str | Path) -> tuple[str, Optional[str]]:
+        def read_single(filepath: str | Path) -> tuple[str, str | None]:
             """Read single file."""
             filepath = str(filepath)
             try:
@@ -109,7 +108,7 @@ class AsyncBatchFileReader:
             max_concurrent: Maximum concurrent operations
         """
         self.max_concurrent = max_concurrent
-        self._semaphore: Optional[asyncio.Semaphore] = None
+        self._semaphore: asyncio.Semaphore | None = None
     
     async def __aenter__(self):
         self._semaphore = asyncio.Semaphore(self.max_concurrent)
@@ -118,7 +117,7 @@ class AsyncBatchFileReader:
     async def __aexit__(self, *args):
         self._semaphore = None
     
-    async def read_files(self, filepaths: list[str | Path]) -> dict[str, Optional[str]]:
+    async def read_files(self, filepaths: list[str | Path]) -> dict[str, str | None]:
         """Read multiple files asynchronously.
         
         Args:
@@ -130,7 +129,7 @@ class AsyncBatchFileReader:
         if not self._semaphore:
             raise RuntimeError("AsyncBatchFileReader must be used as context manager")
         
-        async def read_single(filepath: str | Path) -> tuple[str, Optional[str]]:
+        async def read_single(filepath: str | Path) -> tuple[str, str | None]:
             """Read single file with semaphore."""
             async with self._semaphore:
                 filepath = str(filepath)
@@ -182,7 +181,7 @@ class AsyncBatchFileReader:
         return dict(results_list)
 
 
-def batch_read_files(filepaths: list[str | Path], max_workers: int = 4) -> dict[str, Optional[str]]:
+def batch_read_files(filepaths: list[str | Path], max_workers: int = 4) -> dict[str, str | None]:
     """Convenience function to batch read files.
     
     Args:
@@ -199,7 +198,7 @@ def batch_read_files(filepaths: list[str | Path], max_workers: int = 4) -> dict[
 async def async_batch_read_files(
     filepaths: list[str | Path],
     max_concurrent: int = 10
-) -> dict[str, Optional[str]]:
+) -> dict[str, str | None]:
     """Convenience function to batch read files asynchronously.
     
     Args:

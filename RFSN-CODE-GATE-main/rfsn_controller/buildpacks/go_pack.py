@@ -6,7 +6,6 @@ Handles Go repositories with go modules.
 
 import hashlib
 import re
-from typing import List, Optional
 
 from .base import (
     Buildpack,
@@ -27,15 +26,13 @@ class GoBuildpack(Buildpack):
         super().__init__()
         self._buildpack_type = BuildpackType.GO
 
-    def detect(self, ctx: BuildpackContext) -> Optional[DetectResult]:
+    def detect(self, ctx: BuildpackContext) -> DetectResult | None:
         """Detect if this is a Go repository."""
         go_indicators = ["go.mod", "go.sum", "Gopkg.toml", "Gopkg.lock"]
 
         found_indicators = []
         for indicator in go_indicators:
-            if indicator in ctx.files:
-                found_indicators.append(indicator)
-            elif any(f == indicator or f.endswith("/" + indicator) for f in ctx.repo_tree):
+            if indicator in ctx.files or any(f == indicator or f.endswith("/" + indicator) for f in ctx.repo_tree):
                 found_indicators.append(indicator)
 
         if not found_indicators:
@@ -57,13 +54,13 @@ class GoBuildpack(Buildpack):
         """Return the Docker image for Go."""
         return "golang:1.22-alpine"
 
-    def sysdeps_whitelist(self) -> List[str]:
+    def sysdeps_whitelist(self) -> list[str]:
         """Return Go-specific system dependencies."""
         common = ["build-essential", "pkg-config", "git", "ca-certificates"]
         go_extras = ["gcc", "musl-dev"]
         return common + go_extras
 
-    def install_plan(self, ctx: BuildpackContext) -> List[Step]:
+    def install_plan(self, ctx: BuildpackContext) -> list[Step]:
         """Generate Go installation steps."""
         steps = []
 
@@ -84,7 +81,7 @@ class GoBuildpack(Buildpack):
 
         return steps
 
-    def test_plan(self, ctx: BuildpackContext, focus_file: Optional[str] = None) -> TestPlan:
+    def test_plan(self, ctx: BuildpackContext, focus_file: str | None = None) -> TestPlan:
         """Generate Go test execution plan."""
         if focus_file:
             argv = ["go", "test", "-v", focus_file]
@@ -132,7 +129,7 @@ class GoBuildpack(Buildpack):
             error_message=error_message,
         )
 
-    def focus_plan(self, failure: FailureInfo) -> Optional[TestPlan]:
+    def focus_plan(self, failure: FailureInfo) -> TestPlan | None:
         """Generate focused test plan based on failure."""
         if not failure.failing_tests:
             return None

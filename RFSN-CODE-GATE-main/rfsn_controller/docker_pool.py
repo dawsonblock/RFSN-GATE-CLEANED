@@ -9,7 +9,6 @@ import subprocess
 import threading
 import time
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
 
 
 @dataclass
@@ -20,7 +19,7 @@ class WarmContainer:
     image: str
     created_at: float
     in_use: bool = False
-    last_used_at: Optional[float] = None
+    last_used_at: float | None = None
 
 
 @dataclass
@@ -41,7 +40,7 @@ class WarmContainerPool:
     pool_size: int = 3
     ttl_seconds: int = 300  # Keep containers warm for 5 minutes
     
-    _containers: Dict[str, List[WarmContainer]] = field(default_factory=dict)
+    _containers: dict[str, list[WarmContainer]] = field(default_factory=dict)
     _lock: threading.Lock = field(default_factory=threading.Lock)
     
     def get_or_create(
@@ -50,7 +49,7 @@ class WarmContainerPool:
         repo_dir: str,
         cpu: float = 2.0,
         mem_mb: int = 4096,
-    ) -> Optional[WarmContainer]:
+    ) -> WarmContainer | None:
         """Get an existing warm container or create a new one.
         
         Args:
@@ -96,9 +95,9 @@ class WarmContainerPool:
     def exec_in_container(
         self,
         container: WarmContainer,
-        cmd: List[str],
+        cmd: list[str],
         timeout_sec: int = 120,
-    ) -> Dict:
+    ) -> dict:
         """Execute a command in a warm container.
         
         Args:
@@ -121,7 +120,7 @@ class WarmContainerPool:
                 shell=False,
                 text=True,
                 capture_output=True,
-                timeout=timeout_sec,
+                timeout=timeout_sec, check=False,
             )
             
             return {
@@ -180,7 +179,7 @@ class WarmContainerPool:
         repo_dir: str,
         cpu: float,
         mem_mb: int,
-    ) -> Optional[WarmContainer]:
+    ) -> WarmContainer | None:
         """Create a new warm container."""
         try:
             # Create container in detached mode with sleep infinity
@@ -202,7 +201,7 @@ class WarmContainerPool:
                 shell=False,
                 text=True,
                 capture_output=True,
-                timeout=60,
+                timeout=60, check=False,
             )
             
             if p.returncode == 0:
@@ -225,7 +224,7 @@ class WarmContainerPool:
                 shell=False,
                 text=True,
                 capture_output=True,
-                timeout=10,
+                timeout=10, check=False,
             )
             return p.returncode == 0 and p.stdout.strip() == "true"
         except Exception:
@@ -238,20 +237,20 @@ class WarmContainerPool:
                 ["docker", "stop", container_id],
                 shell=False,
                 capture_output=True,
-                timeout=10,
+                timeout=10, check=False,
             )
             subprocess.run(
                 ["docker", "rm", "-f", container_id],
                 shell=False,
                 capture_output=True,
-                timeout=10,
+                timeout=10, check=False,
             )
         except Exception:
             pass
 
 
 # Global pool instance
-_pool: Optional[WarmContainerPool] = None
+_pool: WarmContainerPool | None = None
 _pool_lock = threading.Lock()
 
 

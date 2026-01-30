@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import List, Pattern, Tuple
+from re import Pattern
 
 
 @dataclass
@@ -23,7 +23,7 @@ class SanitizationResult:
     
     original: str
     sanitized: str
-    triggered_patterns: List[str] = field(default_factory=list)
+    triggered_patterns: list[str] = field(default_factory=list)
     was_modified: bool = False
     
     def to_dict(self) -> dict:
@@ -100,7 +100,7 @@ class ContentSanitizer:
     def __init__(
         self,
         mode: str = "strip",  # strip, escape, flag
-        extra_patterns: List[str] | None = None,
+        extra_patterns: list[str] | None = None,
         case_sensitive: bool = False,
     ):
         """Initialize the sanitizer.
@@ -119,7 +119,7 @@ class ContentSanitizer:
             patterns.extend(extra_patterns)
         
         flags = 0 if case_sensitive else re.IGNORECASE
-        self._compiled: List[Pattern] = [
+        self._compiled: list[Pattern] = [
             re.compile(p, flags) for p in patterns
         ]
         self._pattern_strings = patterns
@@ -136,7 +136,7 @@ class ContentSanitizer:
         triggered = []
         sanitized = content
         
-        for pattern, pattern_str in zip(self._compiled, self._pattern_strings):
+        for pattern, pattern_str in zip(self._compiled, self._pattern_strings, strict=False):
             matches = pattern.findall(content)
             if matches:
                 triggered.append(pattern_str[:50])  # Truncate for logging
@@ -179,7 +179,7 @@ class ContentSanitizer:
                 return False
         return True
     
-    def get_triggers(self, content: str) -> List[str]:
+    def get_triggers(self, content: str) -> list[str]:
         """Get list of triggered patterns without sanitizing.
         
         Args:
@@ -189,12 +189,12 @@ class ContentSanitizer:
             List of triggered pattern descriptions.
         """
         triggered = []
-        for pattern, pattern_str in zip(self._compiled, self._pattern_strings):
+        for pattern, pattern_str in zip(self._compiled, self._pattern_strings, strict=False):
             if pattern.search(content):
                 triggered.append(pattern_str[:50])
         return triggered
     
-    def batch_sanitize(self, contents: List[str]) -> List[SanitizationResult]:
+    def batch_sanitize(self, contents: list[str]) -> list[SanitizationResult]:
         """Sanitize multiple content strings.
         
         Args:
@@ -205,7 +205,7 @@ class ContentSanitizer:
         """
         return [self.sanitize(c) for c in contents]
     
-    def sanitize_dict(self, data: dict, keys_to_sanitize: List[str]) -> Tuple[dict, List[str]]:
+    def sanitize_dict(self, data: dict, keys_to_sanitize: list[str]) -> tuple[dict, list[str]]:
         """Sanitize specific keys in a dictionary.
         
         Args:

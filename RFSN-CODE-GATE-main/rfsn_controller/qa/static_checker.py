@@ -7,8 +7,9 @@ Wraps mypy, ruff, and other static analysis tools for use as evidence.
 import json
 import logging
 import subprocess
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +20,7 @@ class StaticCheckResult:
 
     tool: str
     exit_code: int
-    issues: List[Dict[str, Any]]
+    issues: list[dict[str, Any]]
     raw_output: str = ""
 
     @property
@@ -40,7 +41,7 @@ class StaticChecker:
         self,
         *,
         timeout_seconds: int = 30,
-        cwd: Optional[str] = None,
+        cwd: str | None = None,
     ):
         """Initialize checker.
         
@@ -55,8 +56,8 @@ class StaticChecker:
         self,
         tool: str,
         *,
-        files: Optional[List[str]] = None,
-        extra_args: Optional[List[str]] = None,
+        files: list[str] | None = None,
+        extra_args: list[str] | None = None,
     ) -> StaticCheckResult:
         """Run a static checker.
         
@@ -87,8 +88,8 @@ class StaticChecker:
 
     def _run_ruff(
         self,
-        files: Optional[List[str]],
-        extra_args: Optional[List[str]],
+        files: list[str] | None,
+        extra_args: list[str] | None,
     ) -> StaticCheckResult:
         """Run ruff with JSON output."""
         cmd = ["ruff", "check", "--output-format=json"]
@@ -115,8 +116,8 @@ class StaticChecker:
 
     def _run_mypy(
         self,
-        files: Optional[List[str]],
-        extra_args: Optional[List[str]],
+        files: list[str] | None,
+        extra_args: list[str] | None,
     ) -> StaticCheckResult:
         """Run mypy."""
         cmd = ["mypy", "--no-error-summary"]
@@ -136,8 +137,8 @@ class StaticChecker:
 
     def _run_flake8(
         self,
-        files: Optional[List[str]],
-        extra_args: Optional[List[str]],
+        files: list[str] | None,
+        extra_args: list[str] | None,
     ) -> StaticCheckResult:
         """Run flake8."""
         cmd = ["flake8"]
@@ -158,8 +159,8 @@ class StaticChecker:
     def _run_generic(
         self,
         tool: str,
-        files: Optional[List[str]],
-        extra_args: Optional[List[str]],
+        files: list[str] | None,
+        extra_args: list[str] | None,
     ) -> StaticCheckResult:
         """Run a generic tool."""
         cmd = [tool]
@@ -177,7 +178,7 @@ class StaticChecker:
             raw_output=result["stdout"],
         )
 
-    def _execute(self, cmd: List[str]) -> Dict[str, Any]:
+    def _execute(self, cmd: list[str]) -> dict[str, Any]:
         """Execute a command and return result."""
         try:
             proc = subprocess.run(
@@ -185,7 +186,7 @@ class StaticChecker:
                 capture_output=True,
                 text=True,
                 timeout=self.timeout_seconds,
-                cwd=self.cwd,
+                cwd=self.cwd, check=False,
             )
             return {
                 "exit_code": proc.returncode,
@@ -197,7 +198,7 @@ class StaticChecker:
         except FileNotFoundError:
             return {"exit_code": 127, "stdout": "", "stderr": f"Tool not found: {cmd[0]}"}
 
-    def _parse_line_output(self, output: str) -> List[Dict[str, Any]]:
+    def _parse_line_output(self, output: str) -> list[dict[str, Any]]:
         """Parse line-based output into issues."""
         issues = []
         for line in output.splitlines():
@@ -219,7 +220,7 @@ class StaticChecker:
                 issues.append({"message": line})
         return issues
 
-    def _parse_mypy_output(self, output: str) -> List[Dict[str, Any]]:
+    def _parse_mypy_output(self, output: str) -> list[dict[str, Any]]:
         """Parse mypy output into issues."""
         issues = []
         for line in output.splitlines():
@@ -240,11 +241,11 @@ class StaticChecker:
 
     def check_all(
         self,
-        tools: Optional[List[str]] = None,
+        tools: list[str] | None = None,
         *,
-        files: Optional[List[str]] = None,
+        files: list[str] | None = None,
         parallel: bool = True,
-    ) -> Dict[str, StaticCheckResult]:
+    ) -> dict[str, StaticCheckResult]:
         """Run multiple static checkers.
         
         Args:
@@ -284,7 +285,7 @@ def create_static_checker(**kwargs) -> StaticChecker:
     return StaticChecker(**kwargs)
 
 
-def static_checker_evidence_fn(tool: str = "ruff") -> Callable[[str], Dict[str, Any]]:
+def static_checker_evidence_fn(tool: str = "ruff") -> Callable[[str], dict[str, Any]]:
     """Create evidence function for EvidenceCollector.
     
     Args:
@@ -295,7 +296,7 @@ def static_checker_evidence_fn(tool: str = "ruff") -> Callable[[str], Dict[str, 
     """
     checker = StaticChecker()
 
-    def evidence_fn(requested_tool: str) -> Dict[str, Any]:
+    def evidence_fn(requested_tool: str) -> dict[str, Any]:
         result = checker.check(requested_tool or tool)
         return {
             "exit_code": result.exit_code,

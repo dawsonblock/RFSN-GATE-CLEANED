@@ -6,11 +6,10 @@ Evaluates multiple candidate proposals and ranks them by quality
 without executing any code.
 """
 
-from dataclasses import dataclass
 import re
-from typing import Optional
+from dataclasses import dataclass
 
-from .proposal import Proposal, ActionType, RiskLevel
+from .proposal import Proposal
 
 
 @dataclass
@@ -41,9 +40,9 @@ class ScoringEngine:
 
     def __init__(
         self,
-        failing_tests: Optional[list[str]] = None,
-        traceback_frames: Optional[list[tuple[str, int]]] = None,
-        test_narrative: Optional[str] = None,
+        failing_tests: list[str] | None = None,
+        traceback_frames: list[tuple[str, int]] | None = None,
+        test_narrative: str | None = None,
     ):
         """
         Initialize scoring engine.

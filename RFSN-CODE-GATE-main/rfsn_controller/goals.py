@@ -6,7 +6,6 @@ Supports multiple goal types: tests, build, lint, repro, static check, feature.
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import List, Optional
 
 # Default feature subgoals (used by both FeatureGoal and controller)
 DEFAULT_FEATURE_SUBGOALS = [
@@ -46,9 +45,9 @@ class FeatureGoal:
     """A feature implementation goal with acceptance criteria."""
 
     description: str
-    acceptance_criteria: List[str]
-    subgoals: Optional[List[str]] = None
-    verification_commands: Optional[List[str]] = None
+    acceptance_criteria: list[str]
+    subgoals: list[str] | None = None
+    verification_commands: list[str] | None = None
     timeout: int = 600
 
     def __post_init__(self):
@@ -248,8 +247,8 @@ class GoalFactory:
     @staticmethod
     def create_feature_goal(
         description: str,
-        acceptance_criteria: List[str],
-        verification_commands: Optional[List[str]] = None,
+        acceptance_criteria: list[str],
+        verification_commands: list[str] | None = None,
         timeout: int = 600,
     ) -> FeatureGoal:
         """Create a feature implementation goal.
@@ -276,9 +275,9 @@ class GoalSet:
     """A set of goals to satisfy."""
 
     primary_goal: Goal
-    verification_goals: List[Goal]
+    verification_goals: list[Goal]
 
-    def get_all_goals(self) -> List[Goal]:
+    def get_all_goals(self) -> list[Goal]:
         """Get all goals (primary + verification).
 
         Returns:
@@ -286,7 +285,7 @@ class GoalSet:
         """
         return [self.primary_goal] + self.verification_goals
 
-    def get_required_goals(self) -> List[Goal]:
+    def get_required_goals(self) -> list[Goal]:
         """Get only required goals.
 
         Returns:
@@ -301,10 +300,10 @@ class GoalSetFactory:
     @staticmethod
     def for_python(
         test_cmd: str = "python -m pytest -q",
-        lint_cmd: Optional[str] = None,
-        typecheck_cmd: Optional[str] = None,
-        repro_cmd: Optional[str] = None,
-        verify_cmd: Optional[str] = None,
+        lint_cmd: str | None = None,
+        typecheck_cmd: str | None = None,
+        repro_cmd: str | None = None,
+        verify_cmd: str | None = None,
     ) -> GoalSet:
         """Create goal set for Python project.
 
@@ -335,9 +334,9 @@ class GoalSetFactory:
     @staticmethod
     def for_node(
         test_cmd: str = "npm test",
-        build_cmd: Optional[str] = None,
-        lint_cmd: Optional[str] = None,
-        verify_cmd: Optional[str] = None,
+        build_cmd: str | None = None,
+        lint_cmd: str | None = None,
+        verify_cmd: str | None = None,
     ) -> GoalSet:
         """Create goal set for Node.js project.
 
@@ -365,8 +364,8 @@ class GoalSetFactory:
     @staticmethod
     def for_go(
         test_cmd: str = "go test ./...",
-        build_cmd: Optional[str] = None,
-        verify_cmd: Optional[str] = None,
+        build_cmd: str | None = None,
+        verify_cmd: str | None = None,
     ) -> GoalSet:
         """Create goal set for Go project.
 
@@ -391,9 +390,9 @@ class GoalSetFactory:
     @staticmethod
     def for_rust(
         test_cmd: str = "cargo test",
-        build_cmd: Optional[str] = None,
-        lint_cmd: Optional[str] = None,
-        verify_cmd: Optional[str] = None,
+        build_cmd: str | None = None,
+        lint_cmd: str | None = None,
+        verify_cmd: str | None = None,
     ) -> GoalSet:
         """Create goal set for Rust project.
 
@@ -421,8 +420,8 @@ class GoalSetFactory:
     @staticmethod
     def for_java(
         test_cmd: str = "mvn test",
-        build_cmd: Optional[str] = None,
-        verify_cmd: Optional[str] = None,
+        build_cmd: str | None = None,
+        verify_cmd: str | None = None,
     ) -> GoalSet:
         """Create goal set for Java project.
 
@@ -447,7 +446,7 @@ class GoalSetFactory:
     @staticmethod
     def for_dotnet(
         test_cmd: str = "dotnet test",
-        build_cmd: Optional[str] = None,
+        build_cmd: str | None = None,
     ) -> GoalSet:
         """Create goal set for .NET project.
 
@@ -469,7 +468,7 @@ class GoalSetFactory:
     @staticmethod
     def for_build_only(
         build_cmd: str,
-        lint_cmd: Optional[str] = None,
+        lint_cmd: str | None = None,
     ) -> GoalSet:
         """Create goal set for project without tests.
 

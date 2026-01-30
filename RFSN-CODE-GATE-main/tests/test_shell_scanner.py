@@ -12,16 +12,13 @@ Tests use the @pytest.mark.scanner marker for selective execution.
 from __future__ import annotations
 
 import json
-import sys
-from io import StringIO
 from pathlib import Path
-from typing import Dict, List
 
 import pytest
 
 from rfsn_controller.shell_scanner import (
-    ShellScanner,
     ScanResult,
+    ShellScanner,
     Violation,
     discover_python_files,
     format_github_actions,
@@ -31,7 +28,6 @@ from rfsn_controller.shell_scanner import (
     scan_with_ast,
     scan_with_regex,
 )
-
 
 # =============================================================================
 # Scanner Core Tests
@@ -545,6 +541,7 @@ class TestCodebaseIntegration:
         # which is a different security context than host shell execution
         safe_file_patterns = {
             "sandbox.py": {"shell_wrapper"},  # Docker container execution
+            "contracts.py": {"shell_true"},  # Contains shell=True in error messages, not actual usage
         }
         
         critical_violations = [

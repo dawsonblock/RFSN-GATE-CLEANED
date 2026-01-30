@@ -6,7 +6,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from rfsn_controller.workspace_manager import WorkspaceManager, GitResult
+from rfsn_controller.workspace_manager import GitResult, WorkspaceManager
 
 
 class TestWorkspaceManager:

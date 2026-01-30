@@ -14,8 +14,9 @@ import json
 import os
 import sqlite3
 import time
+from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
-from typing import Any, AsyncIterator, Dict, List, Optional, Tuple
+from typing import Any
 
 # Try to import httpx for async HTTP
 try:
@@ -43,7 +44,7 @@ CONNECTION_POOL_LIMITS = {
 }
 
 # Global HTTP client pool (reuses connections)
-_http_clients: Dict[str, Any] = {}
+_http_clients: dict[str, Any] = {}
 
 def get_http_client(base_url: str) -> Any:
     """Get or create a pooled HTTP client for the given base URL.
@@ -85,7 +86,7 @@ class AsyncLLMResponse:
     latency_ms: float = 0.0
     cached: bool = False
     
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Parse content as JSON dict."""
         try:
             return json.loads(self.content)
@@ -100,7 +101,7 @@ async def call_deepseek_async(
     *,
     temperature: float = 0.0,
     model: str = "deepseek-chat",
-    system_prompt: Optional[str] = None,
+    system_prompt: str | None = None,
     timeout: float = DEFAULT_TIMEOUT,
 ) -> AsyncLLMResponse:
     """Delegate to llm_deepseek.call_model_async."""
@@ -129,7 +130,7 @@ async def call_gemini_async(
     *,
     temperature: float = 0.0,
     model: str = "gemini-2.0-flash",
-    system_prompt: Optional[str] = None,
+    system_prompt: str | None = None,
     timeout: float = DEFAULT_TIMEOUT,
 ) -> AsyncLLMResponse:
     """Delegate to llm_gemini.call_model_async."""
@@ -153,10 +154,10 @@ async def call_gemini_async(
 
 
 # Global cache instance
-_cache_instance: Optional["LLMCache"] = None
+_cache_instance: LLMCache | None = None
 
 
-def get_cache(db_path: Optional[str] = None) -> "LLMCache":
+def get_cache(db_path: str | None = None) -> LLMCache:
     """Get the global LLM cache instance."""
     global _cache_instance
     if _cache_instance is None:
@@ -170,9 +171,9 @@ async def call_deepseek_cached(
     *,
     temperature: float = 0.0,
     model: str = "deepseek-chat",
-    system_prompt: Optional[str] = None,
+    system_prompt: str | None = None,
     use_cache: bool = True,
-    cache: Optional["LLMCache"] = None,
+    cache: LLMCache | None = None,
 ) -> AsyncLLMResponse:
     """Call DeepSeek with caching support."""
     if use_cache:
@@ -199,7 +200,7 @@ async def call_deepseek_streaming(
     *,
     temperature: float = 0.0,
     model: str = "deepseek-chat",
-    system_prompt: Optional[str] = None,
+    system_prompt: str | None = None,
 ) -> AsyncIterator[str]:
     """Delegate to llm_deepseek.call_model_streaming."""
     from .deepseek import call_model_streaming as ds_stream
@@ -212,7 +213,7 @@ async def call_gemini_streaming(
     *,
     temperature: float = 0.0,
     model: str = "gemini-2.0-flash",
-    system_prompt: Optional[str] = None,
+    system_prompt: str | None = None,
 ) -> AsyncIterator[str]:
     """Delegate to llm_gemini.call_model_streaming."""
     from .gemini import call_model_streaming as gem_stream
@@ -226,9 +227,9 @@ async def call_gemini_cached(
     *,
     temperature: float = 0.0,
     model: str = "gemini-2.0-flash",
-    system_prompt: Optional[str] = None,
+    system_prompt: str | None = None,
     use_cache: bool = True,
-    cache: Optional["LLMCache"] = None,
+    cache: LLMCache | None = None,
 ) -> AsyncLLMResponse:
     """Call Gemini with caching support."""
     if use_cache:
@@ -256,13 +257,13 @@ async def call_gemini_cached(
 # ============================================================================
 
 async def call_parallel(
-    prompts: List[Tuple[str, float]],  # List of (prompt, temperature)
+    prompts: list[tuple[str, float]],  # List of (prompt, temperature)
     *,
     model: str = "deepseek-chat",
-    system_prompt: Optional[str] = None,
+    system_prompt: str | None = None,
     timeout: float = DEFAULT_TIMEOUT,
     use_cache: bool = True,
-) -> List[AsyncLLMResponse]:
+) -> list[AsyncLLMResponse]:
     """Call LLM with multiple prompts/temperatures in parallel.
     
     Args:
@@ -300,10 +301,10 @@ async def call_parallel(
 async def generate_patches_parallel(
     prompt: str,
     *,
-    temperatures: Optional[List[float]] = None,
+    temperatures: list[float] | None = None,
     model: str = "deepseek-chat",
-    system_prompt: Optional[str] = None,
-) -> List[Dict[str, Any]]:
+    system_prompt: str | None = None,
+) -> list[dict[str, Any]]:
     """Generate patches at multiple temperatures in parallel."""
     if temperatures is None:
         temperatures = [0.0, 0.4, 0.8] # Increased variance
@@ -343,7 +344,7 @@ class LLMCache:
     max_age_hours: int = 72  # Extended TTL for dev workflows
     max_entries: int = 10000
     
-    _conn: Optional[sqlite3.Connection] = field(default=None, repr=False)
+    _conn: sqlite3.Connection | None = field(default=None, repr=False)
     
     def __post_init__(self):
         self._ensure_db()
@@ -380,7 +381,7 @@ class LLMCache:
         prompt: str,
         model: str,
         temperature: float,
-    ) -> Optional[AsyncLLMResponse]:
+    ) -> AsyncLLMResponse | None:
         """Look up cached response.
         
         Args:
@@ -504,7 +505,7 @@ class LLMCache:
             self._conn.close()
             self._conn = None
     
-    def stats(self) -> Dict[str, Any]:
+    def stats(self) -> dict[str, Any]:
         """Get cache statistics."""
         if not self._conn:
             return {"error": "not connected"}
@@ -539,7 +540,7 @@ def call_model_async_sync(
     temperature: float = 0.0,
     model: str = "deepseek-chat",
     use_cache: bool = True,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Sync wrapper for async LLM call.
     
     Use this as a drop-in replacement for the existing call_model function.

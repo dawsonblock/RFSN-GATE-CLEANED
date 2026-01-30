@@ -7,17 +7,16 @@ Prevents planner changes from silently degrading plan quality.
 import json
 import re
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 import pytest
 
-from rfsn_controller.planner_v2 import ControllerAdapter, Plan
-
+from rfsn_controller.planner_v2 import ControllerAdapter
 
 GOLDEN_PLANS_DIR = Path(__file__).parent / "golden_plans"
 
 
-def load_golden_examples() -> List[Dict[str, Any]]:
+def load_golden_examples() -> list[dict[str, Any]]:
     """Load all golden plan examples."""
     examples = []
     for path in GOLDEN_PLANS_DIR.glob("*.json"):
@@ -28,7 +27,7 @@ def load_golden_examples() -> List[Dict[str, Any]]:
     return examples
 
 
-def get_example_ids() -> List[str]:
+def get_example_ids() -> list[str]:
     """Get IDs for parametrized tests."""
     examples = load_golden_examples()
     return [e["name"] for e in examples]
@@ -47,7 +46,7 @@ class TestGoldenPlanInvariants:
         load_golden_examples(),
         ids=get_example_ids(),
     )
-    def test_plan_meets_invariants(self, adapter: ControllerAdapter, example: Dict[str, Any]):
+    def test_plan_meets_invariants(self, adapter: ControllerAdapter, example: dict[str, Any]):
         """Test that generated plan meets golden example invariants."""
         # Generate plan
         goal = example["goal"]
@@ -90,7 +89,7 @@ class TestGoldenPlanInvariants:
         load_golden_examples(),
         ids=get_example_ids(),
     )
-    def test_plan_has_required_step_types(self, adapter: ControllerAdapter, example: Dict[str, Any]):
+    def test_plan_has_required_step_types(self, adapter: ControllerAdapter, example: dict[str, Any]):
         """Test that plan has required step type patterns."""
         goal = example["goal"]
         context = example.get("context", {})
@@ -116,7 +115,7 @@ class TestGoldenPlanInvariants:
         load_golden_examples(),
         ids=get_example_ids(),
     )
-    def test_plan_step_patterns(self, adapter: ControllerAdapter, example: Dict[str, Any]):
+    def test_plan_step_patterns(self, adapter: ControllerAdapter, example: dict[str, Any]):
         """Test that plan steps match expected patterns."""
         goal = example["goal"]
         context = example.get("context", {})

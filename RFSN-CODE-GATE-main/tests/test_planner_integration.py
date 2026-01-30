@@ -1,14 +1,15 @@
 """Integration tests for Planner v2."""
 
+from unittest.mock import MagicMock
+
 import pytest
-from unittest.mock import MagicMock, patch
+
 from rfsn_controller.planner_v2 import (
-    PlannerV2,
     ControllerAdapter,
-    PlanState,
     ControllerOutcome,
-    StepStatus,
+    PlannerV2,
 )
+
 
 class TestPlannerIntegration:
     """Holistic integration tests."""
@@ -33,10 +34,10 @@ class TestPlannerIntegration:
         
         # Mock the plan to have parallelizable steps
         plan = adapter.get_plan()
-        state = adapter.get_state()
+        adapter.get_state()
         
         # Inject parallel steps
-        from rfsn_controller.planner_v2.schema import Step, RiskLevel
+        from rfsn_controller.planner_v2.schema import RiskLevel, Step
         step1 = Step("s1", "Step 1", "intent", ["file1.py"], "success", risk_level=RiskLevel.LOW)
         step2 = Step("s2", "Step 2", "intent", ["file2.py"], "success", risk_level=RiskLevel.LOW)
         step3 = Step("s3", "Step 3", "intent", ["file1.py"], "success", risk_level=RiskLevel.LOW) # Conflict with s1
@@ -87,14 +88,14 @@ class TestPlannerIntegration:
         )
         
         # Mock failure evidence conversion
-        from rfsn_controller.planner_v2.schema import FailureEvidence, FailureCategory
+        from rfsn_controller.planner_v2.schema import FailureCategory, FailureEvidence
         mock_qa.convert_qa_to_failure_evidence.return_value = FailureEvidence(
             category=FailureCategory.TEST_REGRESSION,
             suggestion="Fix regression"
         )
         
         # Process outcome
-        next_task = adapter.process_outcome(outcome)
+        adapter.process_outcome(outcome)
         
         # Should have triggered revision
         plan = adapter.get_plan()

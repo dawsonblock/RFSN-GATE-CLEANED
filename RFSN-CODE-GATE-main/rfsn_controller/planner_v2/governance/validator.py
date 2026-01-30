@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, List, Optional, Set
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ..schema import Plan, Step
@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 class ValidationError:
     """A single validation error."""
     
-    step_id: Optional[str]
+    step_id: str | None
     field: str
     message: str
     severity: str = "error"  # error, warning
@@ -38,8 +38,8 @@ class ValidationResult:
     """Result of plan validation."""
     
     valid: bool
-    errors: List[ValidationError] = field(default_factory=list)
-    warnings: List[ValidationError] = field(default_factory=list)
+    errors: list[ValidationError] = field(default_factory=list)
+    warnings: list[ValidationError] = field(default_factory=list)
     
     def __bool__(self) -> bool:
         return self.valid
@@ -96,7 +96,7 @@ class PlanValidator:
     def __init__(
         self,
         allow_wildcards: bool = False,
-        extra_forbidden_paths: Optional[List[str]] = None,
+        extra_forbidden_paths: list[str] | None = None,
         strict_mode: bool = True,
     ):
         """Initialize the validator.
@@ -115,7 +115,7 @@ class PlanValidator:
             re.compile(p, re.IGNORECASE) for p in self.INJECTION_PATTERNS
         ]
     
-    def validate(self, plan: "Plan") -> ValidationResult:
+    def validate(self, plan: Plan) -> ValidationResult:
         """Run all validation checks on a plan.
         
         Args:
@@ -124,8 +124,8 @@ class PlanValidator:
         Returns:
             ValidationResult with errors and warnings.
         """
-        errors: List[ValidationError] = []
-        warnings: List[ValidationError] = []
+        errors: list[ValidationError] = []
+        warnings: list[ValidationError] = []
         
         # Plan-level checks
         errors.extend(self._check_plan_structure(plan))
@@ -150,7 +150,7 @@ class PlanValidator:
             warnings=warnings,
         )
     
-    def _check_plan_structure(self, plan: "Plan") -> List[ValidationError]:
+    def _check_plan_structure(self, plan: Plan) -> list[ValidationError]:
         """Check plan-level structure."""
         errors = []
         
@@ -166,8 +166,8 @@ class PlanValidator:
         return errors
     
     def _check_step(
-        self, step: "Step", plan: "Plan"
-    ) -> tuple[List[ValidationError], List[ValidationError]]:
+        self, step: Step, plan: Plan
+    ) -> tuple[list[ValidationError], list[ValidationError]]:
         """Check a single step."""
         errors = []
         warnings = []
@@ -221,7 +221,7 @@ class PlanValidator:
         
         return errors, warnings
     
-    def _check_dependency_graph(self, plan: "Plan") -> List[ValidationError]:
+    def _check_dependency_graph(self, plan: Plan) -> list[ValidationError]:
         """Check dependency graph integrity."""
         errors = []
         step_ids = {s.step_id for s in plan.steps}
@@ -243,7 +243,7 @@ class PlanValidator:
         
         return errors
     
-    def _has_cycle(self, plan: "Plan") -> bool:
+    def _has_cycle(self, plan: Plan) -> bool:
         """Check if dependency graph has cycles."""
         WHITE, GRAY, BLACK = 0, 1, 2
         color = {s.step_id: WHITE for s in plan.steps}
@@ -267,7 +267,7 @@ class PlanValidator:
                     return True
         return False
     
-    def _check_prompt_injection(self, text: str) -> List[str]:
+    def _check_prompt_injection(self, text: str) -> list[str]:
         """Check for prompt injection patterns."""
         matches = []
         for pattern in self._compiled_injection:
@@ -276,7 +276,7 @@ class PlanValidator:
         return matches
     
     def validate_step_update(
-        self, original: "Step", updated: "Step"
+        self, original: Step, updated: Step
     ) -> ValidationResult:
         """Validate a step modification.
         

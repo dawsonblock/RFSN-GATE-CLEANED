@@ -15,16 +15,14 @@ import ast
 import os
 import re
 from pathlib import Path
-from typing import List, Set, Tuple
 
 import pytest
-
 
 # Root directory of the rfsn_controller package
 PACKAGE_ROOT = Path(__file__).parent.parent / "rfsn_controller"
 
 # Directories to exclude from scanning
-EXCLUDED_DIRS: Set[str] = {
+EXCLUDED_DIRS: set[str] = {
     "__pycache__",
     ".git",
     "firecracker-main",  # External dependency
@@ -33,7 +31,7 @@ EXCLUDED_DIRS: Set[str] = {
 }
 
 # Files to exclude (temporary/debug scripts)
-EXCLUDED_FILES: Set[str] = {
+EXCLUDED_FILES: set[str] = {
     "debug_runner.py",
     "shell_scanner.py",  # Contains detection patterns as strings
     "contracts.py",  # Contains shell validation messages (Phase 5)
@@ -47,7 +45,7 @@ FORBIDDEN_PATTERNS = [
 ]
 
 
-def get_python_files() -> List[Path]:
+def get_python_files() -> list[Path]:
     """Get all Python files in the package, excluding specified directories."""
     files = []
     for root, dirs, filenames in os.walk(PACKAGE_ROOT):
@@ -61,7 +59,7 @@ def get_python_files() -> List[Path]:
     return files
 
 
-def find_pattern_violations(content: str, patterns: List[Tuple[str, str]]) -> List[Tuple[int, str, str]]:
+def find_pattern_violations(content: str, patterns: list[tuple[str, str]]) -> list[tuple[int, str, str]]:
     """Find violations of forbidden patterns in file content.
     
     Args:
@@ -115,7 +113,7 @@ def find_pattern_violations(content: str, patterns: List[Tuple[str, str]]) -> Li
     return violations
 
 
-def check_subprocess_calls_use_lists(content: str, filename: str) -> List[str]:
+def check_subprocess_calls_use_lists(content: str, filename: str) -> list[str]:
     """Use AST to verify subprocess calls use list arguments.
     
     Args:
@@ -348,5 +346,5 @@ class TestPhase1ShellElimination:
         
         if errors:
             pytest.fail(
-                f"Found shell=True in exec_utils.py code:\n" + "\n".join(errors)
+                "Found shell=True in exec_utils.py code:\n" + "\n".join(errors)
             )

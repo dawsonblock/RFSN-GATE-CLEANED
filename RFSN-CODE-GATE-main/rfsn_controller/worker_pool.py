@@ -9,12 +9,12 @@ Implements:
 """
 
 import hashlib
-import json
 import logging
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -60,17 +60,17 @@ class WorkerPatchProposal:
     # Metadata
     estimated_lines: int = 0
     estimated_files: int = 0
-    dependencies: List[str] = field(default_factory=list)  # Other task_ids this depends on
+    dependencies: list[str] = field(default_factory=list)  # Other task_ids this depends on
     
     # Validation hints
-    expected_tests_fixed: List[str] = field(default_factory=list)
-    potential_regressions: List[str] = field(default_factory=list)
+    expected_tests_fixed: list[str] = field(default_factory=list)
+    potential_regressions: list[str] = field(default_factory=list)
     
     def proposal_hash(self) -> str:
         """Hash for deduplication."""
         return hashlib.sha256(self.diff.encode()).hexdigest()[:16]
     
-    def as_dict(self) -> Dict[str, Any]:
+    def as_dict(self) -> dict[str, Any]:
         return {
             "worker_id": self.worker_id,
             "task_id": self.task_id,
@@ -96,18 +96,18 @@ class TaskNode:
     status: TaskStatus = TaskStatus.PENDING
     
     # DAG structure
-    dependencies: List[str] = field(default_factory=list)  # task_ids that must complete first
-    dependents: List[str] = field(default_factory=list)   # task_ids that depend on this
+    dependencies: list[str] = field(default_factory=list)  # task_ids that must complete first
+    dependents: list[str] = field(default_factory=list)   # task_ids that depend on this
     
     # Execution info
-    assigned_worker: Optional[str] = None
-    proposals: List[WorkerPatchProposal] = field(default_factory=list)
-    selected_proposal: Optional[WorkerPatchProposal] = None
+    assigned_worker: str | None = None
+    proposals: list[WorkerPatchProposal] = field(default_factory=list)
+    selected_proposal: WorkerPatchProposal | None = None
     
     # Context for the worker
-    context: Dict[str, Any] = field(default_factory=dict)
+    context: dict[str, Any] = field(default_factory=dict)
     
-    def is_ready(self, completed_tasks: Set[str]) -> bool:
+    def is_ready(self, completed_tasks: set[str]) -> bool:
         """Check if all dependencies are satisfied."""
         return all(dep in completed_tasks for dep in self.dependencies)
 
@@ -130,7 +130,7 @@ class WorkerAgent(ABC):
         task: TaskNode,
         *,
         max_proposals: int = 3,
-    ) -> List[WorkerPatchProposal]:
+    ) -> list[WorkerPatchProposal]:
         """Generate patch proposals for a task.
         
         Args:
@@ -149,7 +149,7 @@ class SimpleWorkerAgent(WorkerAgent):
     def __init__(
         self,
         worker_id: str,
-        generator: Callable[[TaskNode], List[Tuple[str, float]]],
+        generator: Callable[[TaskNode], list[tuple[str, float]]],
     ):
         """Initialize with a generator function.
         
@@ -165,7 +165,7 @@ class SimpleWorkerAgent(WorkerAgent):
         task: TaskNode,
         *,
         max_proposals: int = 3,
-    ) -> List[WorkerPatchProposal]:
+    ) -> list[WorkerPatchProposal]:
         try:
             results = self.generator(task)
         except Exception as e:
@@ -191,16 +191,16 @@ class TaskDAG:
     """Directed acyclic graph of tasks for complex repairs."""
     
     def __init__(self):
-        self.tasks: Dict[str, TaskNode] = {}
-        self.completed: Set[str] = set()
+        self.tasks: dict[str, TaskNode] = {}
+        self.completed: set[str] = set()
     
     def add_task(
         self,
         task_id: str,
         description: str,
         *,
-        dependencies: Optional[List[str]] = None,
-        context: Optional[Dict[str, Any]] = None,
+        dependencies: list[str] | None = None,
+        context: dict[str, Any] | None = None,
     ) -> TaskNode:
         """Add a task to the DAG.
         
@@ -228,7 +228,7 @@ class TaskDAG:
         self.tasks[task_id] = task
         return task
     
-    def get_ready_tasks(self) -> List[TaskNode]:
+    def get_ready_tasks(self) -> list[TaskNode]:
         """Get all tasks ready to execute (dependencies satisfied)."""
         ready = []
         for task in self.tasks.values():
@@ -236,7 +236,7 @@ class TaskDAG:
                 ready.append(task)
         return ready
     
-    def mark_completed(self, task_id: str, proposal: Optional[WorkerPatchProposal] = None) -> None:
+    def mark_completed(self, task_id: str, proposal: WorkerPatchProposal | None = None) -> None:
         """Mark a task as completed."""
         if task_id in self.tasks:
             self.tasks[task_id].status = TaskStatus.COMPLETED
@@ -259,7 +259,7 @@ class TaskDAG:
                 return False
         return True
     
-    def get_execution_order(self) -> List[str]:
+    def get_execution_order(self) -> list[str]:
         """Get topological order of tasks."""
         # Kahn's algorithm
         in_degree = {tid: len(t.dependencies) for tid, t in self.tasks.items()}
@@ -285,10 +285,10 @@ class ConflictResolver:
     
     def resolve(
         self,
-        proposals: List[WorkerPatchProposal],
+        proposals: list[WorkerPatchProposal],
         *,
-        validation_fn: Optional[Callable[[str], bool]] = None,
-    ) -> Optional[WorkerPatchProposal]:
+        validation_fn: Callable[[str], bool] | None = None,
+    ) -> WorkerPatchProposal | None:
         """Select the best proposal from candidates.
         
         Args:
@@ -320,7 +320,7 @@ class ConflictResolver:
         
         elif self.strategy == ConflictResolution.VOTE:
             # Group by diff hash and pick most common
-            votes: Dict[str, List[WorkerPatchProposal]] = {}
+            votes: dict[str, list[WorkerPatchProposal]] = {}
             for p in valid:
                 h = p.proposal_hash()
                 if h not in votes:
@@ -344,8 +344,8 @@ class WorkerPool:
     
     def __init__(
         self,
-        workers: Optional[List[WorkerAgent]] = None,
-        conflict_resolver: Optional[ConflictResolver] = None,
+        workers: list[WorkerAgent] | None = None,
+        conflict_resolver: ConflictResolver | None = None,
     ):
         """Initialize worker pool.
         
@@ -353,7 +353,7 @@ class WorkerPool:
             workers: List of worker agents.
             conflict_resolver: Resolver for conflicting proposals.
         """
-        self.workers: Dict[str, WorkerAgent] = {}
+        self.workers: dict[str, WorkerAgent] = {}
         if workers:
             for w in workers:
                 self.workers[w.worker_id] = w
@@ -373,8 +373,8 @@ class WorkerPool:
         task: TaskNode,
         *,
         max_proposals_per_worker: int = 2,
-        validation_fn: Optional[Callable[[str], bool]] = None,
-    ) -> Optional[WorkerPatchProposal]:
+        validation_fn: Callable[[str], bool] | None = None,
+    ) -> WorkerPatchProposal | None:
         """Process a task by collecting proposals from all workers.
         
         Args:
@@ -385,7 +385,7 @@ class WorkerPool:
         Returns:
             Selected proposal, or None if no valid proposal.
         """
-        all_proposals: List[WorkerPatchProposal] = []
+        all_proposals: list[WorkerPatchProposal] = []
         
         for worker in self.workers.values():
             try:
@@ -427,8 +427,8 @@ class WorkerPool:
         dag: TaskDAG,
         *,
         max_proposals_per_worker: int = 2,
-        validation_fn: Optional[Callable[[str], bool]] = None,
-    ) -> Dict[str, Optional[WorkerPatchProposal]]:
+        validation_fn: Callable[[str], bool] | None = None,
+    ) -> dict[str, WorkerPatchProposal | None]:
         """Process all tasks in a DAG in dependency order.
         
         Args:
@@ -439,7 +439,7 @@ class WorkerPool:
         Returns:
             Dict of task_id -> selected proposal (or None).
         """
-        results: Dict[str, Optional[WorkerPatchProposal]] = {}
+        results: dict[str, WorkerPatchProposal | None] = {}
         
         while not dag.all_completed():
             ready = dag.get_ready_tasks()
@@ -468,8 +468,8 @@ class WorkerPool:
 def decompose_task(
     description: str,
     *,
-    failing_tests: List[str],
-    error_signatures: List[str],
+    failing_tests: list[str],
+    error_signatures: list[str],
 ) -> TaskDAG:
     """Decompose a complex repair into a DAG of subtasks.
     
@@ -484,7 +484,7 @@ def decompose_task(
     dag = TaskDAG()
     
     # Group tests by file
-    test_files: Dict[str, List[str]] = {}
+    test_files: dict[str, list[str]] = {}
     for test in failing_tests:
         # Extract file from test path (e.g., "tests/test_foo.py::test_bar" -> "test_foo.py")
         if "::" in test:

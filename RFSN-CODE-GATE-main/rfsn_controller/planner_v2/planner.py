@@ -7,9 +7,9 @@ The planner outputs plans only - it NEVER executes code directly.
 from __future__ import annotations
 
 import hashlib
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from .failure_classifier import FailureClassifier, FailureType
 from .lifecycle import StepLifecycle
@@ -47,9 +47,9 @@ class PlannerV2:
 
     def __init__(
         self,
-        memory_adapter: Optional[MemoryAdapter] = None,
+        memory_adapter: MemoryAdapter | None = None,
         seed: int = 0,
-        state_dir: Optional[Path] = None,
+        state_dir: Path | None = None,
     ):
         """Initialize the planner.
 
@@ -95,7 +95,7 @@ class PlannerV2:
         Returns:
             Current UTC time in ISO format.
         """
-        return datetime.now(timezone.utc).isoformat()
+        return datetime.now(UTC).isoformat()
 
     def _detect_goal_type(self, goal: str) -> str:
         """Detect the type of goal from description.
@@ -116,7 +116,7 @@ class PlannerV2:
     def propose_plan(
         self,
         goal: str,
-        context: Dict[str, Any],
+        context: dict[str, Any],
     ) -> Plan:
         """Generate a structured plan for the given goal.
 
@@ -210,7 +210,7 @@ class PlannerV2:
         self,
         plan_id: str,
         goal: str,
-        context: Dict[str, Any],
+        context: dict[str, Any],
     ) -> Plan:
         """Generate a repair-mode plan.
 
@@ -315,7 +315,7 @@ class PlannerV2:
         self,
         plan_id: str,
         goal: str,
-        context: Dict[str, Any],
+        context: dict[str, Any],
     ) -> Plan:
         """Generate a feature-mode plan.
 
@@ -424,7 +424,7 @@ class PlannerV2:
         self,
         plan_id: str,
         goal: str,
-        context: Dict[str, Any],
+        context: dict[str, Any],
     ) -> Plan:
         """Generate a generic plan.
 
@@ -484,7 +484,7 @@ class PlannerV2:
         self,
         plan: Plan,
         state: PlanState,
-    ) -> Optional[Step]:
+    ) -> Step | None:
         """Get the next step to execute.
 
         Finds the next PENDING step whose dependencies are all DONE.
@@ -559,9 +559,9 @@ class PlannerV2:
         step_id: str,
         success: bool,
         diff: str = "",
-        tags: Optional[List[str]] = None,
+        tags: list[str] | None = None,
         failure_type: str = "unknown",
-        files: Optional[List[str]] = None,
+        files: list[str] | None = None,
     ):
         """Record action outcome to firewall and memory.
         
@@ -595,7 +595,7 @@ class PlannerV2:
         except ImportError:
             pass  # ActionStore not available
 
-    def check_guardrails(self, file_path: str, diff: str) -> List[str]:
+    def check_guardrails(self, file_path: str, diff: str) -> list[str]:
         """Check if patch violates guardrails.
         
         Args:
@@ -681,7 +681,7 @@ class PlannerV2:
 
         return True
 
-    def _propose_build_fix_plan(self, plan_id: str, goal: str, context: Dict[str, Any]) -> Plan:
+    def _propose_build_fix_plan(self, plan_id: str, goal: str, context: dict[str, Any]) -> Plan:
         """Specialized plan for build errors."""
         steps = [
             Step(
@@ -710,7 +710,7 @@ class PlannerV2:
         ]
         return Plan(plan_id=plan_id, goal=goal, steps=steps, created_at=self._now_iso())
 
-    def _propose_dependency_fix_plan(self, plan_id: str, goal: str, context: Dict[str, Any]) -> Plan:
+    def _propose_dependency_fix_plan(self, plan_id: str, goal: str, context: dict[str, Any]) -> Plan:
         """Specialized plan for dependency conflicts."""
         steps = [
              Step(
@@ -739,7 +739,7 @@ class PlannerV2:
         ]
         return Plan(plan_id=plan_id, goal=goal, steps=steps, created_at=self._now_iso())
 
-    def _propose_observation_plan(self, plan_id: str, goal: str, context: Dict[str, Any]) -> Plan:
+    def _propose_observation_plan(self, plan_id: str, goal: str, context: dict[str, Any]) -> Plan:
         """Propose a read-only observation plan for low-confidence scenarios."""
         steps = [
             Step(
@@ -769,7 +769,7 @@ class PlannerV2:
             assumptions=["Low confidence in initial failure type - need observation"],
         )
 
-    def get_plan_summary(self, plan: Plan, state: PlanState) -> Dict[str, Any]:
+    def get_plan_summary(self, plan: Plan, state: PlanState) -> dict[str, Any]:
         """Get a summary of plan execution status.
 
         Args:
@@ -795,7 +795,7 @@ class PlannerV2:
         plan: Plan,
         state: PlanState,
         max_workers: int = 4,
-    ) -> List[Step]:
+    ) -> list[Step]:
         """Get the next batch of steps that can run in parallel.
 
         Args:

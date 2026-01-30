@@ -379,8 +379,8 @@ def call_model(model_input: str, temperature: float = 0.0) -> dict:
 
 async def call_model_async(model_input: str, temperature: float = 0.0) -> dict:
     """Async version of call_model."""
-    import time
     import asyncio
+    import time
     
     genai, types = _ensure_genai_imported()
     output_schema = _build_schemas()

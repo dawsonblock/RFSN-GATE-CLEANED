@@ -11,7 +11,6 @@ Implements diff shrinking strategies:
 import logging
 import re
 from dataclasses import dataclass, field
-from typing import List, Optional, Set, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +23,7 @@ class MinimizedDiff:
     minimized: str
     dropped_hunks: int
     formatting_only_lines: int
-    speculative_files: List[str] = field(default_factory=list)
+    speculative_files: list[str] = field(default_factory=list)
 
     @property
     def reduction_ratio(self) -> float:
@@ -39,7 +38,7 @@ class DiffHunk:
     """Represents a single hunk in a diff."""
 
     header: str  # @@ -start,count +start,count @@
-    lines: List[str]
+    lines: list[str]
     file_path: str
     start_line_old: int
     start_line_new: int
@@ -118,7 +117,7 @@ class DiffMinimizer:
         drop_whitespace: bool = True,
         drop_comments: bool = True,
         drop_import_reorder: bool = True,
-        trace_files: Optional[Set[str]] = None,
+        trace_files: set[str] | None = None,
     ):
         """Initialize minimizer with filtering options.
 
@@ -151,13 +150,13 @@ class DiffMinimizer:
             )
 
         files_and_hunks = self._parse_diff(diff)
-        kept_parts: List[str] = []
+        kept_parts: list[str] = []
         dropped_hunks = 0
         formatting_only_lines = 0
-        speculative_files: List[str] = []
+        speculative_files: list[str] = []
 
         for file_path, file_header, hunks in files_and_hunks:
-            kept_hunks: List[DiffHunk] = []
+            kept_hunks: list[DiffHunk] = []
 
             for hunk in hunks:
                 should_drop, reason = self._should_drop_hunk(hunk)
@@ -194,7 +193,7 @@ class DiffMinimizer:
             speculative_files=speculative_files,
         )
 
-    def _should_drop_hunk(self, hunk: DiffHunk) -> Tuple[bool, str]:
+    def _should_drop_hunk(self, hunk: DiffHunk) -> tuple[bool, str]:
         """Determine if a hunk should be dropped.
 
         Returns:
@@ -212,19 +211,19 @@ class DiffMinimizer:
 
         return False, ""
 
-    def _parse_diff(self, diff: str) -> List[Tuple[str, str, List[DiffHunk]]]:
+    def _parse_diff(self, diff: str) -> list[tuple[str, str, list[DiffHunk]]]:
         """Parse a git diff into files and hunks.
 
         Returns:
             List of (file_path, file_header, hunks) tuples.
         """
-        result: List[Tuple[str, str, List[DiffHunk]]] = []
+        result: list[tuple[str, str, list[DiffHunk]]] = []
         lines = diff.split("\n")
 
-        current_file: Optional[str] = None
-        current_file_header: List[str] = []
-        current_hunks: List[DiffHunk] = []
-        current_hunk: Optional[DiffHunk] = None
+        current_file: str | None = None
+        current_file_header: list[str] = []
+        current_hunks: list[DiffHunk] = []
+        current_hunk: DiffHunk | None = None
 
         hunk_header_pattern = re.compile(r"^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@")
 
@@ -287,7 +286,7 @@ class DiffMinimizer:
 
         return result
 
-    def split_independent(self, diff: str) -> List[str]:
+    def split_independent(self, diff: str) -> list[str]:
         """Split a diff into independent per-file diffs.
 
         Args:
@@ -297,7 +296,7 @@ class DiffMinimizer:
             List of single-file diffs.
         """
         files_and_hunks = self._parse_diff(diff)
-        result: List[str] = []
+        result: list[str] = []
 
         for file_path, file_header, hunks in files_and_hunks:
             if hunks:
@@ -312,7 +311,7 @@ class DiffMinimizer:
 
         return result
 
-    def detect_speculative_edits(self, diff: str) -> List[str]:
+    def detect_speculative_edits(self, diff: str) -> list[str]:
         """Detect files changed that aren't in the error trace.
 
         Args:

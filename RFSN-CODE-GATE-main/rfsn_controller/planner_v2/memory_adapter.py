@@ -9,7 +9,7 @@ The planner can READ historical outcomes but CANNOT write to memory.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from rfsn_controller.action_outcome_memory import ActionOutcomeStore
@@ -24,12 +24,12 @@ class DecompositionPrior:
     """
 
     goal_type: str
-    step_pattern: List[str]
+    step_pattern: list[str]
     success_rate: float
     weight: float
     n: int
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Serialize to dictionary."""
         return {
             "goal_type": self.goal_type,
@@ -57,7 +57,7 @@ class MemoryAdapter:
 
     def __init__(
         self,
-        memory_store: Optional["ActionOutcomeStore"] = None,
+        memory_store: ActionOutcomeStore | None = None,
         min_similarity: float = 0.25,
     ):
         """Initialize the memory adapter.
@@ -75,7 +75,7 @@ class MemoryAdapter:
         repo_type: str,
         language: str,
         top_k: int = 5,
-    ) -> List[DecompositionPrior]:
+    ) -> list[DecompositionPrior]:
         """Query past outcomes to bias toward successful decompositions.
 
         Strategy:
@@ -101,7 +101,6 @@ class MemoryAdapter:
         # This integrates with the existing memory system
         try:
             from rfsn_controller.action_outcome_memory import (
-                ContextSignature,
                 make_context_signature,
             )
 

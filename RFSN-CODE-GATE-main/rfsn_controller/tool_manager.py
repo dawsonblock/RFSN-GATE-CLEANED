@@ -8,7 +8,7 @@ and enforces quotas to control token usage and prevent stalling.
 import hashlib
 import json
 from dataclasses import dataclass
-from typing import Any, Dict, Optional, Set
+from typing import Any
 
 
 @dataclass
@@ -25,7 +25,7 @@ class ToolRequest:
     """A tool request with signature."""
 
     tool: str
-    args: Dict[str, Any]
+    args: dict[str, Any]
 
     def signature(self) -> str:
         """Generate a unique signature for this request."""
@@ -42,17 +42,17 @@ class ToolRequest:
 class ToolRequestManager:
     """Manages tool request deduplication and quotas."""
 
-    def __init__(self, config: Optional[ToolRequestConfig] = None):
+    def __init__(self, config: ToolRequestConfig | None = None):
         self.config = config or ToolRequestConfig()
-        self.seen_signatures: Set[str] = set()
+        self.seen_signatures: set[str] = set()
         self.total_requests_this_run: int = 0
-        self.request_counts: Dict[str, int] = {}
+        self.request_counts: dict[str, int] = {}
 
     def should_allow_request(
         self,
         tool: str,
-        args: Dict[str, Any],
-    ) -> tuple[bool, Optional[str]]:
+        args: dict[str, Any],
+    ) -> tuple[bool, str | None]:
         """Check if a tool request should be allowed.
 
         Args:
@@ -78,7 +78,7 @@ class ToolRequestManager:
 
         return True, None
 
-    def register_request(self, tool: str, args: Dict[str, Any]) -> None:
+    def register_request(self, tool: str, args: dict[str, Any]) -> None:
         """Register a tool request as seen.
 
         Args:
@@ -96,8 +96,8 @@ class ToolRequestManager:
 
     def filter_requests(
         self,
-        requests: list[Dict[str, Any]],
-    ) -> tuple[list[Dict[str, Any]], list[str]]:
+        requests: list[dict[str, Any]],
+    ) -> tuple[list[dict[str, Any]], list[str]]:
         """Filter a list of tool requests against quotas and deduplication.
 
         Args:
@@ -131,7 +131,7 @@ class ToolRequestManager:
 
         return allowed, blocked
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get statistics about tool requests.
 
         Returns:

@@ -11,12 +11,11 @@ Ensures patches meet quality standards before acceptance:
 """
 
 import re
-from typing import List, Optional, Set, Tuple
 
 # Immutable control surfaces that must never be modified by automated patches.
 #
 # These files form the core safety boundary of the controller and sandbox.
-IMMUTABLE_CONTROL_PATHS: Set[str] = {
+IMMUTABLE_CONTROL_PATHS: set[str] = {
     "rfsn_controller/command_allowlist.py",
     "rfsn_controller/command_normalizer.py",
     "rfsn_controller/apt_whitelist.py",
@@ -40,7 +39,7 @@ class PatchHygieneConfig:
         allow_test_deletion: bool = False,
         allow_test_modification: bool = False,
         allow_lockfile_changes: bool = False,
-        language: Optional[str] = None,
+        language: str | None = None,
     ):
         self.max_lines_changed = max_lines_changed
         self.max_files_changed = max_files_changed
@@ -53,7 +52,7 @@ class PatchHygieneConfig:
         self.language = language
 
     @classmethod
-    def for_repair_mode(cls, language: Optional[str] = None) -> "PatchHygieneConfig":
+    def for_repair_mode(cls, language: str | None = None) -> "PatchHygieneConfig":
         """Create a strict configuration for repair mode.
 
         Repair mode requires minimal changes to fix bugs:
@@ -76,7 +75,7 @@ class PatchHygieneConfig:
         )
 
     @classmethod
-    def for_feature_mode(cls, language: Optional[str] = None) -> "PatchHygieneConfig":
+    def for_feature_mode(cls, language: str | None = None) -> "PatchHygieneConfig":
         """Create a more permissive configuration for feature mode.
 
         Feature mode allows larger changes for feature implementation:
@@ -119,7 +118,7 @@ class PatchHygieneConfig:
         allow_test_deletion: bool = False,
         allow_test_modification: bool = False,
         allow_lockfile_changes: bool = False,
-        language: Optional[str] = None,
+        language: str | None = None,
     ) -> "PatchHygieneConfig":
         """Create a custom configuration with specific thresholds.
 
@@ -144,7 +143,7 @@ class PatchHygieneConfig:
         )
 
     @staticmethod
-    def _default_forbidden_dirs() -> Set[str]:
+    def _default_forbidden_dirs() -> set[str]:
         """Default directories that should never be modified."""
         return {
             "vendor/",
@@ -166,7 +165,7 @@ class PatchHygieneConfig:
         }
 
     @staticmethod
-    def _default_forbidden_patterns() -> Set[str]:
+    def _default_forbidden_patterns() -> set[str]:
         """Default file patterns that should never be modified."""
         return {
             "package-lock.json",
@@ -190,7 +189,7 @@ class PatchHygieneConfig:
 class PatchHygieneResult:
     """Result of patch hygiene validation."""
 
-    def __init__(self, is_valid: bool, violations: List[str]):
+    def __init__(self, is_valid: bool, violations: list[str]):
         self.is_valid = is_valid
         self.violations = violations
 
@@ -200,7 +199,7 @@ class PatchHygieneResult:
 
 def validate_patch_hygiene(
     diff: str,
-    config: Optional[PatchHygieneConfig] = None,
+    config: PatchHygieneConfig | None = None,
 ) -> PatchHygieneResult:
     """Validate a patch against hygiene gates.
 
@@ -331,7 +330,7 @@ def validate_patch_hygiene(
     return PatchHygieneResult(len(violations) == 0, violations)
 
 
-def _parse_diff(diff: str) -> Tuple[Set[str], int, int]:
+def _parse_diff(diff: str) -> tuple[set[str], int, int]:
     """Parse a git diff to extract changed files and line counts.
 
     Args:

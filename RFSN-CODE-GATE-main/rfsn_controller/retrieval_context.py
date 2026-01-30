@@ -9,7 +9,6 @@ the right code.
 from __future__ import annotations
 
 import re
-from typing import List, Optional, Set
 
 from .repo_index import RepoIndex
 
@@ -18,10 +17,10 @@ _RE_PY_FUNC = re.compile(r"in ([A-Za-z_][A-Za-z0-9_]*)")
 _RE_ASSERT_HINT = re.compile(r"assert\s+([A-Za-z_][A-Za-z0-9_]*)", re.IGNORECASE)
 
 
-def _uniq_preserve(items: List[str]) -> List[str]:
+def _uniq_preserve(items: list[str]) -> list[str]:
     """Deduplicate while preserving order."""
-    seen: Set[str] = set()
-    out: List[str] = []
+    seen: set[str] = set()
+    out: list[str] = []
     for item in items:
         if item not in seen:
             seen.add(item)
@@ -87,7 +86,7 @@ def build_retrieval_context(
             break
 
     # Build retrieval context text
-    parts: List[str] = []
+    parts: list[str] = []
 
     if files:
         parts.append("LIKELY_FILES_FROM_TRACE:")
@@ -108,7 +107,7 @@ def build_retrieval_context(
         parts.append("")
 
     # Suggest next reads: trace files first, then files from symbol hits
-    suggested: List[str] = []
+    suggested: list[str] = []
     for f in files:
         suggested.append(f)
     for hit in sym_hits:

@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from rfsn_controller.evidence_manager import EvidenceManager, EvidenceEntry
+from rfsn_controller.evidence_manager import EvidenceEntry, EvidenceManager
 
 
 class TestEvidenceManager:

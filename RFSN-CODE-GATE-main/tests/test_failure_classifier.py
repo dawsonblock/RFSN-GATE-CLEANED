@@ -1,10 +1,12 @@
 """Tests for Failure Taxonomy Engine."""
 
 import pytest
+
 from rfsn_controller.planner_v2.failure_classifier import (
     FailureClassifier,
     FailureType,
 )
+
 
 class TestFailureClassifier:
     

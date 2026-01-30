@@ -7,7 +7,6 @@ across supported languages.
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict, Optional
 
 
 class Language(Enum):
@@ -27,13 +26,13 @@ class CommandTemplates:
 
     install: str
     test: str
-    build: Optional[str]
-    lint: Optional[str]
-    typecheck: Optional[str]
+    build: str | None
+    lint: str | None
+    typecheck: str | None
 
 
 # Language-specific command templates
-TEMPLATES: Dict[Language, CommandTemplates] = {
+TEMPLATES: dict[Language, CommandTemplates] = {
     Language.PYTHON: CommandTemplates(
         install="python -m pip install -e .",
         test="python -m pytest -q",
@@ -80,7 +79,7 @@ TEMPLATES: Dict[Language, CommandTemplates] = {
 
 
 # Buildpack Docker images for each language
-BUILDPACK_IMAGES: Dict[Language, str] = {
+BUILDPACK_IMAGES: dict[Language, str] = {
     Language.PYTHON: "python:3.11-slim",
     Language.NODE: "node:20-slim",
     Language.GO: "golang:1.22-slim",

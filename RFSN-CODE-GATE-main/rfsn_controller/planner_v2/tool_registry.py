@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 class ToolCategory(Enum):
@@ -40,20 +40,20 @@ class ToolContract:
     
     # Constraints
     max_runtime_sec: int = 300
-    allowed_exit_codes: List[int] = field(default_factory=lambda: [0])
+    allowed_exit_codes: list[int] = field(default_factory=lambda: [0])
     requires_sandbox: bool = True
     
     # Risk level this tool is appropriate for
     min_risk_level: str = "LOW"  # LOW, MED, HIGH
     
     # Output parsing
-    output_parser: Optional[str] = None  # Name of parser function
+    output_parser: str | None = None  # Name of parser function
     
     def format_command(self, **kwargs) -> str:
         """Format command with provided arguments."""
         return self.command_template.format(**kwargs)
     
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "tool_id": self.tool_id,
             "name": self.name,
@@ -73,14 +73,14 @@ class VerifyRecipe:
     
     recipe_id: str
     name: str
-    tools: List[str]  # Tool IDs to run in sequence
+    tools: list[str]  # Tool IDs to run in sequence
     description: str
     
     # Recipe constraints
     fail_fast: bool = True  # Stop on first tool failure
     required_all_pass: bool = True  # All tools must pass
     
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "recipe_id": self.recipe_id,
             "name": self.name,
@@ -99,8 +99,8 @@ class ToolContractRegistry:
     """
     
     def __init__(self):
-        self._tools: Dict[str, ToolContract] = {}
-        self._recipes: Dict[str, VerifyRecipe] = {}
+        self._tools: dict[str, ToolContract] = {}
+        self._recipes: dict[str, VerifyRecipe] = {}
         self._register_default_tools()
         self._register_default_recipes()
     
@@ -354,26 +354,26 @@ class ToolContractRegistry:
         """Register a verify recipe."""
         self._recipes[recipe.recipe_id] = recipe
     
-    def get_tool(self, tool_id: str) -> Optional[ToolContract]:
+    def get_tool(self, tool_id: str) -> ToolContract | None:
         """Get a tool by ID."""
         return self._tools.get(tool_id)
     
-    def get_recipe(self, recipe_id: str) -> Optional[VerifyRecipe]:
+    def get_recipe(self, recipe_id: str) -> VerifyRecipe | None:
         """Get a recipe by ID."""
         return self._recipes.get(recipe_id)
     
-    def list_tools(self, category: Optional[ToolCategory] = None) -> List[ToolContract]:
+    def list_tools(self, category: ToolCategory | None = None) -> list[ToolContract]:
         """List all tools, optionally filtered by category."""
         tools = list(self._tools.values())
         if category:
             tools = [t for t in tools if t.category == category]
         return tools
     
-    def list_recipes(self) -> List[VerifyRecipe]:
+    def list_recipes(self) -> list[VerifyRecipe]:
         """List all recipes."""
         return list(self._recipes.values())
     
-    def get_tools_for_risk(self, risk_level: str) -> List[ToolContract]:
+    def get_tools_for_risk(self, risk_level: str) -> list[ToolContract]:
         """Get tools appropriate for a risk level."""
         risk_order = {"LOW": 0, "MED": 1, "HIGH": 2}
         level = risk_order.get(risk_level, 0)
@@ -383,7 +383,7 @@ class ToolContractRegistry:
             if risk_order.get(t.min_risk_level, 0) <= level
         ]
     
-    def get_recipe_for_language(self, language: str, full: bool = True) -> Optional[str]:
+    def get_recipe_for_language(self, language: str, full: bool = True) -> str | None:
         """Get appropriate recipe for a language.
         
         Args:
@@ -421,7 +421,7 @@ class ToolContractRegistry:
         
         return False
     
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Export registry as dictionary."""
         return {
             "tools": {k: v.to_dict() for k, v in self._tools.items()},
@@ -430,7 +430,7 @@ class ToolContractRegistry:
 
 
 # Singleton registry
-_registry: Optional[ToolContractRegistry] = None
+_registry: ToolContractRegistry | None = None
 
 
 def get_tool_registry() -> ToolContractRegistry:

@@ -7,7 +7,6 @@ Defines the mandatory schema for all proposals submitted to the RFSN gate.
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional
 from uuid import UUID, uuid4
 
 
@@ -54,7 +53,7 @@ class Target:
     """The target of a proposal action."""
 
     path: str  # Relative path from repo root
-    symbol: Optional[str] = None  # Function/class name if applicable
+    symbol: str | None = None  # Function/class name if applicable
 
     def __post_init__(self):
         """Validate target path."""

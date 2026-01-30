@@ -13,7 +13,7 @@ import sqlite3
 import threading
 import time
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 
 @dataclass
@@ -24,12 +24,12 @@ class ActionOutcome:
     context_hash: str  # Hash of relevant context
     input_summary: str  # Brief description of input
     success: bool
-    outcome_details: Dict[str, Any]
+    outcome_details: dict[str, Any]
     timestamp: float
     
     # Optional learning data
-    error_type: Optional[str] = None
-    recovery_action: Optional[str] = None
+    error_type: str | None = None
+    recovery_action: str | None = None
 
 
 @dataclass
@@ -45,7 +45,7 @@ class ActionOutcomeStore:
     db_path: str
     max_entries: int = 50000
     
-    _conn: Optional[sqlite3.Connection] = field(default=None, repr=False)
+    _conn: sqlite3.Connection | None = field(default=None, repr=False)
     _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
     
     def __post_init__(self):
@@ -80,7 +80,7 @@ class ActionOutcomeStore:
         """)
         self._conn.commit()
     
-    def _hash_context(self, context: Dict[str, Any]) -> str:
+    def _hash_context(self, context: dict[str, Any]) -> str:
         """Create hash from context dict."""
         # Include only stable keys for hashing
         stable = {
@@ -127,12 +127,12 @@ class ActionOutcomeStore:
     def record_from_controller(
         self,
         action_type: str,
-        context: Dict[str, Any],
+        context: dict[str, Any],
         input_summary: str,
         success: bool,
-        details: Optional[Dict[str, Any]] = None,
-        error_type: Optional[str] = None,
-        recovery_action: Optional[str] = None,
+        details: dict[str, Any] | None = None,
+        error_type: str | None = None,
+        recovery_action: str | None = None,
     ) -> None:
         """Convenience method to record from controller.
         
@@ -160,8 +160,8 @@ class ActionOutcomeStore:
     def get_success_rate(
         self,
         action_type: str,
-        context: Dict[str, Any],
-    ) -> Tuple[float, int]:
+        context: dict[str, Any],
+    ) -> tuple[float, int]:
         """Get historical success rate for action type in context.
         
         Args:
@@ -196,9 +196,9 @@ class ActionOutcomeStore:
     def get_common_errors(
         self,
         action_type: str,
-        context: Dict[str, Any],
+        context: dict[str, Any],
         limit: int = 5,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Get most common error types for action in context.
         
         Args:
@@ -236,9 +236,9 @@ class ActionOutcomeStore:
     def suggest_recovery(
         self,
         action_type: str,
-        context: Dict[str, Any],
+        context: dict[str, Any],
         error_type: str,
-    ) -> Optional[str]:
+    ) -> str | None:
         """Suggest recovery action based on history.
         
         Args:
@@ -292,11 +292,11 @@ class ActionOutcomeStore:
 
 
 # Global store instance
-_store: Optional[ActionOutcomeStore] = None
+_store: ActionOutcomeStore | None = None
 _store_lock = threading.Lock()
 
 
-def get_action_store(db_path: Optional[str] = None) -> ActionOutcomeStore:
+def get_action_store(db_path: str | None = None) -> ActionOutcomeStore:
     """Get the global action outcome store."""
     global _store
     with _store_lock:

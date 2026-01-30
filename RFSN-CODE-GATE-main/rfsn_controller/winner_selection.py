@@ -9,7 +9,6 @@ Implements scoring-based selection for multiple successful patches:
 """
 
 from dataclasses import dataclass
-from typing import List, Optional, Set
 
 
 @dataclass
@@ -26,7 +25,7 @@ class PatchScore:
     reason: str
 
 
-def parse_diff_stats(diff: str) -> tuple[int, int, Set[str]]:
+def parse_diff_stats(diff: str) -> tuple[int, int, set[str]]:
     """Parse a diff to extract statistics.
 
     Args:
@@ -81,7 +80,7 @@ def is_test_file(filepath: str) -> bool:
 def score_patch(
     diff: str,
     diff_hash: str,
-    traceback_files: Optional[Set[str]] = None,
+    traceback_files: set[str] | None = None,
     test_edit_penalty: float = 10.0,
     traceback_bonus: float = -5.0,
 ) -> PatchScore:
@@ -149,11 +148,11 @@ def score_patch(
 
 
 def select_best_patch(
-    candidates: List[tuple[str, float]],  # List of (diff, temperature)
-    traceback_files: Optional[Set[str]] = None,
+    candidates: list[tuple[str, float]],  # List of (diff, temperature)
+    traceback_files: set[str] | None = None,
     test_edit_penalty: float = 10.0,
     traceback_bonus: float = -5.0,
-) -> Optional[PatchScore]:
+) -> PatchScore | None:
     """Select the best patch from multiple successful candidates.
 
     Args:
@@ -190,10 +189,10 @@ def select_best_patch(
 
 def select_best_patch_from_hashes(
     diff_hashes: dict[str, str],  # Map of diff_hash -> diff
-    traceback_files: Optional[Set[str]] = None,
+    traceback_files: set[str] | None = None,
     test_edit_penalty: float = 10.0,
     traceback_bonus: float = -5.0,
-) -> Optional[PatchScore]:
+) -> PatchScore | None:
     """Select the best patch from a map of diff hashes.
 
     Args:

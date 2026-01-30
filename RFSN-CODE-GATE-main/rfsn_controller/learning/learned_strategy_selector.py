@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Set
 
 from .fingerprint import (
     FailureFingerprint,
@@ -46,15 +45,15 @@ class StrategyRecommendation:
     fingerprint_hash: str
     
     # Alternative strategies (fallbacks)
-    alternatives: List[str]
+    alternatives: list[str]
     
     # Strategies to avoid
-    quarantined: Set[str]
+    quarantined: set[str]
     
     # Reasoning (for debugging/audit)
     reasoning: str
     
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         """Convert to JSON-serializable dict."""
         return {
             "strategy": self.strategy,
@@ -90,7 +89,7 @@ class LearnedStrategySelector:
     
     def __init__(
         self,
-        strategies: Optional[List[str]] = None,
+        strategies: list[str] | None = None,
     ):
         """Initialize selector.
         
@@ -101,15 +100,15 @@ class LearnedStrategySelector:
         self.quarantine = QuarantineLane()
         
         # Cache of fingerprints for update correlation
-        self._fingerprint_cache: Dict[str, FailureFingerprint] = {}
+        self._fingerprint_cache: dict[str, FailureFingerprint] = {}
     
     def recommend(
         self,
-        failing_tests: Optional[List[str]] = None,
-        lint_errors: Optional[List[str]] = None,
-        stack_trace: Optional[str] = None,
-        affected_files: Optional[List[str]] = None,
-        exclude: Optional[Set[str]] = None,
+        failing_tests: list[str] | None = None,
+        lint_errors: list[str] | None = None,
+        stack_trace: str | None = None,
+        affected_files: list[str] | None = None,
+        exclude: set[str] | None = None,
     ) -> StrategyRecommendation:
         """Get a strategy recommendation for the current failure.
         
@@ -172,7 +171,7 @@ class LearnedStrategySelector:
         recommendation: StrategyRecommendation,
         success: bool,
         regression: bool = False,
-        partial_reward: Optional[float] = None,
+        partial_reward: float | None = None,
     ) -> None:
         """Update learning based on outcome.
         
@@ -210,8 +209,8 @@ class LearnedStrategySelector:
     def _get_alternatives(
         self,
         fp_hash: str,
-        exclude: Set[str],
-    ) -> List[str]:
+        exclude: set[str],
+    ) -> list[str]:
         """Get alternative strategies ranked by expected reward."""
         stats = self.bandit.get_stats(fp_hash)
         
@@ -228,7 +227,7 @@ class LearnedStrategySelector:
         self,
         fingerprint: FailureFingerprint,
         strategy: str,
-        quarantined: Set[str],
+        quarantined: set[str],
     ) -> str:
         """Build human-readable reasoning for recommendation."""
         parts = [
@@ -244,7 +243,7 @@ class LearnedStrategySelector:
         
         return "; ".join(parts)
     
-    def get_stats(self) -> Dict:
+    def get_stats(self) -> dict:
         """Get combined statistics from all components."""
         return {
             "bandit": self.bandit.get_stats(),

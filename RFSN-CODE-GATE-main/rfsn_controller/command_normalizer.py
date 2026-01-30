@@ -8,7 +8,6 @@ due to shell=False execution model.
 
 import re
 import shlex
-from typing import List
 
 
 def detect_shell_idioms(cmd: str) -> bool:
@@ -43,10 +42,8 @@ def detect_shell_idioms(cmd: str) -> bool:
     if tokens:
         if any(t in {"|", ">", "<", ">>"} for t in tokens):
             return True
-    else:
-        # Fallback heuristic
-        if "|" in cmd or ">" in cmd or "<" in cmd:
-            return True
+    elif "|" in cmd or ">" in cmd or "<" in cmd:
+        return True
 
     # Check for command substitution
     if "$(" in cmd or "`" in cmd:
@@ -70,7 +67,7 @@ def detect_shell_idioms(cmd: str) -> bool:
     return False
 
 
-def split_compound(cmd: str) -> List[str]:
+def split_compound(cmd: str) -> list[str]:
     """Split a compound command into individual commands.
 
     This is a conservative splitter that only handles simple cases:

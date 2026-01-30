@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass, field
-from typing import Any, Dict, Optional
+from typing import Any
 
 
 @dataclass
@@ -30,7 +30,7 @@ class PlannerMetrics:
     
     # Revision
     revisions_total: int = 0
-    revisions_by_category: Dict[str, int] = field(default_factory=dict)
+    revisions_by_category: dict[str, int] = field(default_factory=dict)
     
     # QA
     qa_evaluations: int = 0
@@ -47,7 +47,7 @@ class PlannerMetrics:
     cache_hits: int = 0
     cache_misses: int = 0
     
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "plans_generated": self.plans_generated,
             "plans_from_cache": self.plans_from_cache,
@@ -89,8 +89,8 @@ class MetricsCollector:
     def __init__(self):
         self._metrics = PlannerMetrics()
         self._start_time = time.monotonic()
-        self._plan_start: Optional[float] = None
-        self._step_start: Optional[float] = None
+        self._plan_start: float | None = None
+        self._step_start: float | None = None
     
     def record_plan_generated(
         self,
@@ -273,7 +273,7 @@ class MetricsCollector:
 
 
 # Global metrics collector
-_global_collector: Optional[MetricsCollector] = None
+_global_collector: MetricsCollector | None = None
 
 
 def get_metrics_collector() -> MetricsCollector:

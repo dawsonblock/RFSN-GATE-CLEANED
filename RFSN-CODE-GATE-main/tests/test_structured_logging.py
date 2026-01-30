@@ -4,8 +4,6 @@ import json
 import logging
 from io import StringIO
 
-import pytest
-
 
 def test_structured_logger_creation():
     """Test StructuredLogger can be created."""
@@ -19,9 +17,9 @@ def test_structured_logger_creation():
 def test_context_variables():
     """Test context variables are set and retrieved."""
     from rfsn_controller.structured_logging import (
+        phase_ctx,
         request_id_ctx,
         user_ctx,
-        phase_ctx,
     )
 
     # Set context

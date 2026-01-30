@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import hashlib
 import re
-from typing import Any, Dict, List
+from typing import Any
 
 # Forbidden path prefixes that should not be sent to the model
 FORBIDDEN_PREFIXES = [".git/", "node_modules/", ".venv/", "venv/", "__pycache__/"]
@@ -30,7 +30,7 @@ def safe_path(p: str) -> bool:
     return not any(p.startswith(prefix) for prefix in FORBIDDEN_PREFIXES)
 
 
-def files_block(files: List[Dict[str, Any]]) -> str:
+def files_block(files: list[dict[str, Any]]) -> str:
     """Create a files block for the model input from a list of read_file results."""
     parts = []
     for f in files:
@@ -83,7 +83,7 @@ def infer_buildpack_type_from_test_cmd(test_cmd: str) -> str:
         return "unknown"
 
 
-def extract_traceback_files(traceback_text: str) -> List[str]:
+def extract_traceback_files(traceback_text: str) -> list[str]:
     """Extract file paths mentioned in a traceback.
     
     Args:

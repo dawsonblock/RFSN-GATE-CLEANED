@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Any
 
 import yaml
 
@@ -11,7 +11,7 @@ import yaml
 @dataclass
 class Profile:
     name: str
-    data: Dict[str, Any]
+    data: dict[str, Any]
 
     def get(self, key: str, default=None):
         return self.data.get(key, default)
@@ -21,15 +21,15 @@ class Profile:
         return self.data.get("sandbox", "local")
 
     @property
-    def docker(self) -> Dict[str, Any]:
+    def docker(self) -> dict[str, Any]:
         return self.data.get("docker", {}) or {}
 
     @property
-    def budgets(self) -> Dict[str, Any]:
+    def budgets(self) -> dict[str, Any]:
         return self.data.get("budgets", {}) or {}
 
     @property
-    def contracts(self) -> Dict[str, Any]:
+    def contracts(self) -> dict[str, Any]:
         return self.data.get("contracts", {}) or {}
 
     @property
@@ -41,22 +41,22 @@ class Profile:
         return self.data.get("event_log_path", "artifacts/events.jsonl")
 
     @property
-    def publish(self) -> Dict[str, Any]:
+    def publish(self) -> dict[str, Any]:
         return self.data.get("publish", {}) or {}
 
     @property
-    def signing(self) -> Dict[str, Any]:
+    def signing(self) -> dict[str, Any]:
         return self.data.get("signing", {}) or {}
 
 
-def load_profiles(path: str) -> Dict[str, Profile]:
-    with open(path, "r", encoding="utf-8") as f:
+def load_profiles(path: str) -> dict[str, Profile]:
+    with open(path, encoding="utf-8") as f:
         obj = yaml.safe_load(f) or {}
     profiles = obj.get("profiles", {}) or {}
     return {k: Profile(k, v or {}) for k, v in profiles.items()}
 
 
-def resolve_profile(profile_name: str, explicit_path: Optional[str] = None) -> Profile:
+def resolve_profile(profile_name: str, explicit_path: str | None = None) -> Profile:
     candidates = []
     if explicit_path:
         candidates.append(explicit_path)

@@ -6,7 +6,6 @@ Handles Node.js repositories with npm, yarn, or pnpm dependency managers.
 
 import hashlib
 import re
-from typing import List, Optional
 
 from .base import (
     Buildpack,
@@ -27,7 +26,7 @@ class NodeBuildpack(Buildpack):
         super().__init__()
         self._buildpack_type = BuildpackType.NODE
 
-    def detect(self, ctx: BuildpackContext) -> Optional[DetectResult]:
+    def detect(self, ctx: BuildpackContext) -> DetectResult | None:
         """Detect if this is a Node.js repository."""
         node_indicators = [
             "package.json",
@@ -41,9 +40,7 @@ class NodeBuildpack(Buildpack):
 
         found_indicators = []
         for indicator in node_indicators:
-            if indicator in ctx.files:
-                found_indicators.append(indicator)
-            elif any(f == indicator or f.endswith("/" + indicator) for f in ctx.repo_tree):
+            if indicator in ctx.files or any(f == indicator or f.endswith("/" + indicator) for f in ctx.repo_tree):
                 found_indicators.append(indicator)
 
         if not found_indicators:
@@ -65,13 +62,13 @@ class NodeBuildpack(Buildpack):
         """Return the Docker image for Node.js."""
         return "node:20-slim"
 
-    def sysdeps_whitelist(self) -> List[str]:
+    def sysdeps_whitelist(self) -> list[str]:
         """Return Node.js-specific system dependencies."""
         common = ["build-essential", "pkg-config", "git", "ca-certificates"]
         node_extras = ["python3", "libssl-dev"]
         return common + node_extras
 
-    def install_plan(self, ctx: BuildpackContext) -> List[Step]:
+    def install_plan(self, ctx: BuildpackContext) -> list[Step]:
         """Generate Node.js installation steps."""
         steps = []
 
@@ -112,9 +109,9 @@ class NodeBuildpack(Buildpack):
 
         return steps
 
-    def test_plan(self, ctx: BuildpackContext, focus_file: Optional[str] = None) -> TestPlan:
+    def test_plan(self, ctx: BuildpackContext, focus_file: str | None = None) -> TestPlan:
         """Generate Node.js test execution plan."""
-        package_json = ctx.files.get("package.json", "")
+        ctx.files.get("package.json", "")
         
         if focus_file:
             argv = ["npm", "test", "--", focus_file]
@@ -168,7 +165,7 @@ class NodeBuildpack(Buildpack):
             error_message=error_message,
         )
 
-    def focus_plan(self, failure: FailureInfo) -> Optional[TestPlan]:
+    def focus_plan(self, failure: FailureInfo) -> TestPlan | None:
         """Generate focused test plan based on failure."""
         if not failure.likely_files:
             return None

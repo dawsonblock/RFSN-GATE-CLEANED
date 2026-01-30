@@ -11,12 +11,8 @@ Tests cover:
 from __future__ import annotations
 
 import json
-import os
-import tempfile
 import threading
 import time
-from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -39,7 +35,6 @@ from rfsn_controller.events import (
     log_subprocess_exec_global,
     set_global_event_logger,
 )
-
 
 # =============================================================================
 # Test Event Enums
@@ -885,52 +880,26 @@ class TestEventConfigIntegration:
         """ControllerConfig includes EventConfig."""
         from rfsn_controller.config import ControllerConfig
         
-        config = ControllerConfig()
+        config = ControllerConfig(github_url="https://github.com/test/repo")
         assert hasattr(config, "events")
         assert config.events.enabled is True
     
     def test_config_from_cli_includes_events(self):
-        """config_from_cli_args creates EventConfig."""
+        """config_from_cli_args creates EventConfig from CLI args."""
         from rfsn_controller.config import config_from_cli_args
         
         class MockArgs:
-            repo = ""
+            repo = "https://github.com/test/repo"
             ref = None
-            feature_mode = "repair"
-            test = "pytest"
-            steps = 12
-            max_steps_without_progress = 10
-            sandbox_image = "python:3.11-slim"
-            network_access = False
-            budget_max_steps = 0
-            budget_max_llm_calls = 0
-            budget_max_tokens = 0
-            budget_max_time_seconds = 0
-            budget_max_subprocess_calls = 0
-            budget_warning_threshold = 0.8
             events_enabled = True
-            events_storage_path = ".rfsn/events.jsonl"
+            events_storage_path = ".rfsn/custom/events.jsonl"
             events_max_memory = 5000
-            events_max_storage = 50000
-            events_min_severity = "info"
             events_persist = True
-            events_include_subprocess = True
-            events_include_llm = True
-            events_include_budget = True
-            learning_db = None
-            policy_mode = "off"
-            planner_mode = "off"
-            repo_index = False
-            seed = 1337
-            model = "deepseek-chat"
-            collect_finetuning_data = False
-            parallel_patches = False
-            enable_llm_cache = False
-            no_eval = False
         
         config = config_from_cli_args(MockArgs())
         assert config.events.max_events_memory == 5000
-        assert config.events.min_severity == "info"
+        assert config.events.storage_path == ".rfsn/custom/events.jsonl"
+        assert config.events.persist_events is True
 
 
 # =============================================================================

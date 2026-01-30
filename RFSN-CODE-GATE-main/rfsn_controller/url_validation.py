@@ -9,7 +9,6 @@ Enforces strict GitHub URL validation to prevent:
 
 import os
 import re
-from typing import Optional, Tuple
 from urllib.parse import urlparse
 
 # Strict regex for GitHub repository URLs
@@ -62,7 +61,7 @@ def normalize_github_url(url: str) -> str:
     return url
 
 
-def validate_github_url(url: str) -> Tuple[bool, Optional[str], Optional[str]]:
+def validate_github_url(url: str) -> tuple[bool, str | None, str | None]:
     """Validate a GitHub repository URL.
 
     Args:
@@ -117,7 +116,7 @@ def validate_github_url(url: str) -> Tuple[bool, Optional[str], Optional[str]]:
     return True, normalized, None
 
 
-def extract_repo_info(url: str) -> Optional[Tuple[str, str]]:
+def extract_repo_info(url: str) -> tuple[str, str] | None:
     """Extract owner and repository name from a GitHub URL.
 
     Args:

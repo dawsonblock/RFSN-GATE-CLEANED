@@ -7,9 +7,9 @@ Respects resource limits and maintains state consistency.
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
-from typing import Callable, List, Optional
 
 from .schema import ControllerOutcome, ControllerTaskSpec, Plan, PlanState, Step, StepStatus
 
@@ -18,7 +18,7 @@ from .schema import ControllerOutcome, ControllerTaskSpec, Plan, PlanState, Step
 class ParallelBatch:
     """A batch of steps that can run in parallel."""
     
-    steps: List[Step]
+    steps: list[Step]
     batch_id: int
     
     @property
@@ -31,9 +31,9 @@ class ParallelResult:
     """Result of parallel batch execution."""
     
     batch_id: int
-    outcomes: List[ControllerOutcome]
+    outcomes: list[ControllerOutcome]
     elapsed_ms: int
-    errors: List[str] = field(default_factory=list)
+    errors: list[str] = field(default_factory=list)
     
     @property
     def all_success(self) -> bool:
@@ -64,13 +64,13 @@ class ParallelStepExecutor:
         """
         self._max_workers = max_workers
         self._use_async = use_async
-        self._executor: Optional[ThreadPoolExecutor] = None
+        self._executor: ThreadPoolExecutor | None = None
     
     def find_parallel_batches(
         self,
         plan: Plan,
         state: PlanState,
-    ) -> List[ParallelBatch]:
+    ) -> list[ParallelBatch]:
         """Find steps that can run in parallel.
         
         Steps are parallelizable if:
@@ -120,7 +120,7 @@ class ParallelStepExecutor:
         
         return batches
     
-    def _filter_non_conflicting(self, steps: List[Step]) -> List[Step]:
+    def _filter_non_conflicting(self, steps: list[Step]) -> list[Step]:
         """Filter steps to keep only non-conflicting ones.
         
         Two steps conflict if they touch the same files.
@@ -180,9 +180,9 @@ class ParallelStepExecutor:
     
     def _execute_threaded(
         self,
-        steps: List[Step],
+        steps: list[Step],
         controller_fn: ControllerFn,
-    ) -> List[ControllerOutcome]:
+    ) -> list[ControllerOutcome]:
         """Execute steps using thread pool.
         
         Args:
@@ -216,9 +216,9 @@ class ParallelStepExecutor:
     
     def _execute_async(
         self,
-        steps: List[Step],
+        steps: list[Step],
         controller_fn: ControllerFn,
-    ) -> List[ControllerOutcome]:
+    ) -> list[ControllerOutcome]:
         """Execute steps using asyncio.
         
         Args:
@@ -236,7 +236,7 @@ class ParallelStepExecutor:
                 step.get_task_spec(),
             )
         
-        async def run_all() -> List[ControllerOutcome]:
+        async def run_all() -> list[ControllerOutcome]:
             tasks = [run_step(s) for s in steps]
             # Use return_exceptions=True to capture errors instead of raising
             return await asyncio.gather(*tasks, return_exceptions=True) # type: ignore
@@ -265,7 +265,7 @@ class ParallelStepExecutor:
     def merge_outcomes(
         self,
         state: PlanState,
-        outcomes: List[ControllerOutcome],
+        outcomes: list[ControllerOutcome],
     ) -> PlanState:
         """Merge parallel outcomes into plan state.
         
@@ -280,9 +280,8 @@ class ParallelStepExecutor:
             if outcome.success:
                 if outcome.step_id not in state.completed_steps:
                     state.completed_steps.append(outcome.step_id)
-            else:
-                if outcome.step_id not in state.failed_steps:
-                    state.failed_steps.append(outcome.step_id)
+            elif outcome.step_id not in state.failed_steps:
+                state.failed_steps.append(outcome.step_id)
         
         return state
 

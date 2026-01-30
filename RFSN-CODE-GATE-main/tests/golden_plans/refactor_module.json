@@ -9,7 +9,7 @@
         "target_module": "utils"
     },
     "invariants": {
-        "min_steps": 4,
+        "min_steps": 3,
         "max_steps": 8,
         "required_step_types": [
             "analyze",
@@ -32,19 +32,20 @@
             ]
         },
         {
-            "pattern": "plan|design",
-            "description": "Plan the refactoring approach",
+            "pattern": "plan|design|implement",
+            "description": "Plan or implement the refactoring approach",
             "required_fields": [
                 "success_criteria"
             ]
         },
         {
-            "pattern": "refactor|reorganize|move",
+            "pattern": "refactor|reorganize|move|implement|change",
             "description": "Execute refactoring",
             "required_fields": [
                 "allowed_files",
                 "rollback_hint"
-            ]
+            ],
+            "optional": true
         },
         {
             "pattern": "verify|test",

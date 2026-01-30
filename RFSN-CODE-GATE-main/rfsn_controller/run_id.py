@@ -1,12 +1,9 @@
 from __future__ import annotations
 
-import os
-import re
-import time
 import hashlib
+import re
 import subprocess
-from dataclasses import dataclass
-from typing import Optional
+import time
 
 
 def _safe(s: str) -> str:
@@ -16,7 +13,7 @@ def _safe(s: str) -> str:
     return s[:80] if len(s) > 80 else s
 
 
-def _git_rev(repo_path: str) -> Optional[str]:
+def _git_rev(repo_path: str) -> str | None:
     try:
         p = subprocess.run(
             ["git", "rev-parse", "HEAD"],
@@ -24,7 +21,7 @@ def _git_rev(repo_path: str) -> Optional[str]:
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
             text=True,
-            timeout=5,
+            timeout=5, check=False,
         )
         if p.returncode == 0:
             return p.stdout.strip()
@@ -37,8 +34,8 @@ def make_run_id(
     *,
     repo_path: str,
     goal: str,
-    profile: Optional[str] = None,
-    ts_unix: Optional[int] = None,
+    profile: str | None = None,
+    ts_unix: int | None = None,
 ) -> str:
     ts = int(ts_unix if ts_unix is not None else time.time())
     commit = _git_rev(repo_path) or "n/a"

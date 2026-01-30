@@ -9,11 +9,11 @@ This module implements a multi-step planner that:
 
 from __future__ import annotations
 
-import json
 from collections import defaultdict, deque
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Set, Tuple
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from .context import ControllerContext
@@ -40,15 +40,15 @@ class PlanNode:
     
     id: str
     description: str
-    inputs: List[str] = field(default_factory=list)
-    outputs: List[str] = field(default_factory=list)
-    preconditions: List[str] = field(default_factory=list)
-    actions: List[str] = field(default_factory=list)
+    inputs: list[str] = field(default_factory=list)
+    outputs: list[str] = field(default_factory=list)
+    preconditions: list[str] = field(default_factory=list)
+    actions: list[str] = field(default_factory=list)
     verification: str = ""
     status: NodeStatus = NodeStatus.PENDING
-    result: Optional[Dict[str, Any]] = None
+    result: dict[str, Any] | None = None
     
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert node to JSON-serializable dict."""
         return {
             "id": self.id,
@@ -63,7 +63,7 @@ class PlanNode:
         }
     
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "PlanNode":
+    def from_dict(cls, data: dict[str, Any]) -> PlanNode:
         """Create a node from a dictionary."""
         node = cls(
             id=data["id"],
@@ -87,8 +87,8 @@ class PlanDAG:
     Supports topological sorting, cycle detection, and incremental execution.
     """
     
-    nodes: Dict[str, PlanNode] = field(default_factory=dict)
-    edges: List[Tuple[str, str]] = field(default_factory=list)
+    nodes: dict[str, PlanNode] = field(default_factory=dict)
+    edges: list[tuple[str, str]] = field(default_factory=list)
     
     def add_node(self, node: PlanNode) -> None:
         """Add a node to the graph."""
@@ -100,11 +100,11 @@ class PlanDAG:
             raise ValueError(f"Both nodes must exist: {from_id} -> {to_id}")
         self.edges.append((from_id, to_id))
     
-    def get_predecessors(self, node_id: str) -> List[str]:
+    def get_predecessors(self, node_id: str) -> list[str]:
         """Get all predecessor node IDs."""
         return [from_id for from_id, to_id in self.edges if to_id == node_id]
     
-    def get_successors(self, node_id: str) -> List[str]:
+    def get_successors(self, node_id: str) -> list[str]:
         """Get all successor node IDs."""
         return [to_id for from_id, to_id in self.edges if from_id == node_id]
     
@@ -115,13 +115,13 @@ class PlanDAG:
             True if cycles exist, False otherwise.
         """
         # Build adjacency list
-        graph: Dict[str, List[str]] = defaultdict(list)
+        graph: dict[str, list[str]] = defaultdict(list)
         for from_id, to_id in self.edges:
             graph[from_id].append(to_id)
         
         # Track visited and recursion stack
-        visited: Set[str] = set()
-        rec_stack: Set[str] = set()
+        visited: set[str] = set()
+        rec_stack: set[str] = set()
         
         def dfs(node: str) -> bool:
             visited.add(node)
@@ -144,7 +144,7 @@ class PlanDAG:
         
         return False
     
-    def topological_sort(self) -> List[str]:
+    def topological_sort(self) -> list[str]:
         """Get nodes in topological order.
         
         Returns:
@@ -157,13 +157,13 @@ class PlanDAG:
             raise ValueError("Cannot sort: graph contains cycles")
         
         # Calculate in-degrees
-        in_degree: Dict[str, int] = {node_id: 0 for node_id in self.nodes}
+        in_degree: dict[str, int] = {node_id: 0 for node_id in self.nodes}
         for _, to_id in self.edges:
             in_degree[to_id] += 1
         
         # Start with nodes that have no predecessors
         queue = deque([node_id for node_id, degree in in_degree.items() if degree == 0])
-        result: List[str] = []
+        result: list[str] = []
         
         while queue:
             node_id = queue.popleft()
@@ -176,7 +176,7 @@ class PlanDAG:
         
         return result
     
-    def get_ready_nodes(self) -> List[str]:
+    def get_ready_nodes(self) -> list[str]:
         """Get nodes that are ready to execute.
         
         A node is ready if all predecessors are DONE.
@@ -199,7 +199,7 @@ class PlanDAG:
         
         return ready
     
-    def to_json(self) -> Dict[str, Any]:
+    def to_json(self) -> dict[str, Any]:
         """Convert DAG to JSON-serializable dict."""
         return {
             "nodes": {k: v.to_dict() for k, v in self.nodes.items()},
@@ -207,7 +207,7 @@ class PlanDAG:
         }
     
     @classmethod
-    def from_json(cls, data: Dict[str, Any]) -> "PlanDAG":
+    def from_json(cls, data: dict[str, Any]) -> PlanDAG:
         """Create a DAG from JSON data."""
         dag = cls()
         for node_id, node_data in data.get("nodes", {}).items():
@@ -219,7 +219,7 @@ class PlanDAG:
 class Planner:
     """Generates and executes plans for code repair/generation tasks."""
     
-    def __init__(self, context: "ControllerContext") -> None:
+    def __init__(self, context: ControllerContext) -> None:
         """Initialize the planner.
         
         Args:
@@ -230,7 +230,7 @@ class Planner:
     def generate_plan(
         self,
         problem: str,
-        repo_index: Optional["RepoIndex"] = None,
+        repo_index: RepoIndex | None = None,
         mode: str = "repair",
     ) -> PlanDAG:
         """Generate an execution plan for the given problem.
@@ -345,7 +345,7 @@ class Planner:
     def execute_node(
         self,
         node: PlanNode,
-        action_fn: Callable[[str], Dict[str, Any]],
+        action_fn: Callable[[str], dict[str, Any]],
     ) -> bool:
         """Execute a single plan node.
         
@@ -393,7 +393,7 @@ class Planner:
     def execute_plan(
         self,
         dag: PlanDAG,
-        action_fn: Callable[[str], Dict[str, Any]],
+        action_fn: Callable[[str], dict[str, Any]],
     ) -> bool:
         """Execute all nodes in the plan.
         

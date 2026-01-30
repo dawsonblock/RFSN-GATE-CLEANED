@@ -10,18 +10,18 @@ Triggers plan halt on patterns like:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, List, Optional, Set
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ..schema import Plan, PlanState, ControllerOutcome
+    from ..schema import ControllerOutcome, Plan, PlanState
 
 
 @dataclass
 class StepHistory:
     """History for a single step across attempts."""
     step_id: str
-    failure_signatures: List[str] = field(default_factory=list)
-    files_touched: Set[str] = field(default_factory=set)
+    failure_signatures: list[str] = field(default_factory=list)
+    files_touched: set[str] = field(default_factory=set)
     flaky_count: int = 0
 
 
@@ -57,7 +57,7 @@ class HaltSpec:
 class HaltChecker:
     """Checks halt conditions during plan execution."""
     
-    def __init__(self, spec: Optional[HaltSpec] = None):
+    def __init__(self, spec: HaltSpec | None = None):
         """Initialize with halt specification.
         
         Args:
@@ -65,14 +65,14 @@ class HaltChecker:
         """
         self.spec = spec or HaltSpec()
         self.step_history: dict[str, StepHistory] = {}
-        self.failure_signatures: List[str] = []
-        self.files_touched_per_step: List[int] = []
-        self.initial_dependencies: Set[str] = set()
-        self.current_dependencies: Set[str] = set()
+        self.failure_signatures: list[str] = []
+        self.files_touched_per_step: list[int] = []
+        self.initial_dependencies: set[str] = set()
+        self.current_dependencies: set[str] = set()
         self.flaky_streak: int = 0
         self.total_steps: int = 0
     
-    def initialize(self, plan: "Plan") -> None:
+    def initialize(self, plan: Plan) -> None:
         """Initialize checker with plan.
         
         Args:
@@ -86,8 +86,8 @@ class HaltChecker:
     def record_outcome(
         self,
         step_id: str,
-        outcome: "ControllerOutcome",
-        files_touched: List[str],
+        outcome: ControllerOutcome,
+        files_touched: list[str],
         is_flaky: bool = False,
     ) -> None:
         """Record a step outcome for halt checking.
@@ -126,7 +126,7 @@ class HaltChecker:
         """
         self.current_dependencies.add(dep)
     
-    def check(self, plan: "Plan", state: "PlanState") -> Optional[str]:
+    def check(self, plan: Plan, state: PlanState) -> str | None:
         """Check all halt conditions.
         
         Args:

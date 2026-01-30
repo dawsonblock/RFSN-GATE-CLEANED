@@ -6,8 +6,6 @@ Tests the 3 key acceptance criteria:
 3. Coverage signal for untested changes
 """
 
-import tempfile
-import os
 
 import pytest
 
@@ -19,15 +17,12 @@ class TestDeltaMapCatchesRegression:
         """Patch with regression is rejected by QA gate."""
         from rfsn_controller.qa import (
             ClaimExtractor,
+            ClaimType,
+            Evidence,
+            EvidenceType,
             PatchContext,
             QACritic,
             QAGate,
-            Claim,
-            ClaimType,
-            ClaimVerdict,
-            Verdict,
-            Evidence,
-            EvidenceType,
         )
 
         # Setup: Create claims
@@ -71,10 +66,8 @@ class TestScopeLimitsEnforced:
         """8 files triggers rejection in strict mode."""
         from rfsn_controller.qa import (
             ClaimExtractor,
-            PatchContext,
-            QACritic,
-            QAGate,
             ClaimType,
+            PatchContext,
         )
 
         # Large patch: 8 files
@@ -96,7 +89,6 @@ class TestScopeLimitsEnforced:
             Claim,
             ClaimType,
             QACritic,
-            QAGate,
             Verdict,
         )
 
@@ -123,8 +115,8 @@ class TestScopeLimitsEnforced:
             Claim,
             ClaimType,
             ClaimVerdict,
-            Verdict,
             QAGate,
+            Verdict,
         )
 
         claims = [
@@ -175,7 +167,7 @@ class TestQAOrchestratorIntegration:
 
     def test_full_pipeline_accept(self):
         """Orchestrator accepts clean patch."""
-        from rfsn_controller.qa import QAOrchestrator, QAConfig
+        from rfsn_controller.qa import QAConfig, QAOrchestrator
 
         # Mock test runner that shows tests pass
         def mock_test_runner(cmd):
@@ -225,7 +217,7 @@ class TestQAOrchestratorIntegration:
 
     def test_full_pipeline_reject_on_failure(self):
         """Orchestrator rejects patch when tests still fail."""
-        from rfsn_controller.qa import QAOrchestrator, QAConfig
+        from rfsn_controller.qa import QAConfig, QAOrchestrator
 
         # Mock test runner that shows tests fail
         def mock_test_runner(cmd):

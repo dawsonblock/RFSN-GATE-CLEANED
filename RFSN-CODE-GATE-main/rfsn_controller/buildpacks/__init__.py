@@ -6,8 +6,6 @@ languages, enabling the RFSN Sandbox Controller to work with any public
 repository regardless of language.
 """
 
-from typing import List
-
 from .base import (
     Buildpack,
     BuildpackContext,
@@ -77,7 +75,7 @@ def get_buildpack(buildpack_type: BuildpackType) -> Buildpack:
     return buildpack_class()
 
 
-def get_all_buildpacks() -> List[Buildpack]:
+def get_all_buildpacks() -> list[Buildpack]:
     """Get all available buildpack instances ordered by detection priority.
 
     Returns:

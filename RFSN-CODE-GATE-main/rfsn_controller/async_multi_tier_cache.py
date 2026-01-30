@@ -24,16 +24,12 @@ Usage:
 from __future__ import annotations
 
 import asyncio
-import hashlib
-import os
 import pickle
 import time
 from collections import OrderedDict
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, TypeVar
-
-import aiosqlite
 
 from .async_db import AsyncConnectionPool
 from .structured_logging import get_logger
@@ -256,7 +252,6 @@ class AsyncMultiTierCache:
         if self._pool is None:
             return
 
-        ttl = ttl_seconds or self.disk_ttl_seconds
         value_blob = pickle.dumps(value)
         now = time.time()
 

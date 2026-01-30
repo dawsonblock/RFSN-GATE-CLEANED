@@ -8,7 +8,7 @@ Fire-and-forget architecture to avoid blocking the controller.
 import queue
 import threading
 from dataclasses import asdict, dataclass
-from typing import Any, Dict, Optional
+from typing import Any
 
 import httpx
 
@@ -19,14 +19,14 @@ DASHBOARD_URL = "http://localhost:8000/api/events"
 @dataclass
 class Event:
     type: str
-    data: Dict[str, Any]
-    run_id: Optional[str] = None
+    data: dict[str, Any]
+    run_id: str | None = None
 
 
 class ProgressBroadcaster:
     """Async event broadcaster for the dashboard."""
 
-    def __init__(self, run_id: Optional[str] = None):
+    def __init__(self, run_id: str | None = None):
         self.run_id = run_id
         self._queue: queue.Queue[Event] = queue.Queue()
         self._stop_event = threading.Event()
@@ -39,10 +39,10 @@ class ProgressBroadcaster:
         self._enqueue("log", {"message": message, "level": level})
 
     def status(
-        self, phase: str, step: Optional[int] = None, max_steps: Optional[int] = None
+        self, phase: str, step: int | None = None, max_steps: int | None = None
     ) -> None:
         """Broadcast status update."""
-        data: Dict[str, Any] = {"phase": phase}
+        data: dict[str, Any] = {"phase": phase}
         if step is not None:
             data["step"] = step
         if max_steps is not None:
@@ -68,25 +68,25 @@ class ProgressBroadcaster:
         )
 
     def tool(
-        self, name: str, description: str, args: Optional[Dict[str, Any]] = None
+        self, name: str, description: str, args: dict[str, Any] | None = None
     ) -> None:
         """Broadcast tool execution event."""
         self._enqueue(
             "tool", {"name": name, "description": description, "args": args or {}}
         )
 
-    def thinking(self, active: bool, thought: Optional[str] = None) -> None:
+    def thinking(self, active: bool, thought: str | None = None) -> None:
         """Broadcast AI thinking state."""
-        data: Dict[str, Any] = {"active": active}
+        data: dict[str, Any] = {"active": active}
         if thought:
             data["thought"] = thought
         self._enqueue("thinking", data)
 
-    def step(self, step_num: int, summary: str, tool: Optional[str] = None) -> None:
+    def step(self, step_num: int, summary: str, tool: str | None = None) -> None:
         """Broadcast step completion."""
         self._enqueue("step", {"step": step_num, "summary": summary, "tool": tool})
 
-    def _enqueue(self, event_type: str, data: Dict[str, Any]) -> None:
+    def _enqueue(self, event_type: str, data: dict[str, Any]) -> None:
         if not self.enabled:
             return
         self._queue.put(Event(type=event_type, data=data, run_id=self.run_id))

@@ -27,11 +27,11 @@ def test_simulation_gate_is_advisory_only():
 
 
 def test_simulation_gate_only_adjusts_candidate_scores():
+    from cgw_ssl_guard.coding_agent.action_types import ActionPayload, CodingAction
+    from cgw_ssl_guard.coding_agent.proposal_generators import ProposalContext
     from cgw_ssl_guard.coding_agent.sim.simulation_gate import SimulationGate
     from cgw_ssl_guard.event_bus import SimpleEventBus
     from cgw_ssl_guard.types import Candidate
-    from cgw_ssl_guard.coding_agent.action_types import ActionPayload, CodingAction
-    from cgw_ssl_guard.coding_agent.proposal_generators import ProposalContext
 
     bus = SimpleEventBus()
     gate = SimulationGate(event_bus=bus)

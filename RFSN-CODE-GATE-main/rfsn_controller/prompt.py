@@ -1,7 +1,7 @@
 """Helpers for constructing model input strings."""
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any
 
 # Mode constants
 MODE_FEATURE = "feature"
@@ -25,7 +25,7 @@ def _truncate(s: str, n: int) -> str:
     return s[:n] + "\n...[truncated]..."
 
 
-def build_model_input(state: Dict[str, Any]) -> str:
+def build_model_input(state: dict[str, Any]) -> str:
     """Build a formatted model input string from the controller state.
 
     The state dictionary should contain keys: goal, intent, subgoal, test_cmd,

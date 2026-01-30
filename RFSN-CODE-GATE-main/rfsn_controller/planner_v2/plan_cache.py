@@ -10,9 +10,9 @@ import hashlib
 import json
 import re
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from .schema import Plan
@@ -32,7 +32,7 @@ class CacheEntry:
     success_rate: float = 1.0
     repo_fingerprint: str = ""
     
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "goal": self.goal,
             "goal_hash": self.goal_hash,
@@ -46,7 +46,7 @@ class CacheEntry:
         }
     
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "CacheEntry":
+    def from_dict(cls, data: dict[str, Any]) -> CacheEntry:
         return cls(
             goal=data["goal"],
             goal_hash=data["goal_hash"],
@@ -65,7 +65,7 @@ class PlanCache:
     
     def __init__(
         self,
-        cache_dir: Optional[Path] = None,
+        cache_dir: Path | None = None,
         max_entries: int = 100,
         similarity_threshold: float = 0.85,
     ):
@@ -82,7 +82,7 @@ class PlanCache:
         
         self._max_entries = max_entries
         self._similarity_threshold = similarity_threshold
-        self._memory_cache: Dict[str, CacheEntry] = {}
+        self._memory_cache: dict[str, CacheEntry] = {}
         
         # Load persistent cache
         if self._cache_dir:
@@ -91,9 +91,9 @@ class PlanCache:
     def get(
         self,
         goal: str,
-        context: Dict[str, Any],
+        context: dict[str, Any],
         repo_fingerprint: str = "",
-    ) -> Optional[Tuple["Plan", float]]:
+    ) -> tuple[Plan, float] | None:
         """Look up a cached plan for a similar goal.
         
         Args:
@@ -148,8 +148,8 @@ class PlanCache:
     def put(
         self,
         goal: str,
-        context: Dict[str, Any],
-        plan: "Plan",
+        context: dict[str, Any],
+        plan: Plan,
         final_status: str,
         repo_fingerprint: str = "",
     ) -> None:
@@ -176,7 +176,7 @@ class PlanCache:
             context_hash=context_hash,
             plan_json=plan.to_json(),
             final_status=final_status,
-            created_at=datetime.now(timezone.utc).isoformat(),
+            created_at=datetime.now(UTC).isoformat(),
             repo_fingerprint=repo_fingerprint,
         )
         
@@ -263,7 +263,7 @@ class PlanCache:
         normalized = self._normalize_goal(goal)
         return hashlib.sha256(normalized.encode()).hexdigest()[:16]
     
-    def _hash_context(self, context: Dict[str, Any]) -> str:
+    def _hash_context(self, context: dict[str, Any]) -> str:
         """Create hash of context."""
         # Only hash stable context keys
         stable_keys = ["repo_type", "language", "test_cmd"]
@@ -310,7 +310,7 @@ class PlanCache:
         path = self._cache_dir / f"{key}.json"
         path.write_text(json.dumps(entry.to_dict(), indent=2))
     
-    def stats(self) -> Dict[str, Any]:
+    def stats(self) -> dict[str, Any]:
         """Get cache statistics."""
         return {
             "entries": len(self._memory_cache),

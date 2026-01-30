@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import Optional
 
 
 @dataclass
@@ -44,7 +43,7 @@ class EarlyStopDecision:
         should_stop: bool,
         reason: str,
         failures_detected: int = 0,
-        error_type: Optional[str] = None
+        error_type: str | None = None
     ):
         self.should_stop = should_stop
         self.reason = reason
@@ -55,7 +54,7 @@ class EarlyStopDecision:
 class EarlyStopOptimizer:
     """Optimizer that decides when to stop test execution early."""
     
-    def __init__(self, config: Optional[EarlyStopConfig] = None):
+    def __init__(self, config: EarlyStopConfig | None = None):
         self.config = config or EarlyStopConfig()
         self._failure_count = 0
         self._critical_errors = []
@@ -168,7 +167,7 @@ class EarlyStopOptimizer:
 
 
 # Global optimizer instance
-_global_optimizer: Optional[EarlyStopOptimizer] = None
+_global_optimizer: EarlyStopOptimizer | None = None
 
 
 def get_early_stop_optimizer() -> EarlyStopOptimizer:

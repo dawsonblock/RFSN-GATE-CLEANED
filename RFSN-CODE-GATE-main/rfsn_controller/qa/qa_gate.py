@@ -9,7 +9,7 @@ The single authority for patch acceptance. Implements decision policy:
 
 import logging
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from .qa_types import (
     Claim,
@@ -29,11 +29,11 @@ class GateDecision:
 
     accepted: bool
     reason: str
-    rejection_reasons: List[str] = field(default_factory=list)
-    escalation_tags: List[str] = field(default_factory=list)
-    risk_flags: List[str] = field(default_factory=list)
+    rejection_reasons: list[str] = field(default_factory=list)
+    escalation_tags: list[str] = field(default_factory=list)
+    risk_flags: list[str] = field(default_factory=list)
 
-    def as_dict(self) -> Dict[str, Any]:
+    def as_dict(self) -> dict[str, Any]:
         return {
             "accepted": self.accepted,
             "reason": self.reason,
@@ -76,9 +76,9 @@ class QAGate:
 
     def decide(
         self,
-        claims: List[Claim],
-        verdicts: List[ClaimVerdict],
-        evidence: Optional[List[Evidence]] = None,
+        claims: list[Claim],
+        verdicts: list[ClaimVerdict],
+        evidence: list[Evidence] | None = None,
     ) -> GateDecision:
         """Make acceptance decision based on claims and verdicts.
         
@@ -93,9 +93,9 @@ class QAGate:
         # Build verdict mapping
         verdict_map = {v.claim_id: v for v in verdicts}
 
-        rejection_reasons: List[str] = []
-        escalation_tags: List[str] = []
-        risk_flags: List[str] = []
+        rejection_reasons: list[str] = []
+        escalation_tags: list[str] = []
+        risk_flags: list[str] = []
 
         # Collect all risk flags
         for v in verdicts:
@@ -132,14 +132,12 @@ class QAGate:
                             verdict.reason,
                         )
 
-            else:
-                # Non-critical claims
-                if verdict.verdict == Verdict.REJECT:
-                    risk_flags.append(f"{claim.type.value}_rejected")
-                    if self.strict_mode:
-                        rejection_reasons.append(
-                            f"{claim.type.value} rejected: {verdict.reason}"
-                        )
+            elif verdict.verdict == Verdict.REJECT:
+                risk_flags.append(f"{claim.type.value}_rejected")
+                if self.strict_mode:
+                    rejection_reasons.append(
+                        f"{claim.type.value} rejected: {verdict.reason}"
+                    )
 
         # Make decision
         if rejection_reasons:

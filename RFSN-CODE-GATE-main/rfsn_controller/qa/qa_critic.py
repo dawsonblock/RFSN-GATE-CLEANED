@@ -9,7 +9,8 @@ The critic CANNOT propose code. It can only evaluate claims.
 
 import json
 import logging
-from typing import Any, Callable, Dict, List, Optional
+from collections.abc import Callable
+from typing import Any
 
 from .qa_types import (
     Claim,
@@ -69,7 +70,7 @@ class QACritic:
     def __init__(
         self,
         *,
-        llm_call: Optional[Callable[[str, str], str]] = None,
+        llm_call: Callable[[str, str], str] | None = None,
         fallback_to_rules: bool = True,
     ):
         """Initialize critic.
@@ -84,11 +85,11 @@ class QACritic:
 
     def critique(
         self,
-        claims: List[Claim],
+        claims: list[Claim],
         *,
-        patch_summary: Optional[Dict[str, Any]] = None,
+        patch_summary: dict[str, Any] | None = None,
         additional_context: str = "",
-    ) -> List[ClaimVerdict]:
+    ) -> list[ClaimVerdict]:
         """Evaluate claims and produce verdicts.
         
         Args:
@@ -120,10 +121,10 @@ class QACritic:
 
     def _llm_critique(
         self,
-        claims: List[Claim],
-        patch_summary: Dict[str, Any],
+        claims: list[Claim],
+        patch_summary: dict[str, Any],
         additional_context: str,
-    ) -> List[ClaimVerdict]:
+    ) -> list[ClaimVerdict]:
         """LLM-based claim evaluation."""
         claims_json = json.dumps([c.as_dict() for c in claims], indent=2)
 
@@ -156,9 +157,9 @@ class QACritic:
 
     def _rule_based_critique(
         self,
-        claims: List[Claim],
-        patch_summary: Dict[str, Any],
-    ) -> List[ClaimVerdict]:
+        claims: list[Claim],
+        patch_summary: dict[str, Any],
+    ) -> list[ClaimVerdict]:
         """Rule-based fallback for claim evaluation.
         
         Simple heuristics when LLM is unavailable.
@@ -174,7 +175,7 @@ class QACritic:
     def _rule_based_verdict(
         self,
         claim: Claim,
-        patch_summary: Dict[str, Any],
+        patch_summary: dict[str, Any],
     ) -> ClaimVerdict:
         """Produce rule-based verdict for a single claim."""
 
@@ -247,7 +248,7 @@ class QACritic:
     def re_evaluate(
         self,
         claim: Claim,
-        evidence: List[Evidence],
+        evidence: list[Evidence],
         original_verdict: ClaimVerdict,
     ) -> ClaimVerdict:
         """Re-evaluate a claim after receiving evidence.
@@ -322,7 +323,7 @@ class QACritic:
 
 
 def create_qa_critic(
-    llm_call: Optional[Callable[[str, str], str]] = None,
+    llm_call: Callable[[str, str], str] | None = None,
     **kwargs,
 ) -> QACritic:
     """Factory function for QACritic.

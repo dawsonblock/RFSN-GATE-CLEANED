@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import threading
 import time
-from typing import List
 
 import pytest
 
@@ -20,7 +19,6 @@ from rfsn_controller.optimizations import (
     SubprocessPool,
     get_subprocess_pool,
 )
-
 
 # =============================================================================
 # CommandResult Tests

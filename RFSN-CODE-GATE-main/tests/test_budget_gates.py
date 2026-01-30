@@ -9,25 +9,24 @@ This module tests:
 - Thread safety
 """
 
-import pytest
 import threading
 import time
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
+
+import pytest
 
 from rfsn_controller.budget import (
     Budget,
-    BudgetState,
     BudgetExceeded,
+    BudgetState,
+    check_time_budget_global,
     create_budget,
     get_global_budget,
-    set_global_budget,
-    record_subprocess_call_global,
     record_llm_call_global,
-    check_time_budget_global,
+    record_subprocess_call_global,
+    set_global_budget,
 )
 from rfsn_controller.config import BudgetConfig, ControllerConfig
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Test BudgetState Enum
@@ -671,7 +670,7 @@ class TestExecUtilsBudgetIntegration:
         set_global_budget(budget)
         
         # Run a simple command
-        result = safe_run(["echo", "test"], cwd=str(tmp_path))
+        safe_run(["echo", "test"], cwd=str(tmp_path))
         
         assert budget.subprocess_calls == 1
         
@@ -794,12 +793,7 @@ class TestBudgetEdgeCases:
 # ─────────────────────────────────────────────────────────────────────────────
 
 class TestConfigFromCliArgs:
-    """Tests for config_from_cli_args budget integration.
-    
-    Note: These tests are skipped because config_from_cli_args is not yet implemented.
-    """
-    
-    pytestmark = pytest.mark.skip(reason="config_from_cli_args not implemented")
+    """Tests for config_from_cli_args budget integration."""
     
     def test_config_from_cli_args_with_budget(self):
         """Test config_from_cli_args with budget arguments."""

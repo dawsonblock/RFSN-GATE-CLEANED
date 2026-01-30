@@ -17,7 +17,7 @@ import asyncio
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any
 
 from .structured_logging import get_logger
 
@@ -41,8 +41,8 @@ class StrategyStep:
 
     step_id: str
     action: str  # edit_file, run_tests, read_file, etc.
-    target: Optional[str] = None  # File path or command
-    content: Optional[str] = None  # Content for edit
+    target: str | None = None  # File path or command
+    content: str | None = None  # Content for edit
     metadata: dict[str, Any] = field(default_factory=dict)
     timeout_seconds: int = 60
 
@@ -66,7 +66,7 @@ class StepResult:
     step_id: str
     success: bool
     output: str
-    error: Optional[str] = None
+    error: str | None = None
     duration_seconds: float = 0.0
     metadata: dict[str, Any] = field(default_factory=dict)
 
@@ -81,7 +81,7 @@ class StrategyResult:
     step_results: list[StepResult] = field(default_factory=list)
     final_state: dict[str, Any] = field(default_factory=dict)
     duration_seconds: float = 0.0
-    error_message: Optional[str] = None
+    error_message: str | None = None
     patches_generated: list[str] = field(default_factory=list)
 
 
@@ -397,7 +397,7 @@ class StrategyExecutor:
                 metadata={"exit_code": proc.returncode},
             )
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             return StepResult(
                 step_id=step.step_id,
                 success=False,

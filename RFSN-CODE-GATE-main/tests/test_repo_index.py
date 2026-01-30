@@ -2,10 +2,7 @@
 
 from pathlib import Path
 
-import pytest
-
 from rfsn_controller.repo_index import FileInfo, RepoIndex, SymbolInfo
-
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures" / "tiny_repo"
 

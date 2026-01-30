@@ -23,14 +23,14 @@ Usage:
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
+from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
-from cgw_ssl_guard import SimpleEventBus, ThalamusGate, CGWRuntime
+from cgw_ssl_guard import CGWRuntime, SimpleEventBus, ThalamusGate
 from cgw_ssl_guard.coding_agent import (
     AgentConfig,
-    AgentResult,
     BlockingExecutor,
     CodingAction,
     CodingAgentRuntime,
@@ -45,9 +45,8 @@ from cgw_ssl_guard.types import Candidate
 from .executor_spine import GovernedExecutor
 
 if TYPE_CHECKING:
-    from .controller import ControllerConfig
-    from .sandbox import Sandbox
     from .planner_v2 import ControllerAdapter
+    from .sandbox import Sandbox
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +68,7 @@ class BridgeConfig:
     
     # Logging
     log_events: bool = True
-    event_log_path: Optional[Path] = None
+    event_log_path: Path | None = None
 
 
 class ControllerProposalGenerator(ProposalGenerator):
@@ -81,16 +80,15 @@ class ControllerProposalGenerator(ProposalGenerator):
     
     def __init__(
         self,
-        sandbox: Optional["Sandbox"] = None,
-        planner_adapter: Optional["ControllerAdapter"] = None,
+        sandbox: Sandbox | None = None,
+        planner_adapter: ControllerAdapter | None = None,
     ):
         super().__init__("controller")
         self.sandbox = sandbox
         self.planner_adapter = planner_adapter
     
-    def generate(self, context: ProposalContext) -> List[Candidate]:
+    def generate(self, context: ProposalContext) -> list[Candidate]:
         """Generate proposals based on controller logic."""
-        candidates = []
         
         # Delegate to planner adapter if available
         if self.planner_adapter is not None:
@@ -99,7 +97,7 @@ class ControllerProposalGenerator(ProposalGenerator):
         # Fallback to basic heuristics
         return self._generate_heuristic(context)
     
-    def _generate_from_planner(self, context: ProposalContext) -> List[Candidate]:
+    def _generate_from_planner(self, context: ProposalContext) -> list[Candidate]:
         """Generate proposals from PlannerV2 adapter."""
         if self.planner_adapter is None:
             return []
@@ -123,7 +121,7 @@ class ControllerProposalGenerator(ProposalGenerator):
         # Get next task spec from planner
         # The planner's step types map to our coding actions
         summary = self.planner_adapter.get_summary()
-        current_step = summary.get("current_step_index", 0)
+        summary.get("current_step_index", 0)
         
         # Default to running tests if no specific action
         return [self._make_candidate(
@@ -132,7 +130,7 @@ class ControllerProposalGenerator(ProposalGenerator):
             urgency=0.5,
         )]
     
-    def _generate_heuristic(self, context: ProposalContext) -> List[Candidate]:
+    def _generate_heuristic(self, context: ProposalContext) -> list[Candidate]:
         """Generate proposals using simple heuristics."""
         # Similar to PlannerProposalGenerator but with controller-specific logic
         candidates = []
@@ -189,9 +187,9 @@ class CGWControllerBridge:
     
     def __init__(
         self,
-        config: Optional[BridgeConfig] = None,
-        sandbox: Optional["Sandbox"] = None,
-        planner_adapter: Optional["ControllerAdapter"] = None,
+        config: BridgeConfig | None = None,
+        sandbox: Sandbox | None = None,
+        planner_adapter: ControllerAdapter | None = None,
     ):
         self.config = config or BridgeConfig()
         self.sandbox = sandbox
@@ -244,10 +242,10 @@ class CGWControllerBridge:
         )
         
         # Runtime
-        self.runtime: Optional[CodingAgentRuntime] = None
+        self.runtime: CodingAgentRuntime | None = None
         
         # Event log
-        self._event_log: List[Dict[str, Any]] = []
+        self._event_log: list[dict[str, Any]] = []
     
     def _setup_event_logging(self) -> None:
         """Set up event bus logging."""
@@ -263,7 +261,7 @@ class CGWControllerBridge:
         self.event_bus.on("CGW_COMMIT", log_event("CGW_COMMIT"))
         self.event_bus.on("FORCED_INJECTION", log_event("FORCED_INJECTION"))
     
-    def _create_generators(self) -> List[ProposalGenerator]:
+    def _create_generators(self) -> list[ProposalGenerator]:
         """Create the proposal generators for this bridge."""
         generators = [
             SafetyProposalGenerator(),
@@ -281,7 +279,7 @@ class CGWControllerBridge:
         
         return generators
     
-    def run(self) -> Dict[str, Any]:
+    def run(self) -> dict[str, Any]:
         """Run the controller through the CGW serial decision loop.
         
         Returns:
@@ -330,6 +328,6 @@ class CGWControllerBridge:
         if self.runtime:
             self.runtime.inject_forced_signal(CodingAction.ABORT, reason)
     
-    def get_event_log(self) -> List[Dict[str, Any]]:
+    def get_event_log(self) -> list[dict[str, Any]]:
         """Get the event log for replay/debugging."""
         return self._event_log.copy()

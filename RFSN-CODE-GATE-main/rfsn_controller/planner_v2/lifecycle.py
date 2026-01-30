@@ -11,7 +11,7 @@ State Machine:
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, Tuple
+from typing import TYPE_CHECKING, Any
 
 from .schema import Plan, RiskLevel, Step, StepStatus
 
@@ -31,7 +31,7 @@ class StepLifecycle:
     MAX_STEP_FAILURES = 2
 
     @staticmethod
-    def can_activate(step: Step, plan: Plan) -> Tuple[bool, str]:
+    def can_activate(step: Step, plan: Plan) -> tuple[bool, str]:
         """Check if a step can transition to ACTIVE.
 
         A step can activate if:
@@ -68,7 +68,7 @@ class StepLifecycle:
         step.status = StepStatus.ACTIVE
 
     @staticmethod
-    def complete(step: Step, result: Dict[str, Any]) -> None:
+    def complete(step: Step, result: dict[str, Any]) -> None:
         """Transition step to DONE.
 
         Args:

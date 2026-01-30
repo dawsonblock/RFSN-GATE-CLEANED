@@ -1,9 +1,11 @@
 """Tests for database connection pooling."""
 
-import pytest
 import sqlite3
 import tempfile
 from pathlib import Path
+
+import pytest
+
 from rfsn_controller.connection_pool import ConnectionPool
 
 
@@ -55,7 +57,7 @@ class TestConnectionPool:
         
         assert pool.available_connections == 2
         
-        with pool.get_connection() as conn:
+        with pool.get_connection():
             assert pool.available_connections == 1
         
         # Connection should be returned
@@ -80,10 +82,10 @@ class TestConnectionPool:
         """Test timeout when pool exhausted."""
         pool = ConnectionPool(temp_db, pool_size=1, timeout=0.1)
         
-        with pool.get_connection() as conn1:
+        with pool.get_connection():
             # Pool exhausted, should timeout
             with pytest.raises(TimeoutError):
-                with pool.get_connection() as conn2:
+                with pool.get_connection():
                     pass
         
         pool.close_all()
@@ -119,7 +121,7 @@ class TestConnectionPool:
         
         # Should raise when trying to get connection
         with pytest.raises(RuntimeError):
-            with pool.get_connection() as conn:
+            with pool.get_connection():
                 pass
     
     def test_context_manager(self, temp_db):
@@ -203,7 +205,7 @@ class TestConnectionPool:
         pool = ConnectionPool(temp_db, pool_size=2)
         
         try:
-            with pool.get_connection() as conn:
+            with pool.get_connection():
                 raise ValueError("Test error")
         except ValueError:
             pass

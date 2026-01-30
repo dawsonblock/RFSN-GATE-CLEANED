@@ -21,9 +21,9 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any
 
-from .exec_utils import safe_run, ExecResult
+from .exec_utils import ExecResult, safe_run
 from .patch_hygiene import validate_patch_hygiene
 from .sandbox import apply_patch_in_dir
 
@@ -36,7 +36,7 @@ class StepExecResult:
     stdout: str = ""
     stderr: str = ""
     exit_code: int = 0
-    details: Dict[str, Any] = None
+    details: dict[str, Any] = None
 
 
 class GovernedExecutor:
@@ -46,8 +46,8 @@ class GovernedExecutor:
         self,
         repo_dir: str | Path,
         *,
-        allowed_commands: Optional[Set[str]] = None,
-        verify_argv: Optional[List[str]] = None,
+        allowed_commands: set[str] | None = None,
+        verify_argv: list[str] | None = None,
         timeout_sec: int = 180,
     ):
         self.repo_dir = str(Path(repo_dir).resolve())
@@ -59,7 +59,7 @@ class GovernedExecutor:
     # Public API
     # ----------------------------
 
-    def execute_step(self, step: Dict[str, Any]) -> StepExecResult:
+    def execute_step(self, step: dict[str, Any]) -> StepExecResult:
         """Execute a single step dict produced by planner/CGW.
 
         Step format (minimum):
@@ -190,7 +190,7 @@ class GovernedExecutor:
     # Internals
     # ----------------------------
 
-    def _run_argv(self, argv: List[str], *, timeout_sec: int) -> ExecResult:
+    def _run_argv(self, argv: list[str], *, timeout_sec: int) -> ExecResult:
         return safe_run(
             argv=argv,
             cwd=self.repo_dir,
@@ -199,9 +199,9 @@ class GovernedExecutor:
             check_global_allowlist=True,
         )
 
-    def _grep_repo(self, query: str, *, max_matches: int) -> List[str]:
+    def _grep_repo(self, query: str, *, max_matches: int) -> list[str]:
         root = Path(self.repo_dir)
-        hits: List[str] = []
+        hits: list[str] = []
         # fast-ish grep without calling shell
         for p in root.rglob("*"):
             if len(hits) >= max_matches:

@@ -9,8 +9,9 @@ import asyncio
 import threading
 import time
 from collections import OrderedDict
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any
 
 
 @dataclass
@@ -42,9 +43,9 @@ class SpeculativeExecutor:
     max_age_seconds: float = 300.0  # 5 minutes
     
     _cache: OrderedDict = field(default_factory=OrderedDict)
-    _pending: Dict[str, asyncio.Task] = field(default_factory=dict)
+    _pending: dict[str, asyncio.Task] = field(default_factory=dict)
     _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
-    _stats: Dict[str, int] = field(default_factory=lambda: {
+    _stats: dict[str, int] = field(default_factory=lambda: {
         "hits": 0, "misses": 0, "speculative_runs": 0
     })
     
@@ -101,7 +102,7 @@ class SpeculativeExecutor:
                 daemon=True,
             ).start()
     
-    def get(self, key: str) -> Optional[Any]:
+    def get(self, key: str) -> Any | None:
         """Get speculated result if available.
         
         Args:
@@ -169,9 +170,9 @@ class PredictivePreloader:
     executor: SpeculativeExecutor = field(default_factory=SpeculativeExecutor)
     
     # Pattern tracking
-    _sequences: List[List[str]] = field(default_factory=list)
-    _current_sequence: List[str] = field(default_factory=list)
-    _transitions: Dict[str, Dict[str, int]] = field(default_factory=dict)
+    _sequences: list[list[str]] = field(default_factory=list)
+    _current_sequence: list[str] = field(default_factory=list)
+    _transitions: dict[str, dict[str, int]] = field(default_factory=dict)
     
     def record_action(self, action: str) -> None:
         """Record an action to learn patterns.
@@ -190,7 +191,7 @@ class PredictivePreloader:
                 self._transitions[prev].get(action, 0) + 1
             )
     
-    def predict_next(self, current_action: str, top_k: int = 3) -> List[str]:
+    def predict_next(self, current_action: str, top_k: int = 3) -> list[str]:
         """Predict likely next actions.
         
         Args:
@@ -215,7 +216,7 @@ class PredictivePreloader:
     def preload_for_action(
         self,
         current_action: str,
-        loaders: Dict[str, Callable[[], Any]],
+        loaders: dict[str, Callable[[], Any]],
     ) -> None:
         """Preload data for predicted next actions.
         
@@ -257,7 +258,7 @@ def create_file_preloader(repo_dir: str) -> PredictivePreloader:
 
 
 # Global executor instance
-_executor: Optional[SpeculativeExecutor] = None
+_executor: SpeculativeExecutor | None = None
 _executor_lock = threading.Lock()
 
 

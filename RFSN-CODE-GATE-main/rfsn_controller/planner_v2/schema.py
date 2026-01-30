@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 class StepStatus(Enum):
@@ -66,14 +66,14 @@ class FailureEvidence:
     """
     
     category: FailureCategory
-    top_failing_tests: List[str] = field(default_factory=list)
+    top_failing_tests: list[str] = field(default_factory=list)
     stack_trace_head: str = ""  # First 500 chars
-    error_codes: List[str] = field(default_factory=list)
-    affected_files: List[str] = field(default_factory=list)
-    error_line: Optional[int] = None
+    error_codes: list[str] = field(default_factory=list)
+    affected_files: list[str] = field(default_factory=list)
+    error_line: int | None = None
     suggestion: str = ""  # Brief fix suggestion if available
     
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Serialize to dictionary."""
         return {
             "category": self.category.value,
@@ -86,7 +86,7 @@ class FailureEvidence:
         }
     
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "FailureEvidence":
+    def from_dict(cls, data: dict[str, Any]) -> FailureEvidence:
         """Deserialize from dictionary."""
         return cls(
             category=FailureCategory(data.get("category", "unknown")),
@@ -99,7 +99,7 @@ class FailureEvidence:
         )
     
     @classmethod
-    def from_error_output(cls, stdout: str, stderr: str, exit_code: int) -> "FailureEvidence":
+    def from_error_output(cls, stdout: str, stderr: str, exit_code: int) -> FailureEvidence:
         """Create evidence from error output.
         
         Parses stdout/stderr to extract structured evidence.
@@ -141,7 +141,7 @@ class FailureEvidence:
         return FailureCategory.UNKNOWN
     
     @staticmethod
-    def _extract_failing_tests(output: str) -> List[str]:
+    def _extract_failing_tests(output: str) -> list[str]:
         """Extract failing test names."""
         import re
         # Match pytest-style test names
@@ -158,7 +158,7 @@ class FailureEvidence:
         return output[:500]
     
     @staticmethod
-    def _extract_error_codes(output: str) -> List[str]:
+    def _extract_error_codes(output: str) -> list[str]:
         """Extract error codes like E501, F401, etc."""
         import re
         pattern = r"\b([A-Z]\d{3,4})\b"
@@ -166,7 +166,7 @@ class FailureEvidence:
         return list(set(matches))[:10]
     
     @staticmethod
-    def _extract_affected_files(output: str) -> List[str]:
+    def _extract_affected_files(output: str) -> list[str]:
         """Extract file paths from output."""
         import re
         pattern = r"[\w/.-]+\.py"
@@ -174,7 +174,7 @@ class FailureEvidence:
         return list(set(matches))[:10]
     
     @staticmethod
-    def _extract_error_line(output: str) -> Optional[int]:
+    def _extract_error_line(output: str) -> int | None:
         """Extract line number from error."""
         import re
         match = re.search(r"line\s+(\d+)", output, re.IGNORECASE)
@@ -193,14 +193,14 @@ class ControllerTaskSpec:
 
     step_id: str
     intent: str
-    allowed_files: List[str]
+    allowed_files: list[str]
     success_criteria: str
-    verify_cmd: Optional[str] = None
-    context_hints: Dict[str, Any] = field(default_factory=dict)
+    verify_cmd: str | None = None
+    context_hints: dict[str, Any] = field(default_factory=dict)
     mode: str = "patch"  # read_only, patch, test
     max_lines: int = 50
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Serialize to dictionary."""
         return {
             "step_id": self.step_id,
@@ -214,7 +214,7 @@ class ControllerTaskSpec:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "ControllerTaskSpec":
+    def from_dict(cls, data: dict[str, Any]) -> ControllerTaskSpec:
         """Deserialize from dictionary."""
         return cls(
             step_id=data["step_id"],
@@ -240,11 +240,11 @@ class ControllerOutcome:
     success: bool
     patch_applied: bool = False
     tests_passed: bool = False
-    error_message: Optional[str] = None
-    metrics: Dict[str, Any] = field(default_factory=dict)
-    failure_evidence: Optional[FailureEvidence] = None
+    error_message: str | None = None
+    metrics: dict[str, Any] = field(default_factory=dict)
+    failure_evidence: FailureEvidence | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Serialize to dictionary."""
         return {
             "step_id": self.step_id,
@@ -257,7 +257,7 @@ class ControllerOutcome:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "ControllerOutcome":
+    def from_dict(cls, data: dict[str, Any]) -> ControllerOutcome:
         """Deserialize from dictionary."""
         evidence = None
         if data.get("failure_evidence"):
@@ -284,20 +284,20 @@ class Step:
     step_id: str
     title: str
     intent: str
-    allowed_files: List[str]
+    allowed_files: list[str]
     success_criteria: str
-    dependencies: List[str] = field(default_factory=list)
-    inputs: List[str] = field(default_factory=list)
+    dependencies: list[str] = field(default_factory=list)
+    inputs: list[str] = field(default_factory=list)
     verify: str = ""
     risk_level: RiskLevel = RiskLevel.LOW
     rollback_hint: str = ""
     hypothesis: str = ""
-    controller_task_spec: Optional[Dict[str, Any]] = None
+    controller_task_spec: dict[str, Any] | None = None
     status: StepStatus = StepStatus.PENDING
-    result: Optional[Dict[str, Any]] = None
+    result: dict[str, Any] | None = None
     failure_count: int = 0
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Serialize to dictionary."""
         return {
             "step_id": self.step_id,
@@ -318,7 +318,7 @@ class Step:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "Step":
+    def from_dict(cls, data: dict[str, Any]) -> Step:
         """Deserialize from dictionary."""
         return cls(
             step_id=data["step_id"],
@@ -360,13 +360,13 @@ class Plan:
 
     plan_id: str
     goal: str
-    steps: List[Step]
+    steps: list[Step]
     created_at: str
-    assumptions: List[str] = field(default_factory=list)
-    constraints: List[str] = field(default_factory=list)
+    assumptions: list[str] = field(default_factory=list)
+    constraints: list[str] = field(default_factory=list)
     version: int = 1
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Serialize to dictionary."""
         return {
             "plan_id": self.plan_id,
@@ -383,7 +383,7 @@ class Plan:
         return json.dumps(self.to_dict(), indent=2)
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "Plan":
+    def from_dict(cls, data: dict[str, Any]) -> Plan:
         """Deserialize from dictionary."""
         return cls(
             plan_id=data["plan_id"],
@@ -396,11 +396,11 @@ class Plan:
         )
 
     @classmethod
-    def from_json(cls, json_str: str) -> "Plan":
+    def from_json(cls, json_str: str) -> Plan:
         """Deserialize from JSON string."""
         return cls.from_dict(json.loads(json_str))
 
-    def get_step(self, step_id: str) -> Optional[Step]:
+    def get_step(self, step_id: str) -> Step | None:
         """Get a step by ID."""
         for step in self.steps:
             if step.step_id == step_id:
@@ -425,14 +425,14 @@ class PlanState:
 
     plan_id: str
     current_step_idx: int = 0
-    completed_steps: List[str] = field(default_factory=list)
-    failed_steps: List[str] = field(default_factory=list)
+    completed_steps: list[str] = field(default_factory=list)
+    failed_steps: list[str] = field(default_factory=list)
     revision_count: int = 0
     consecutive_failures: int = 0
     halted: bool = False
     halt_reason: str = ""
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Serialize to dictionary."""
         return {
             "plan_id": self.plan_id,
@@ -446,7 +446,7 @@ class PlanState:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "PlanState":
+    def from_dict(cls, data: dict[str, Any]) -> PlanState:
         """Deserialize from dictionary."""
         return cls(
             plan_id=data["plan_id"],

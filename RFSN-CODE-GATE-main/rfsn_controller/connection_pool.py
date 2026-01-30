@@ -17,14 +17,13 @@ Usage:
 
 from __future__ import annotations
 
+import atexit
 import sqlite3
+import threading
+from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
-from queue import Queue, Empty
-from typing import Optional
-from collections.abc import Generator
-import threading
-import atexit
+from queue import Empty, Queue
 
 
 class ConnectionPool:

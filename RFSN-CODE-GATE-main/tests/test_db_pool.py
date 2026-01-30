@@ -1,18 +1,18 @@
 """Tests for database connection pooling."""
 
 import os
-import pytest
 import sqlite3
 import tempfile
 import threading
 import time
-from pathlib import Path
+
+import pytest
 
 from rfsn_controller.db_pool import (
     SQLiteConnectionPool,
-    get_pool,
     close_all_pools,
     execute_with_retry,
+    get_pool,
     get_pool_stats,
 )
 
@@ -62,7 +62,7 @@ class TestSQLiteConnectionPool:
         """Test that connections are returned to the pool after use."""
         initial_available = pool._pool.qsize()
         
-        with pool.connection() as conn:
+        with pool.connection():
             # Connection is checked out
             assert pool._pool.qsize() == initial_available - 1
         
@@ -93,10 +93,10 @@ class TestSQLiteConnectionPool:
         """Test timeout when trying to get connection from exhausted pool."""
         pool = SQLiteConnectionPool(temp_db, pool_size=1, timeout=0.1)
         
-        with pool.connection() as conn:
+        with pool.connection():
             # Pool is exhausted, next get should timeout
             with pytest.raises(RuntimeError, match="Could not get connection"):
-                with pool.connection() as conn2:
+                with pool.connection():
                     pass
         
         pool.close_all()
@@ -172,7 +172,7 @@ class TestSQLiteConnectionPool:
         
         # Getting connection from closed pool should raise
         with pytest.raises(RuntimeError, match="Connection pool is closed"):
-            with pool.connection() as conn:
+            with pool.connection():
                 pass
     
     def test_context_manager(self, temp_db):
@@ -263,7 +263,7 @@ class TestUtilityFunctions:
         assert stats["closed"] is False
         
         # Take a connection
-        with pool.connection() as conn:
+        with pool.connection():
             stats = get_pool_stats(pool)
             assert stats["available"] == pool.pool_size - 1
             assert stats["in_use"] == 1

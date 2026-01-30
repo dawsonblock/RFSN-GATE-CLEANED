@@ -1,10 +1,11 @@
 from __future__ import annotations
+
 import hashlib
 import json
 import time
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, Optional, Protocol
+from datetime import UTC, datetime, timedelta
+from typing import Any, Protocol
 
 
 class Clock(Protocol):
@@ -46,7 +47,7 @@ class SystemClock:
     _steps: int = 0
 
     def now_utc(self) -> datetime:
-        return datetime.now(timezone.utc)
+        return datetime.now(UTC)
 
     def time(self) -> float:
         return float(time.time())
@@ -68,7 +69,7 @@ def _stable_json(obj: Any) -> str:
 def make_run_id(
     *,
     clock: Clock,
-    seed_material: Dict[str, Any],
+    seed_material: dict[str, Any],
 ) -> str:
     dt = clock.now_utc()
     ts = dt.strftime("%Y%m%d_%H%M%S")
@@ -76,7 +77,7 @@ def make_run_id(
     return f"run_{ts}_{h}"
 
 
-def parse_utc_iso(s: str) -> Optional[datetime]:
+def parse_utc_iso(s: str) -> datetime | None:
     if not s:
         return None
     try:
@@ -84,5 +85,5 @@ def parse_utc_iso(s: str) -> Optional[datetime]:
     except Exception:
         return None
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
-    return dt.astimezone(timezone.utc)
+        dt = dt.replace(tzinfo=UTC)
+    return dt.astimezone(UTC)

@@ -8,7 +8,7 @@ handling tools like npm workspaces, poetry workspaces, and Go modules.
 import os
 import re
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 @dataclass
@@ -19,9 +19,9 @@ class WorkspaceInfo:
     path: str
     language: str
     has_tests: bool
-    test_command: Optional[str] = None
-    dependencies: Optional[List[str]] = None
-    metadata: Optional[Dict[str, Any]] = None
+    test_command: str | None = None
+    dependencies: list[str] | None = None
+    metadata: dict[str, Any] | None = None
 
     def __post_init__(self):
         if self.dependencies is None:
@@ -41,14 +41,14 @@ class WorkspaceResolver:
         """
         self.repo_dir = repo_dir
 
-    def resolve(self) -> List[WorkspaceInfo]:
+    def resolve(self) -> list[WorkspaceInfo]:
         """Resolve all workspaces in the repository.
 
         Returns:
             List of WorkspaceInfo objects.
         """
         # Try different workspace resolution strategies
-        workspaces: List[WorkspaceInfo] = []
+        workspaces: list[WorkspaceInfo] = []
 
         # Try npm/yarn/pnpm workspaces
         npm_workspaces = self._resolve_npm_workspaces()
@@ -82,13 +82,13 @@ class WorkspaceResolver:
 
         return workspaces
 
-    def _resolve_npm_workspaces(self) -> List[WorkspaceInfo]:
+    def _resolve_npm_workspaces(self) -> list[WorkspaceInfo]:
         """Resolve npm/yarn/pnpm workspaces.
 
         Returns:
             List of WorkspaceInfo objects for Node.js workspaces.
         """
-        workspaces: List[WorkspaceInfo] = []
+        workspaces: list[WorkspaceInfo] = []
 
         # Check for package.json with workspaces field
         package_json_path = os.path.join(self.repo_dir, "package.json")
@@ -98,7 +98,7 @@ class WorkspaceResolver:
         try:
             import json
 
-            with open(package_json_path, "r") as f:
+            with open(package_json_path) as f:
                 package_json = json.load(f)
 
             workspaces_field = package_json.get("workspaces")
@@ -124,7 +124,7 @@ class WorkspaceResolver:
                         # Check if this directory has a package.json
                         ws_package_json = os.path.join(root, "package.json")
                         if os.path.exists(ws_package_json):
-                            with open(ws_package_json, "r") as f:
+                            with open(ws_package_json) as f:
                                 ws_package = json.load(f)
 
                             # Check for test scripts
@@ -151,13 +151,13 @@ class WorkspaceResolver:
 
         return workspaces
 
-    def _resolve_poetry_workspaces(self) -> List[WorkspaceInfo]:
+    def _resolve_poetry_workspaces(self) -> list[WorkspaceInfo]:
         """Resolve poetry workspaces.
 
         Returns:
             List of WorkspaceInfo objects for Python workspaces.
         """
-        workspaces: List[WorkspaceInfo] = []
+        workspaces: list[WorkspaceInfo] = []
 
         # Check for pyproject.toml with poetry.plugins
         pyproject_path = os.path.join(self.repo_dir, "pyproject.toml")
@@ -167,7 +167,7 @@ class WorkspaceResolver:
         try:
             import toml  # type: ignore
 
-            with open(pyproject_path, "r") as f:
+            with open(pyproject_path) as f:
                 pyproject = toml.load(f)
 
             poetry_section = pyproject.get("tool", {}).get("poetry", {})
@@ -189,7 +189,7 @@ class WorkspaceResolver:
                     if re.match(regex_pattern, rel_path):
                         ws_pyproject = os.path.join(root, "pyproject.toml")
                         if os.path.exists(ws_pyproject) and ws_pyproject != pyproject_path:
-                            with open(ws_pyproject, "r") as f:
+                            with open(ws_pyproject) as f:
                                 ws_config = toml.load(f)
 
                             ws_poetry = ws_config.get("tool", {}).get("poetry", {})
@@ -213,13 +213,13 @@ class WorkspaceResolver:
 
         return workspaces
 
-    def _resolve_go_modules(self) -> List[WorkspaceInfo]:
+    def _resolve_go_modules(self) -> list[WorkspaceInfo]:
         """Resolve Go modules.
 
         Returns:
             List of WorkspaceInfo objects for Go modules.
         """
-        workspaces: List[WorkspaceInfo] = []
+        workspaces: list[WorkspaceInfo] = []
 
         # Check for go.mod
         go_mod_path = os.path.join(self.repo_dir, "go.mod")
@@ -227,7 +227,7 @@ class WorkspaceResolver:
             return workspaces
 
         try:
-            with open(go_mod_path, "r") as f:
+            with open(go_mod_path) as f:
                 content = f.read()
 
             # Parse module name
@@ -260,13 +260,13 @@ class WorkspaceResolver:
 
         return workspaces
 
-    def _resolve_rust_workspaces(self) -> List[WorkspaceInfo]:
+    def _resolve_rust_workspaces(self) -> list[WorkspaceInfo]:
         """Resolve Rust workspaces.
 
         Returns:
             List of WorkspaceInfo objects for Rust workspaces.
         """
-        workspaces: List[WorkspaceInfo] = []
+        workspaces: list[WorkspaceInfo] = []
 
         # Check for Cargo.toml with workspace section
         cargo_path = os.path.join(self.repo_dir, "Cargo.toml")
@@ -276,7 +276,7 @@ class WorkspaceResolver:
         try:
             import toml
 
-            with open(cargo_path, "r") as f:
+            with open(cargo_path) as f:
                 cargo_config = toml.load(f)
 
             workspace_section = cargo_config.get("workspace")
@@ -294,7 +294,7 @@ class WorkspaceResolver:
                 member_cargo = os.path.join(member_path, "Cargo.toml")
 
                 if os.path.exists(member_cargo):
-                    with open(member_cargo, "r") as f:
+                    with open(member_cargo) as f:
                         member_config = toml.load(f)
 
                     package = member_config.get("package", {})
@@ -317,7 +317,7 @@ class WorkspaceResolver:
 
         return workspaces
 
-    def _resolve_java_modules(self) -> List[WorkspaceInfo]:
+    def _resolve_java_modules(self) -> list[WorkspaceInfo]:
         """Resolve Maven/Gradle multi-module projects.
 
         Returns:
@@ -337,13 +337,13 @@ class WorkspaceResolver:
 
         return workspaces
 
-    def _resolve_maven_modules(self) -> List[WorkspaceInfo]:
+    def _resolve_maven_modules(self) -> list[WorkspaceInfo]:
         """Resolve Maven modules.
 
         Returns:
             List of WorkspaceInfo objects for Maven modules.
         """
-        workspaces: List[WorkspaceInfo] = []
+        workspaces: list[WorkspaceInfo] = []
 
         try:
             import xml.etree.ElementTree as ET
@@ -389,13 +389,13 @@ class WorkspaceResolver:
 
         return workspaces
 
-    def _resolve_gradle_modules(self) -> List[WorkspaceInfo]:
+    def _resolve_gradle_modules(self) -> list[WorkspaceInfo]:
         """Resolve Gradle modules.
 
         Returns:
             List of WorkspaceInfo objects for Gradle modules.
         """
-        workspaces: List[WorkspaceInfo] = []
+        workspaces: list[WorkspaceInfo] = []
 
         try:
             # Parse settings.gradle or settings.gradle.kts
@@ -403,7 +403,7 @@ class WorkspaceResolver:
             for settings_file in settings_files:
                 settings_path = os.path.join(self.repo_dir, settings_file)
                 if os.path.exists(settings_path):
-                    with open(settings_path, "r") as f:
+                    with open(settings_path) as f:
                         content = f.read()
 
                     # Find include statements
@@ -435,13 +435,13 @@ class WorkspaceResolver:
 
         return workspaces
 
-    def _resolve_dotnet_projects(self) -> List[WorkspaceInfo]:
+    def _resolve_dotnet_projects(self) -> list[WorkspaceInfo]:
         """Resolve .NET solution projects.
 
         Returns:
             List of WorkspaceInfo objects for .NET projects.
         """
-        workspaces: List[WorkspaceInfo] = []
+        workspaces: list[WorkspaceInfo] = []
 
         # Find all .sln files
         for root, _dirs, files in os.walk(self.repo_dir):
@@ -452,7 +452,7 @@ class WorkspaceResolver:
 
         return workspaces
 
-    def _parse_solution_file(self, sln_path: str) -> List[WorkspaceInfo]:
+    def _parse_solution_file(self, sln_path: str) -> list[WorkspaceInfo]:
         """Parse a .NET solution file.
 
         Args:
@@ -461,10 +461,10 @@ class WorkspaceResolver:
         Returns:
             List of WorkspaceInfo objects for projects in the solution.
         """
-        workspaces: List[WorkspaceInfo] = []
+        workspaces: list[WorkspaceInfo] = []
 
         try:
-            with open(sln_path, "r") as f:
+            with open(sln_path) as f:
                 content = f.read()
 
             # Find project references
@@ -523,7 +523,7 @@ class WorkspaceResolver:
 
         return "npm"  # Default
 
-    def _parse_go_dependencies(self, go_mod_content: str) -> List[str]:
+    def _parse_go_dependencies(self, go_mod_content: str) -> list[str]:
         """Parse dependencies from go.mod content.
 
         Args:
@@ -548,7 +548,7 @@ class WorkspaceResolver:
         return dependencies
 
 
-def resolve_workspaces(repo_dir: str) -> List[WorkspaceInfo]:
+def resolve_workspaces(repo_dir: str) -> list[WorkspaceInfo]:
     """Resolve workspaces in a repository.
 
     Args:

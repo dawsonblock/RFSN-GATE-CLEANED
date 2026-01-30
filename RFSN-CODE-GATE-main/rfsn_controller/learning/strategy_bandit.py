@@ -17,8 +17,7 @@ from __future__ import annotations
 
 import logging
 import random
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Set
+from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +60,7 @@ class StrategyStats:
         exploration = c * math.sqrt(math.log(total_pulls + 1) / self.tries)
         return exploitation + exploration
     
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         """Serialize to dict."""
         return {
             "wins": self.wins,
@@ -108,7 +107,7 @@ class StrategyBandit:
     
     def __init__(
         self,
-        strategies: Optional[List[str]] = None,
+        strategies: list[str] | None = None,
         exploration_bonus: float = 0.1,
     ):
         """Initialize bandit.
@@ -122,14 +121,14 @@ class StrategyBandit:
         
         # Per-context arm statistics
         # context_key -> strategy -> stats
-        self._arms: Dict[str, Dict[str, StrategyStats]] = {}
+        self._arms: dict[str, dict[str, StrategyStats]] = {}
         
         # Global statistics (across all contexts)
-        self._global_stats: Dict[str, StrategyStats] = {
+        self._global_stats: dict[str, StrategyStats] = {
             s: StrategyStats() for s in self.strategies
         }
     
-    def _get_context_arms(self, context_key: str) -> Dict[str, StrategyStats]:
+    def _get_context_arms(self, context_key: str) -> dict[str, StrategyStats]:
         """Get or create arm stats for a context."""
         if context_key not in self._arms:
             self._arms[context_key] = {
@@ -140,7 +139,7 @@ class StrategyBandit:
     def select(
         self,
         context_key: str,
-        exclude: Optional[Set[str]] = None,
+        exclude: set[str] | None = None,
         method: str = "thompson",
     ) -> str:
         """Select a strategy for the given context.
@@ -204,7 +203,7 @@ class StrategyBandit:
         strategy: str,
         success: bool,
         regression: bool = False,
-        partial_reward: Optional[float] = None,
+        partial_reward: float | None = None,
     ) -> None:
         """Update arm after observing outcome.
         
@@ -253,7 +252,7 @@ class StrategyBandit:
             strategy, context_key[:8], success, stats.mean_reward
         )
     
-    def get_stats(self, context_key: Optional[str] = None) -> Dict[str, Dict]:
+    def get_stats(self, context_key: str | None = None) -> dict[str, dict]:
         """Get statistics for arms.
         
         Args:

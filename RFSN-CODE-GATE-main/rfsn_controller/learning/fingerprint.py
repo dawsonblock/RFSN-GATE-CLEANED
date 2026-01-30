@@ -13,8 +13,8 @@ from __future__ import annotations
 
 import hashlib
 import re
-from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from dataclasses import dataclass
+from typing import Any
 
 
 @dataclass(frozen=True)
@@ -29,19 +29,19 @@ class FailureFingerprint:
     category: str
     
     # Stable test names (sorted for consistency)
-    failing_tests: Tuple[str, ...]
+    failing_tests: tuple[str, ...]
     
     # Lint codes (sorted)
-    lint_codes: Tuple[str, ...]
+    lint_codes: tuple[str, ...]
     
     # Files involved (sorted basenames only)
-    affected_files: Tuple[str, ...]
+    affected_files: tuple[str, ...]
     
     # Error class from stack trace (e.g., "TypeError", "AttributeError")
-    error_class: Optional[str] = None
+    error_class: str | None = None
     
     # Normalized stack signature (top 3 frames)
-    stack_signature: Optional[str] = None
+    stack_signature: str | None = None
     
     def __hash__(self) -> int:
         return hash((
@@ -52,7 +52,7 @@ class FailureFingerprint:
             self.error_class,
         ))
     
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to JSON-serializable dict."""
         return {
             "category": self.category,
@@ -117,7 +117,7 @@ CATEGORY_PATTERNS = {
 
 def categorize_failure(
     test_output: str,
-    lint_errors: Optional[List[str]] = None,
+    lint_errors: list[str] | None = None,
 ) -> str:
     """Categorize a failure into a coarse class.
     
@@ -140,7 +140,7 @@ def categorize_failure(
     return "UNKNOWN"
 
 
-def extract_error_class(stack_trace: str) -> Optional[str]:
+def extract_error_class(stack_trace: str) -> str | None:
     """Extract error class from stack trace.
     
     Args:
@@ -185,10 +185,10 @@ def normalize_stack_signature(stack_trace: str, max_frames: int = 3) -> str:
 
 
 def fingerprint_failure(
-    failing_tests: Optional[List[str]] = None,
-    lint_errors: Optional[List[str]] = None,
-    stack_trace: Optional[str] = None,
-    affected_files: Optional[List[str]] = None,
+    failing_tests: list[str] | None = None,
+    lint_errors: list[str] | None = None,
+    stack_trace: str | None = None,
+    affected_files: list[str] | None = None,
 ) -> FailureFingerprint:
     """Create a fingerprint from failure information.
     

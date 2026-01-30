@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 import time
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any
 
 from .artifact_log import PlanArtifactLog
 from .fingerprint import RepoFingerprint, compute_fingerprint
@@ -25,13 +25,13 @@ from .governance import (
 from .memory_adapter import MemoryAdapter
 from .overrides import OverrideManager
 from .planner import PlannerV2
+from .qa_integration import PlannerQABridge
 from .schema import (
     ControllerOutcome,
     ControllerTaskSpec,
     Plan,
     PlanState,
 )
-from .qa_integration import PlannerQABridge
 
 if TYPE_CHECKING:
     from ..qa.qa_orchestrator import QAOrchestrator
@@ -60,21 +60,21 @@ class ControllerAdapter:
 
     def __init__(
         self,
-        planner: Optional[PlannerV2] = None,
-        memory_adapter: Optional[MemoryAdapter] = None,
+        planner: PlannerV2 | None = None,
+        memory_adapter: MemoryAdapter | None = None,
         seed: int = 0,
         # Governance options
-        budget: Optional[PlanBudget] = None,
-        halt_spec: Optional[HaltSpec] = None,
-        validator: Optional[PlanValidator] = None,
-        sanitizer: Optional[ContentSanitizer] = None,
+        budget: PlanBudget | None = None,
+        halt_spec: HaltSpec | None = None,
+        validator: PlanValidator | None = None,
+        sanitizer: ContentSanitizer | None = None,
         # Artifact logging
-        artifact_dir: Optional[Path] = None,
-        repo_dir: Optional[Path] = None,
+        artifact_dir: Path | None = None,
+        repo_dir: Path | None = None,
         # Overrides
-        override_file: Optional[Path] = None,
+        override_file: Path | None = None,
         # QA
-        qa_orchestrator: Optional[QAOrchestrator] = None,
+        qa_orchestrator: QAOrchestrator | None = None,
     ):
         """Initialize the controller adapter.
 
@@ -94,8 +94,8 @@ class ControllerAdapter:
         if planner is None:
             planner = PlannerV2(memory_adapter=memory_adapter, seed=seed)
         self._planner = planner
-        self._current_plan: Optional[Plan] = None
-        self._current_state: Optional[PlanState] = None
+        self._current_plan: Plan | None = None
+        self._current_state: PlanState | None = None
         
         # Governance
         self._budget = budget
@@ -104,12 +104,12 @@ class ControllerAdapter:
         self._sanitizer = sanitizer or ContentSanitizer(mode="flag")
         
         # Artifact logging
-        self._artifact_log: Optional[PlanArtifactLog] = None
+        self._artifact_log: PlanArtifactLog | None = None
         if artifact_dir:
             self._artifact_log = PlanArtifactLog(artifact_dir)
-        self._current_artifact_id: Optional[str] = None
+        self._current_artifact_id: str | None = None
         self._repo_dir = repo_dir
-        self._repo_fingerprint: Optional[RepoFingerprint] = None
+        self._repo_fingerprint: RepoFingerprint | None = None
         
         # Overrides
         self._override_manager = OverrideManager(override_file)
@@ -118,13 +118,13 @@ class ControllerAdapter:
         self._qa_bridge = PlannerQABridge(qa_orchestrator)
         
         # Step timing
-        self._step_start_time: Optional[float] = None
-        self._files_touched: List[str] = []
+        self._step_start_time: float | None = None
+        self._files_touched: list[str] = []
 
     def start_goal(
         self,
         goal: str,
-        context: Dict[str, Any],
+        context: dict[str, Any],
         validate: bool = True,
     ) -> ControllerTaskSpec:
         """Start a new goal and get the first task spec.
@@ -210,8 +210,8 @@ class ControllerAdapter:
         self,
         outcome: ControllerOutcome,
         diff: str = "",
-        files_touched: Optional[List[str]] = None,
-    ) -> Optional[ControllerTaskSpec]:
+        files_touched: list[str] | None = None,
+    ) -> ControllerTaskSpec | None:
         """Process controller outcome and get next task spec.
 
         Updates plan state based on the outcome, checks governance conditions,
@@ -408,7 +408,7 @@ class ControllerAdapter:
             return ValidationResult(valid=False, errors=[])
         return self._validator.validate(self._current_plan)
 
-    def get_budget_status(self) -> Dict[str, Any]:
+    def get_budget_status(self) -> dict[str, Any]:
         """Get current budget status.
 
         Returns:
@@ -421,7 +421,7 @@ class ControllerAdapter:
             **self._budget.to_dict(),
         }
 
-    def get_halt_status(self) -> Dict[str, Any]:
+    def get_halt_status(self) -> dict[str, Any]:
         """Get halt checker status.
 
         Returns:
@@ -439,7 +439,7 @@ class ControllerAdapter:
             return "{}"
         return self._current_plan.to_json()
 
-    def get_plan(self) -> Optional[Plan]:
+    def get_plan(self) -> Plan | None:
         """Get the current plan.
 
         Returns:
@@ -447,7 +447,7 @@ class ControllerAdapter:
         """
         return self._current_plan
 
-    def get_state(self) -> Optional[PlanState]:
+    def get_state(self) -> PlanState | None:
         """Get current plan state.
 
         Returns:
@@ -455,7 +455,7 @@ class ControllerAdapter:
         """
         return self._current_state
 
-    def get_summary(self) -> Dict[str, Any]:
+    def get_summary(self) -> dict[str, Any]:
         """Get a summary of current plan execution.
 
         Returns:
@@ -515,7 +515,7 @@ class ControllerAdapter:
         self._step_start_time = None
         self._files_touched = []
 
-    def get_parallel_tasks(self, max_workers: int = 4) -> List[ControllerTaskSpec]:
+    def get_parallel_tasks(self, max_workers: int = 4) -> list[ControllerTaskSpec]:
         """Get the next batch of tasks that can run in parallel.
         
         Args:

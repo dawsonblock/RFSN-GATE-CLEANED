@@ -17,8 +17,8 @@ Example:
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from typing import Callable
 
 from prometheus_client import REGISTRY, generate_latest
 

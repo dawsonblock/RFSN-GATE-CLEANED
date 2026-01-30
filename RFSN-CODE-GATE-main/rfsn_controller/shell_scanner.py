@@ -28,10 +28,9 @@ import json
 import os
 import re
 import sys
+from collections.abc import Iterator
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Dict, Iterator, List, Optional, Set, Tuple
-
 
 __version__ = "1.0.0"
 
@@ -61,8 +60,8 @@ class ScanResult:
     """Result of scanning a codebase."""
     
     files_scanned: int = 0
-    violations: List[Violation] = field(default_factory=list)
-    errors: List[str] = field(default_factory=list)
+    violations: list[Violation] = field(default_factory=list)
+    errors: list[str] = field(default_factory=list)
     
     @property
     def has_violations(self) -> bool:
@@ -76,7 +75,7 @@ class ScanResult:
     def high_count(self) -> int:
         return sum(1 for v in self.violations if v.severity == "high")
     
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         return {
             "files_scanned": self.files_scanned,
             "violation_count": len(self.violations),
@@ -88,7 +87,7 @@ class ScanResult:
 
 
 # Regex patterns for shell usage detection
-SHELL_PATTERNS: List[Tuple[str, str, str, str]] = [
+SHELL_PATTERNS: list[tuple[str, str, str, str]] = [
     # (pattern, category, severity, message)
     (r'\bshell\s*=\s*True\b', "shell_true", "critical",
      "shell=True enables shell injection vulnerabilities"),
@@ -131,7 +130,7 @@ SHELL_PATTERNS: List[Tuple[str, str, str, str]] = [
 ]
 
 # Patterns that indicate safe usage (to avoid false positives)
-SAFE_PATTERNS: List[str] = [
+SAFE_PATTERNS: list[str] = [
     r'shell\s*=\s*False',  # Explicit shell=False
     r'#.*shell\s*=\s*True',  # In comments
     r'["\']{3}.*shell\s*=\s*True.*["\']{3}',  # In docstrings
@@ -145,10 +144,10 @@ SAFE_PATTERNS: List[str] = [
 class ShellUsageVisitor(ast.NodeVisitor):
     """AST visitor to detect shell usage patterns."""
     
-    def __init__(self, filename: str, source_lines: List[str]):
+    def __init__(self, filename: str, source_lines: list[str]):
         self.filename = filename
         self.source_lines = source_lines
-        self.violations: List[Violation] = []
+        self.violations: list[Violation] = []
         
     def _get_line_snippet(self, lineno: int) -> str:
         """Get the source line as a snippet."""
@@ -241,14 +240,14 @@ class ShellUsageVisitor(ast.NodeVisitor):
                                 f"Shell wrapper [{base_cmd}, {flag}] detected in argv"
                             )
     
-    def _get_constant_value(self, node: ast.AST) -> Optional[str]:
+    def _get_constant_value(self, node: ast.AST) -> str | None:
         """Extract constant string value from AST node."""
         if isinstance(node, ast.Constant) and isinstance(node.value, str):
             return node.value
         return None
 
 
-def scan_with_ast(filepath: Path, content: str) -> List[Violation]:
+def scan_with_ast(filepath: Path, content: str) -> list[Violation]:
     """Scan a file using AST analysis.
     
     Args:
@@ -260,7 +259,7 @@ def scan_with_ast(filepath: Path, content: str) -> List[Violation]:
     """
     try:
         tree = ast.parse(content)
-    except SyntaxError as e:
+    except SyntaxError:
         return []  # Skip files with syntax errors
     
     source_lines = content.split('\n')
@@ -273,7 +272,7 @@ def scan_with_ast(filepath: Path, content: str) -> List[Violation]:
 # Regex-based Detection
 # =============================================================================
 
-def scan_with_regex(filepath: Path, content: str) -> List[Violation]:
+def scan_with_regex(filepath: Path, content: str) -> list[Violation]:
     """Scan a file using regex patterns.
     
     Args:
@@ -283,7 +282,7 @@ def scan_with_regex(filepath: Path, content: str) -> List[Violation]:
     Returns:
         List of violations found.
     """
-    violations: List[Violation] = []
+    violations: list[Violation] = []
     lines = content.split('\n')
     
     # Track if we're in a multi-line string (rough heuristic)
@@ -343,7 +342,7 @@ def scan_with_regex(filepath: Path, content: str) -> List[Violation]:
 # =============================================================================
 
 # Default directories to exclude
-DEFAULT_EXCLUDES: Set[str] = {
+DEFAULT_EXCLUDES: set[str] = {
     "__pycache__",
     ".git",
     ".svn",
@@ -362,9 +361,9 @@ DEFAULT_EXCLUDES: Set[str] = {
 
 
 def discover_python_files(
-    paths: List[Path],
-    exclude_dirs: Optional[Set[str]] = None,
-    exclude_files: Optional[Set[str]] = None,
+    paths: list[Path],
+    exclude_dirs: set[str] | None = None,
+    exclude_files: set[str] | None = None,
 ) -> Iterator[Path]:
     """Discover Python files from given paths.
     
@@ -402,9 +401,9 @@ class ShellScanner:
     
     def __init__(
         self,
-        exclude_dirs: Optional[Set[str]] = None,
-        exclude_files: Optional[Set[str]] = None,
-        exclude_patterns: Optional[List[str]] = None,
+        exclude_dirs: set[str] | None = None,
+        exclude_files: set[str] | None = None,
+        exclude_patterns: list[str] | None = None,
     ):
         """Initialize the scanner.
         
@@ -417,7 +416,7 @@ class ShellScanner:
         self.exclude_files = exclude_files or set()
         self.exclude_patterns = [re.compile(p) for p in (exclude_patterns or [])]
     
-    def scan_file(self, filepath: Path) -> List[Violation]:
+    def scan_file(self, filepath: Path) -> list[Violation]:
         """Scan a single file for violations.
         
         Args:
@@ -428,7 +427,7 @@ class ShellScanner:
         """
         try:
             content = filepath.read_text(encoding='utf-8', errors='ignore')
-        except (OSError, IOError) as e:
+        except OSError:
             return []  # Skip files we can't read
         
         # Combine AST and regex results, deduplicating
@@ -436,8 +435,8 @@ class ShellScanner:
         regex_violations = scan_with_regex(filepath, content)
         
         # Deduplicate by (file, line, category)
-        seen: Set[Tuple[str, int, str]] = set()
-        violations: List[Violation] = []
+        seen: set[tuple[str, int, str]] = set()
+        violations: list[Violation] = []
         
         for v in ast_violations + regex_violations:
             key = (v.file, v.line, v.category)
@@ -460,7 +459,7 @@ class ShellScanner:
         
         return violations
     
-    def scan(self, paths: List[Path]) -> ScanResult:
+    def scan(self, paths: list[Path]) -> ScanResult:
         """Scan paths for shell usage violations.
         
         Args:
@@ -493,7 +492,7 @@ class ShellScanner:
 
 def format_text(result: ScanResult, verbose: bool = False) -> str:
     """Format scan result as human-readable text."""
-    lines: List[str] = []
+    lines: list[str] = []
     
     lines.append(f"\n{'='*60}")
     lines.append("Shell Scanner Report")
@@ -507,7 +506,7 @@ def format_text(result: ScanResult, verbose: bool = False) -> str:
     
     if result.violations:
         # Group by severity
-        by_severity: Dict[str, List[Violation]] = {
+        by_severity: dict[str, list[Violation]] = {
             "critical": [],
             "high": [],
             "medium": [],
@@ -539,7 +538,7 @@ def format_json(result: ScanResult) -> str:
 
 def format_github_actions(result: ScanResult) -> str:
     """Format scan result for GitHub Actions annotations."""
-    lines: List[str] = []
+    lines: list[str] = []
     
     for v in result.violations:
         # GitHub Actions workflow command format
@@ -637,7 +636,7 @@ Examples:
     return parser
 
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     """Main entry point for CLI.
     
     Args:

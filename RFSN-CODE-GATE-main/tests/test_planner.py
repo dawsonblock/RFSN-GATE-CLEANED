@@ -2,9 +2,9 @@
 
 import pytest
 
-from rfsn_controller.planner import NodeStatus, PlanDAG, PlanNode, Planner
 from rfsn_controller.config import ControllerConfig
 from rfsn_controller.context import create_context
+from rfsn_controller.planner import NodeStatus, PlanDAG, Planner, PlanNode
 
 
 class TestPlanNode:

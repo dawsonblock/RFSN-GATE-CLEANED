@@ -5,7 +5,6 @@ Handles polyrepo/monorepo repositories with multiple language support.
 """
 
 import hashlib
-from typing import List, Optional
 
 from .base import (
     Buildpack,
@@ -30,7 +29,7 @@ class PolyrepoBuildpack(Buildpack):
         super().__init__()
         self._buildpack_type = BuildpackType.POLYREPO
 
-    def detect(self, ctx: BuildpackContext) -> Optional[DetectResult]:
+    def detect(self, ctx: BuildpackContext) -> DetectResult | None:
         """Detect if this is a polyrepo/monorepo repository.
         
         Polyrepos typically have multiple project markers at the root
@@ -61,10 +60,7 @@ class PolyrepoBuildpack(Buildpack):
                     if any(f.endswith(ext) for f in ctx.repo_tree):
                         found_languages.add(lang)
                         found_indicators.append(marker)
-                elif marker in ctx.files:
-                    found_languages.add(lang)
-                    found_indicators.append(marker)
-                elif any(f == marker or f.endswith("/" + marker) for f in ctx.repo_tree):
+                elif marker in ctx.files or any(f == marker or f.endswith("/" + marker) for f in ctx.repo_tree):
                     found_languages.add(lang)
                     found_indicators.append(marker)
 
@@ -90,7 +86,7 @@ class PolyrepoBuildpack(Buildpack):
         """
         return "ubuntu:22.04"
 
-    def sysdeps_whitelist(self) -> List[str]:
+    def sysdeps_whitelist(self) -> list[str]:
         """Return polyrepo-specific system dependencies."""
         common = ["build-essential", "pkg-config", "git", "ca-certificates"]
         # Include common language runtimes
@@ -109,7 +105,7 @@ class PolyrepoBuildpack(Buildpack):
         ]
         return common + polyrepo_extras
 
-    def install_plan(self, ctx: BuildpackContext) -> List[Step]:
+    def install_plan(self, ctx: BuildpackContext) -> list[Step]:
         """Generate polyrepo installation steps.
         
         Attempts to install dependencies for each detected language.
@@ -145,7 +141,7 @@ class PolyrepoBuildpack(Buildpack):
 
         return steps
 
-    def test_plan(self, ctx: BuildpackContext, focus_file: Optional[str] = None) -> TestPlan:
+    def test_plan(self, ctx: BuildpackContext, focus_file: str | None = None) -> TestPlan:
         """Generate polyrepo test execution plan.
         
         For polyrepos, we run a general test command that tries
@@ -173,6 +169,6 @@ class PolyrepoBuildpack(Buildpack):
             error_message=None,
         )
 
-    def focus_plan(self, failure: FailureInfo) -> Optional[TestPlan]:
+    def focus_plan(self, failure: FailureInfo) -> TestPlan | None:
         """Generate focused test plan based on failure."""
         return None  # Polyrepo focusing is complex

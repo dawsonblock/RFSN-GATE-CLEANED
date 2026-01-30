@@ -8,7 +8,6 @@ across different languages (Python, Node, Java, Go, Rust).
 import re
 from dataclasses import dataclass
 from enum import Enum
-from typing import List, Optional
 
 
 class Language(Enum):
@@ -27,7 +26,7 @@ class StackFrame:
     """A single stack frame."""
 
     filepath: str
-    line_number: Optional[int]
+    line_number: int | None
     function_name: str
     language: Language
 
@@ -36,8 +35,8 @@ class StackFrame:
 class ParsedTrace:
     """Result of parsing a stack trace."""
 
-    frames: List[StackFrame]
-    error_type: Optional[str]
+    frames: list[StackFrame]
+    error_type: str | None
     error_message: str
     language: Language
 
@@ -121,7 +120,7 @@ class TraceParser:
 
         return Language.UNKNOWN
 
-    def parse(self, trace: str, language: Optional[Language] = None) -> ParsedTrace:
+    def parse(self, trace: str, language: Language | None = None) -> ParsedTrace:
         """Parse a stack trace.
 
         Args:
@@ -399,7 +398,7 @@ class TraceParser:
             language=Language.RUST,
         )
 
-    def extract_files_to_examine(self, trace: str) -> List[str]:
+    def extract_files_to_examine(self, trace: str) -> list[str]:
         """Extract unique file paths from a stack trace.
 
         Args:

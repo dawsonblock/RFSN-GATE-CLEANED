@@ -10,7 +10,7 @@ Validates model JSON responses and diffs:
 import json
 import re
 from dataclasses import dataclass
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
 
 @dataclass
@@ -18,13 +18,13 @@ class ModelOutput:
     """Validated model output."""
 
     mode: str  # "tool_request", "patch", or "feature_summary"
-    requests: Optional[list[Dict[str, Any]]] = None
-    diff: Optional[str] = None
-    why: Optional[str] = None
-    summary: Optional[str] = None
-    completion_status: Optional[str] = None
+    requests: list[dict[str, Any]] | None = None
+    diff: str | None = None
+    why: str | None = None
+    summary: str | None = None
+    completion_status: str | None = None
     is_valid: bool = True
-    validation_error: Optional[str] = None
+    validation_error: str | None = None
 
 
 class ModelOutputValidator:
@@ -110,7 +110,7 @@ class ModelOutputValidator:
                 validation_error=f"Unknown mode: {mode}",
             )
 
-    def _validate_tool_request(self, data: Dict[str, Any]) -> ModelOutput:
+    def _validate_tool_request(self, data: dict[str, Any]) -> ModelOutput:
         """Validate tool_request mode output.
 
         Args:
@@ -222,7 +222,7 @@ class ModelOutputValidator:
             is_valid=True,
         )
 
-    def _validate_patch(self, data: Dict[str, Any]) -> ModelOutput:
+    def _validate_patch(self, data: dict[str, Any]) -> ModelOutput:
         """Validate patch mode output.
 
         Args:
@@ -259,7 +259,7 @@ class ModelOutputValidator:
             is_valid=True,
         )
 
-    def _validate_feature_summary(self, data: Dict[str, Any]) -> ModelOutput:
+    def _validate_feature_summary(self, data: dict[str, Any]) -> ModelOutput:
         """Validate feature_summary mode output.
 
         Args:
@@ -309,7 +309,7 @@ class ModelOutputValidator:
             is_valid=True,
         )
 
-    def _detect_shell_idioms(self, text: str) -> Tuple[bool, Optional[str]]:
+    def _detect_shell_idioms(self, text: str) -> tuple[bool, str | None]:
         """Detect forbidden shell idioms in text.
 
         The sandbox uses shell=False, so shell features like &&, pipes, redirects,
@@ -326,7 +326,7 @@ class ModelOutputValidator:
                 return True, description
         return False, None
 
-    def _validate_diff_format(self, diff: str) -> Tuple[bool, Optional[str]]:
+    def _validate_diff_format(self, diff: str) -> tuple[bool, str | None]:
         """Validate that a string is a valid unified diff.
 
         Args:

@@ -7,7 +7,6 @@ Enforces constraints like "do not change function signatures" or
 from __future__ import annotations
 
 import ast
-from typing import Dict, List, Optional
 
 
 class SemanticDiff:
@@ -17,13 +16,13 @@ class SemanticDiff:
         self.old_tree = self._parse(old_code)
         self.new_tree = self._parse(new_code)
         
-    def _parse(self, code: str) -> Optional[ast.AST]:
+    def _parse(self, code: str) -> ast.AST | None:
         try:
             return ast.parse(code)
         except SyntaxError:
             return None
 
-    def get_changed_functions(self) -> List[str]:
+    def get_changed_functions(self) -> list[str]:
         """Get list of functions with changed signatures."""
         if not self.old_tree or not self.new_tree:
             return []
@@ -38,7 +37,7 @@ class SemanticDiff:
                     changed.append(name)
         return changed
         
-    def _extract_functions(self, tree: ast.AST) -> Dict[str, str]:
+    def _extract_functions(self, tree: ast.AST) -> dict[str, str]:
         """Extract function signatures."""
         funcs = {}
         for node in ast.walk(tree):
@@ -53,7 +52,7 @@ class SemanticDiff:
 class SemanticGuardrails:
     """Enforces semantic safety checks."""
     
-    def check_diff(self, file_path: str, old_content: str, new_content: str) -> List[str]:
+    def check_diff(self, file_path: str, old_content: str, new_content: str) -> list[str]:
         """Check if a file change violates safety guardrails.
         
         Args:

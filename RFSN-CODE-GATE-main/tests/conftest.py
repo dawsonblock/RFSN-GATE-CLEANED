@@ -9,14 +9,12 @@ This module provides:
 
 from __future__ import annotations
 
-import os
 import sys
-import tempfile
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable, Dict, Generator, List, Optional
+from typing import Any
 
 import pytest
-
 
 # =============================================================================
 # Path Configuration
@@ -41,7 +39,7 @@ def pytest_configure(config: pytest.Config) -> None:
 
 def pytest_collection_modifyitems(
     config: pytest.Config, 
-    items: List[pytest.Item]
+    items: list[pytest.Item]
 ) -> None:
     """Modify test collection - auto-apply markers based on path."""
     for item in items:
@@ -75,7 +73,7 @@ def tmp_py_file(tmp_path: Path) -> Callable[[str, str], Path]:
 
 
 @pytest.fixture
-def tmp_project_dir(tmp_path: Path) -> Callable[[Dict[str, str]], Path]:
+def tmp_project_dir(tmp_path: Path) -> Callable[[dict[str, str]], Path]:
     """Factory fixture to create a temporary project structure.
     
     Usage:
@@ -85,7 +83,7 @@ def tmp_project_dir(tmp_path: Path) -> Callable[[Dict[str, str]], Path]:
                 "utils/helper.py": "def foo(): pass",
             })
     """
-    def _create(files: Dict[str, str]) -> Path:
+    def _create(files: dict[str, str]) -> Path:
         for rel_path, content in files.items():
             filepath = tmp_path / rel_path
             filepath.parent.mkdir(parents=True, exist_ok=True)
@@ -122,7 +120,7 @@ def main():
 
 
 @pytest.fixture
-def unsafe_code_samples() -> Dict[str, str]:
+def unsafe_code_samples() -> dict[str, str]:
     """Return samples of unsafe Python code with various violations."""
     return {
         "shell_true": '''
@@ -199,7 +197,7 @@ def nested_violation():
 # =============================================================================
 
 @pytest.fixture
-def valid_argv_samples() -> List[List[str]]:
+def valid_argv_samples() -> list[list[str]]:
     """Return valid argv command lists for testing."""
     return [
         ["echo", "hello"],
@@ -211,7 +209,7 @@ def valid_argv_samples() -> List[List[str]]:
 
 
 @pytest.fixture
-def invalid_argv_samples() -> List[tuple]:
+def invalid_argv_samples() -> list[tuple]:
     """Return invalid argv samples with expected error types."""
     return [
         # (argv, expected_error_pattern)
@@ -234,7 +232,7 @@ def test_cwd(tmp_path: Path) -> Path:
 # =============================================================================
 
 @pytest.fixture
-def mock_env() -> Dict[str, str]:
+def mock_env() -> dict[str, str]:
     """Provide a mock environment for testing."""
     return {
         "PATH": "/usr/bin:/bin",
@@ -254,7 +252,7 @@ def capture_subprocess_calls(monkeypatch: pytest.MonkeyPatch):
             assert len(calls) == 1
             assert calls[0]['args'] == ['echo', 'test']
     """
-    calls: List[Dict[str, Any]] = []
+    calls: list[dict[str, Any]] = []
     
     def mock_run(*args, **kwargs):
         calls.append({

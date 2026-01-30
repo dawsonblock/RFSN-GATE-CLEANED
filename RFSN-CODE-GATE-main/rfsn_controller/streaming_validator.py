@@ -9,8 +9,9 @@ from __future__ import annotations
 import asyncio
 import json
 import re
+from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass, field
-from typing import Any, AsyncIterator, Callable, Dict, List, Optional
+from typing import Any
 
 
 @dataclass
@@ -22,7 +23,7 @@ class StreamingValidator:
     """
     
     # Patterns that indicate a valid patch response
-    valid_patterns: List[str] = field(default_factory=lambda: [
+    valid_patterns: list[str] = field(default_factory=lambda: [
         r'"mode"\s*:\s*"patch"',
         r'"mode"\s*:\s*"skip"',
         r'"diff"\s*:',
@@ -30,7 +31,7 @@ class StreamingValidator:
     ])
     
     # Patterns that indicate an invalid/error response
-    invalid_patterns: List[str] = field(default_factory=lambda: [
+    invalid_patterns: list[str] = field(default_factory=lambda: [
         r'I cannot',
         r"I'm sorry",
         r'As an AI',
@@ -48,7 +49,7 @@ class StreamingValidator:
         self._valid_compiled = [re.compile(p, re.IGNORECASE) for p in self.valid_patterns]
         self._invalid_compiled = [re.compile(p, re.IGNORECASE) for p in self.invalid_patterns]
     
-    def validate_partial(self, content: str) -> Optional[bool]:
+    def validate_partial(self, content: str) -> bool | None:
         """Check if partial content is valid, invalid, or undetermined.
         
         Args:
@@ -81,9 +82,9 @@ class StreamingValidator:
 
 async def stream_with_early_validation(
     stream: AsyncIterator[str],
-    validator: Optional[StreamingValidator] = None,
-    on_valid: Optional[Callable[[str], None]] = None,
-    on_invalid: Optional[Callable[[str], None]] = None,
+    validator: StreamingValidator | None = None,
+    on_valid: Callable[[str], None] | None = None,
+    on_invalid: Callable[[str], None] | None = None,
 ) -> str:
     """Process a stream with early validation.
     
@@ -125,8 +126,8 @@ async def stream_with_early_validation(
 
 
 async def stream_first_valid(
-    streams: List[AsyncIterator[str]],
-    validator: Optional[StreamingValidator] = None,
+    streams: list[AsyncIterator[str]],
+    validator: StreamingValidator | None = None,
     timeout: float = 30.0,
 ) -> str:
     """Race multiple streams and return first valid response.
@@ -186,14 +187,14 @@ async def stream_first_valid(
                 continue
         
         raise ValueError("No valid response from any stream")
-    except asyncio.TimeoutError:
+    except TimeoutError:
         # Cancel all tasks
         for task in tasks:
             task.cancel()
         raise
 
 
-def extract_json_streaming(content: str) -> Optional[Dict[str, Any]]:
+def extract_json_streaming(content: str) -> dict[str, Any] | None:
     """Extract JSON from potentially incomplete streaming content.
     
     Handles cases where JSON is wrapped in markdown or incomplete.

@@ -7,7 +7,6 @@ Safely installs APT packages from a curated whitelist during the SYSDEPS phase.
 import re
 import subprocess
 from dataclasses import dataclass
-from typing import List, Optional
 
 from rfsn_controller.apt_whitelist import DEFAULT_WHITELIST, AptWhitelist
 
@@ -17,9 +16,9 @@ class SysdepsResult:
     """Result of system dependency installation."""
 
     success: bool
-    installed_packages: List[str]
-    blocked_packages: List[str]
-    error_message: Optional[str]
+    installed_packages: list[str]
+    blocked_packages: list[str]
+    error_message: str | None
 
 
 class SysdepsInstaller:
@@ -27,7 +26,7 @@ class SysdepsInstaller:
 
     def __init__(
         self,
-        whitelist: Optional[AptWhitelist] = None,
+        whitelist: AptWhitelist | None = None,
         dry_run: bool = False,
     ):
         """Initialize the installer.
@@ -39,7 +38,7 @@ class SysdepsInstaller:
         self.whitelist = whitelist or DEFAULT_WHITELIST
         self.dry_run = dry_run
 
-    def parse_error_for_packages(self, error_output: str) -> List[str]:
+    def parse_error_for_packages(self, error_output: str) -> list[str]:
         """Parse error output for missing package hints.
 
         Args:
@@ -75,8 +74,8 @@ class SysdepsInstaller:
 
     def install(
         self,
-        packages: List[str],
-        hints: Optional[List[str]] = None,
+        packages: list[str],
+        hints: list[str] | None = None,
     ) -> SysdepsResult:
         """Install packages safely with whitelist validation.
 
@@ -126,8 +125,8 @@ class SysdepsInstaller:
 
     def _run_apt_install(
         self,
-        packages: List[str],
-        blocked: List[str],
+        packages: list[str],
+        blocked: list[str],
     ) -> SysdepsResult:
         """Run apt-get install command.
 
@@ -145,7 +144,7 @@ class SysdepsInstaller:
                 update_cmd,
                 capture_output=True,
                 text=True,
-                timeout=300,
+                timeout=300, check=False,
             )
 
             if result.returncode != 0:
@@ -188,7 +187,7 @@ class SysdepsInstaller:
                 install_cmd,
                 capture_output=True,
                 text=True,
-                timeout=600,
+                timeout=600, check=False,
             )
 
             if result.returncode != 0:
@@ -221,7 +220,7 @@ class SysdepsInstaller:
                 success=False,
                 installed_packages=[],
                 blocked_packages=blocked + packages,
-                error_message=f"Unexpected error: {str(e)}",
+                error_message=f"Unexpected error: {e!s}",
             )
 
     def install_starter_set(self) -> SysdepsResult:

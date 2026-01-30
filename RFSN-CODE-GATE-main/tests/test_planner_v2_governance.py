@@ -1,6 +1,5 @@
 """Tests for Planner v2.1 Governance, Failure Taxonomy, and Audit Trail."""
 
-import json
 import tempfile
 from pathlib import Path
 
@@ -10,36 +9,25 @@ from rfsn_controller.planner_v2 import (
     # Governance
     BudgetExhausted,
     ContentSanitizer,
-    HaltChecker,
-    HaltSpec,
-    PlanBudget,
-    PlanValidator,
-    ValidationResult,
-    # Failure taxonomy
     ControllerOutcome,
     FailureCategory,
     FailureEvidence,
-    # Artifacts
-    PlanArtifact,
-    PlanArtifactLog,
-    RepoFingerprint,
-    # Replay
-    PlanReplay,
-    ReplayResult,
-    # CLI
-    print_plan_dag,
-    print_plan_summary,
+    HaltChecker,
+    HaltSpec,
     # Overrides
     OverrideManager,
-    PlanOverride,
-    # Core
     Plan,
+    # Artifacts
+    PlanArtifactLog,
+    PlanBudget,
     PlanState,
-    RiskLevel,
+    PlanValidator,
+    RepoFingerprint,
     Step,
-    StepStatus,
+    # Replay
+    print_plan_dag,
+    print_plan_summary,
 )
-
 
 # ============================================================================
 # VALIDATOR TESTS

@@ -9,9 +9,8 @@ from __future__ import annotations
 import hashlib
 import subprocess
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Dict, List, Optional
 
 
 @dataclass
@@ -19,17 +18,17 @@ class RepoFingerprint:
     """Unique identifier for repo state."""
     
     file_list_hash: str
-    lockfile_hashes: Dict[str, str] = field(default_factory=dict)
-    git_commit: Optional[str] = None
-    git_branch: Optional[str] = None
+    lockfile_hashes: dict[str, str] = field(default_factory=dict)
+    git_commit: str | None = None
+    git_branch: str | None = None
     timestamp: str = ""
     file_count: int = 0
     
     def __post_init__(self) -> None:
         if not self.timestamp:
-            self.timestamp = datetime.now(timezone.utc).isoformat()
+            self.timestamp = datetime.now(UTC).isoformat()
     
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         return {
             "file_list_hash": self.file_list_hash,
             "lockfile_hashes": self.lockfile_hashes,
@@ -40,7 +39,7 @@ class RepoFingerprint:
         }
     
     @classmethod
-    def from_dict(cls, data: Dict) -> "RepoFingerprint":
+    def from_dict(cls, data: dict) -> RepoFingerprint:
         return cls(
             file_list_hash=data["file_list_hash"],
             lockfile_hashes=data.get("lockfile_hashes", {}),
@@ -50,7 +49,7 @@ class RepoFingerprint:
             file_count=data.get("file_count", 0),
         )
     
-    def matches(self, other: "RepoFingerprint", tolerance: float = 0.9) -> bool:
+    def matches(self, other: RepoFingerprint, tolerance: float = 0.9) -> bool:
         """Check if fingerprints are similar enough for memory reuse.
         
         Args:
@@ -139,7 +138,7 @@ def compute_fingerprint(repo_dir: Path) -> RepoFingerprint:
     )
 
 
-def _get_file_list(repo_path: Path) -> List[str]:
+def _get_file_list(repo_path: Path) -> list[str]:
     """Get sorted list of files in repo."""
     files = []
     for f in repo_path.rglob("*"):
@@ -153,7 +152,7 @@ def _get_file_list(repo_path: Path) -> List[str]:
     return sorted(files)
 
 
-def _hash_file_list(files: List[str]) -> str:
+def _hash_file_list(files: list[str]) -> str:
     """Hash a list of filenames."""
     combined = "\n".join(files)
     return hashlib.sha256(combined.encode()).hexdigest()[:16]
@@ -164,11 +163,11 @@ def _hash_file(filepath: Path) -> str:
     try:
         content = filepath.read_bytes()
         return hashlib.sha256(content).hexdigest()[:16]
-    except (IOError, OSError):
+    except OSError:
         return "error"
 
 
-def _get_git_commit(repo_path: Path) -> Optional[str]:
+def _get_git_commit(repo_path: Path) -> str | None:
     """Get current git commit hash."""
     try:
         result = subprocess.run(
@@ -176,7 +175,7 @@ def _get_git_commit(repo_path: Path) -> Optional[str]:
             cwd=repo_path,
             capture_output=True,
             text=True,
-            timeout=5,
+            timeout=5, check=False,
         )
         if result.returncode == 0:
             return result.stdout.strip()[:12]
@@ -185,7 +184,7 @@ def _get_git_commit(repo_path: Path) -> Optional[str]:
     return None
 
 
-def _get_git_branch(repo_path: Path) -> Optional[str]:
+def _get_git_branch(repo_path: Path) -> str | None:
     """Get current git branch."""
     try:
         result = subprocess.run(
@@ -193,7 +192,7 @@ def _get_git_branch(repo_path: Path) -> Optional[str]:
             cwd=repo_path,
             capture_output=True,
             text=True,
-            timeout=5,
+            timeout=5, check=False,
         )
         if result.returncode == 0:
             return result.stdout.strip()

@@ -6,7 +6,6 @@ import json
 import os
 import sqlite3
 from pathlib import Path
-from typing import Optional
 
 # Lazy import: only import openai when actually calling the model
 # This allows the controller to be imported even if openai is not installed
@@ -16,11 +15,11 @@ _openai = None
 # LLM RESPONSE CACHING
 # =============================================================================
 # Set RFSN_LLM_CACHE=1 to enable caching, or RFSN_LLM_CACHE=/path/to/cache.db
-_cache_db: Optional[sqlite3.Connection] = None
+_cache_db: sqlite3.Connection | None = None
 _cache_enabled: bool = os.environ.get("RFSN_LLM_CACHE", "0") not in ("0", "")
 
 
-def _get_cache_db() -> Optional[sqlite3.Connection]:
+def _get_cache_db() -> sqlite3.Connection | None:
     """Get or create the cache database connection."""
     global _cache_db
     if not _cache_enabled:
@@ -49,7 +48,7 @@ def _cache_key(prompt: str, temperature: float) -> str:
     return hashlib.sha256(content.encode()).hexdigest()
 
 
-def _cache_get(key: str) -> Optional[dict]:
+def _cache_get(key: str) -> dict | None:
     """Get a cached response."""
     db = _get_cache_db()
     if db is None:
@@ -87,7 +86,7 @@ def _ensure_openai_imported():
     global _openai
     if _openai is None:
         try:
-            from openai import OpenAI, AsyncOpenAI
+            from openai import AsyncOpenAI, OpenAI
 
             _openai = (OpenAI, AsyncOpenAI)
         except ImportError as e:
@@ -602,8 +601,8 @@ def call_model_with_fallback(model_input: str, temperature: float = 0.0) -> dict
 
 async def call_model_async(model_input: str, temperature: float = 0.0) -> dict:
     """Async version of call_model."""
-    import time
     import asyncio
+    import time
     
     _ensure_openai_imported()
 

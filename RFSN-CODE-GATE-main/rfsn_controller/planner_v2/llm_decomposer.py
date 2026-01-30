@@ -8,8 +8,9 @@ from __future__ import annotations
 
 import json
 import re
-from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional
+from collections.abc import Callable
+from dataclasses import dataclass
+from typing import Any
 
 from .schema import Plan, RiskLevel, Step
 from .tool_registry import get_tool_registry
@@ -28,10 +29,12 @@ class DecompositionConfig:
     require_verification: bool = True
 
 
+from datetime import UTC
+
 from .model_selector import ModelSelector
 
 # Type alias for LLM call function: (prompt, temperature, max_tokens, model_id) -> response
-LLMCallFn = Callable[[str, float, int, Optional[str]], str]
+LLMCallFn = Callable[[str, float, int, str | None], str]
 
 
 DECOMPOSITION_SYSTEM_PROMPT = """You are a software engineering planner. Your job is to decompose high-level goals into atomic, executable steps.
@@ -127,10 +130,10 @@ class LLMDecomposer:
     
     def __init__(
         self,
-        llm_call: Optional[LLMCallFn] = None,
-        config: Optional[DecompositionConfig] = None,
-        model_selector: Optional[ModelSelector] = None,
-        firewall_warnings: Optional[List[str]] = None,
+        llm_call: LLMCallFn | None = None,
+        config: DecompositionConfig | None = None,
+        model_selector: ModelSelector | None = None,
+        firewall_warnings: list[str] | None = None,
     ):
         """Initialize the decomposer.
         
@@ -148,9 +151,9 @@ class LLMDecomposer:
     def decompose(
         self,
         goal: str,
-        context: Dict[str, Any],
+        context: dict[str, Any],
         plan_id: str,
-    ) -> Optional[Plan]:
+    ) -> Plan | None:
         """Decompose a goal into a structured plan using LLM.
         
         Args:
@@ -168,7 +171,7 @@ class LLMDecomposer:
         model_id = None
         if self._model_selector:
             # Detect context from arguments
-            repo_type = context.get("repo_type", "unknown")
+            context.get("repo_type", "unknown")
             language = context.get("language", "unknown")
             failure_type = context.get("failure_type", "unknown")
             
@@ -227,7 +230,7 @@ class LLMDecomposer:
         
         return None
     
-    def _build_decomposition_prompt(self, goal: str, context: Dict[str, Any]) -> str:
+    def _build_decomposition_prompt(self, goal: str, context: dict[str, Any]) -> str:
         """Build the decomposition prompt for the LLM.
         
         Args:
@@ -292,7 +295,7 @@ class LLMDecomposer:
         
         return f"{system_prompt}\\n\\n{user_prompt}"
     
-    def _parse_llm_response(self, response: str) -> List[Dict[str, Any]]:
+    def _parse_llm_response(self, response: str) -> list[dict[str, Any]]:
         """Parse LLM response into step dictionaries.
         
         Args:
@@ -322,7 +325,7 @@ class LLMDecomposer:
         
         return []
     
-    def _validate_decomposition(self, steps: List[Dict[str, Any]]) -> bool:
+    def _validate_decomposition(self, steps: list[dict[str, Any]]) -> bool:
         """Validate the decomposition meets requirements.
         
         Args:
@@ -360,8 +363,8 @@ class LLMDecomposer:
         self,
         plan_id: str,
         goal: str,
-        step_dicts: List[Dict[str, Any]],
-        context: Dict[str, Any],
+        step_dicts: list[dict[str, Any]],
+        context: dict[str, Any],
     ) -> Plan:
         """Build a Plan from validated step dictionaries.
         
@@ -374,7 +377,7 @@ class LLMDecomposer:
         Returns:
             Constructed Plan.
         """
-        from datetime import datetime, timezone
+        from datetime import datetime
         
         steps = []
         for step_dict in step_dicts:
@@ -403,7 +406,7 @@ class LLMDecomposer:
             plan_id=plan_id,
             goal=goal,
             steps=steps,
-            created_at=datetime.now(timezone.utc).isoformat(),
+            created_at=datetime.now(UTC).isoformat(),
             assumptions=["LLM-generated decomposition"],
             constraints=context.get("constraints", []),
         )
@@ -418,8 +421,8 @@ class DecompositionFallback:
     
     def __init__(
         self,
-        llm_decomposer: Optional[LLMDecomposer] = None,
-        pattern_decomposer: Optional[Callable] = None,
+        llm_decomposer: LLMDecomposer | None = None,
+        pattern_decomposer: Callable | None = None,
     ):
         """Initialize with decomposers.
         
@@ -434,9 +437,9 @@ class DecompositionFallback:
     def decompose(
         self,
         goal: str,
-        context: Dict[str, Any],
+        context: dict[str, Any],
         plan_id: str,
-    ) -> Optional[Plan]:
+    ) -> Plan | None:
         """Decompose with fallback.
         
         Tries LLM first, falls back to pattern-based.

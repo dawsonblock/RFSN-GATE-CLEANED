@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict, List, Optional
 
 
 class VerificationType(Enum):
@@ -33,7 +32,7 @@ class VerificationHook:
     template: str
     description: str
     is_fast: bool  # Quick check vs full verification
-    required_tools: List[str]  # Tools that must be available
+    required_tools: list[str]  # Tools that must be available
     
     def format(self, **kwargs) -> str:
         """Format the template with provided values."""
@@ -41,7 +40,7 @@ class VerificationHook:
 
 
 # Standard verification hooks library
-VERIFICATION_HOOKS: Dict[VerificationType, VerificationHook] = {
+VERIFICATION_HOOKS: dict[VerificationType, VerificationHook] = {
     VerificationType.PYTEST_SUBSET: VerificationHook(
         hook_type=VerificationType.PYTEST_SUBSET,
         template="pytest {files} -x -v --tb=short",
@@ -117,12 +116,12 @@ class VerificationHooks:
         return VERIFICATION_HOOKS[hook_type]
     
     @classmethod
-    def get_fast_hooks(cls) -> List[VerificationHook]:
+    def get_fast_hooks(cls) -> list[VerificationHook]:
         """Get all fast verification hooks."""
         return [h for h in VERIFICATION_HOOKS.values() if h.is_fast]
     
     @classmethod
-    def get_full_hooks(cls) -> List[VerificationHook]:
+    def get_full_hooks(cls) -> list[VerificationHook]:
         """Get all full verification hooks."""
         return [h for h in VERIFICATION_HOOKS.values() if not h.is_fast]
     
@@ -130,7 +129,7 @@ class VerificationHooks:
     def select_for_step(
         cls,
         step_id: str,
-        touched_files: List[str],
+        touched_files: list[str],
         test_cmd: str,
         is_milestone: bool = False,
     ) -> str:
@@ -162,7 +161,7 @@ class VerificationHooks:
         return hook.format(files=files)
     
     @staticmethod
-    def _find_related_tests(files: List[str]) -> List[str]:
+    def _find_related_tests(files: list[str]) -> list[str]:
         """Find test files related to source files.
         
         Heuristic: for each src/foo.py, look for test_foo.py.
@@ -217,7 +216,7 @@ class TestStrategy:
         cls,
         step_id: str,
         full_cmd: str,
-        touched_files: Optional[List[str]] = None,
+        touched_files: list[str] | None = None,
     ) -> str:
         """Get appropriate test command for step.
         

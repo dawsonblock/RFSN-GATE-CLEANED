@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, List, Optional, Set
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .schema import Step
@@ -20,22 +20,22 @@ class PlanOverride:
     """Runtime override specification for plan execution."""
     
     # Steps to skip entirely
-    skip_steps: Set[str] = field(default_factory=set)
+    skip_steps: set[str] = field(default_factory=set)
     
     # Tighten file allowlists: step_id -> new allowlist
-    tighten_allowlists: Dict[str, List[str]] = field(default_factory=dict)
+    tighten_allowlists: dict[str, list[str]] = field(default_factory=dict)
     
     # Change verification commands: step_id -> new command
-    change_verify_commands: Dict[str, str] = field(default_factory=dict)
+    change_verify_commands: dict[str, str] = field(default_factory=dict)
     
     # Force halt plan
     halt_plan: bool = False
     halt_reason: str = ""
     
     # Force step risk level: step_id -> new risk level
-    force_risk_levels: Dict[str, str] = field(default_factory=dict)
+    force_risk_levels: dict[str, str] = field(default_factory=dict)
     
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         return {
             "skip_steps": list(self.skip_steps),
             "tighten_allowlists": self.tighten_allowlists,
@@ -46,7 +46,7 @@ class PlanOverride:
         }
     
     @classmethod
-    def from_dict(cls, data: Dict) -> "PlanOverride":
+    def from_dict(cls, data: dict) -> PlanOverride:
         return cls(
             skip_steps=set(data.get("skip_steps", [])),
             tighten_allowlists=data.get("tighten_allowlists", {}),
@@ -60,7 +60,7 @@ class PlanOverride:
 class OverrideManager:
     """Manages runtime overrides for plan execution."""
     
-    def __init__(self, override_file: Optional[Path] = None):
+    def __init__(self, override_file: Path | None = None):
         """Initialize the override manager.
         
         Args:
@@ -76,7 +76,7 @@ class OverrideManager:
             try:
                 data = json.loads(self.override_file.read_text())
                 self._overrides = PlanOverride.from_dict(data)
-            except (json.JSONDecodeError, IOError):
+            except (OSError, json.JSONDecodeError):
                 pass
     
     def save_overrides(self) -> None:
@@ -107,7 +107,7 @@ class OverrideManager:
         """Get halt reason if halted."""
         return self._overrides.halt_reason
     
-    def apply(self, step: "Step") -> "Step":
+    def apply(self, step: Step) -> Step:
         """Apply overrides to a step before execution.
         
         Args:
@@ -159,7 +159,7 @@ class OverrideManager:
         """Remove step from skip list."""
         self._overrides.skip_steps.discard(step_id)
     
-    def tighten_allowlist(self, step_id: str, files: List[str]) -> None:
+    def tighten_allowlist(self, step_id: str, files: list[str]) -> None:
         """Tighten file allowlist for a step."""
         self._overrides.tighten_allowlists[step_id] = files
     

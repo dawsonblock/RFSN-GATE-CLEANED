@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import hashlib
 import re
-from typing import List
 
 PYTEST_FAILED_RE = re.compile(r"^FAILED\s+(.+?)$", re.MULTILINE)
 TRACE_FILE_RE = re.compile(r'File "([^"]+\.py)"')
@@ -24,7 +23,7 @@ def error_signature(stdout: str, stderr: str) -> str:
     return hashlib.sha256(blob.encode("utf-8", errors="ignore")).hexdigest()
 
 
-def parse_pytest_failures(output: str, limit: int = 20) -> List[str]:
+def parse_pytest_failures(output: str, limit: int = 20) -> list[str]:
     """Extract a list of failing test identifiers from pytest output.
 
     Args:
@@ -37,7 +36,7 @@ def parse_pytest_failures(output: str, limit: int = 20) -> List[str]:
     return PYTEST_FAILED_RE.findall(output or "")[:limit]
 
 
-def parse_trace_files(output: str, limit: int = 20) -> List[str]:
+def parse_trace_files(output: str, limit: int = 20) -> list[str]:
     """Extract filenames from Python traceback lines in the output.
 
     Args:
@@ -47,7 +46,7 @@ def parse_trace_files(output: str, limit: int = 20) -> List[str]:
     Returns:
         A list of file paths referenced in tracebacks.
     """
-    out: List[str] = []
+    out: list[str] = []
     for m in TRACE_FILE_RE.finditer(output or ""):
         out.append(m.group(1))
         if len(out) >= limit:

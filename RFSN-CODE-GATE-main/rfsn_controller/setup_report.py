@@ -5,7 +5,7 @@ Creates structured reports about project setup and installation.
 """
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 @dataclass
@@ -20,23 +20,23 @@ class SetupResult:
 @dataclass
 class SetupReport:
     """Report on project setup status."""
-    pip_result: Optional[SetupResult] = None
-    node_result: Optional[SetupResult] = None
-    go_result: Optional[SetupResult] = None
-    rust_result: Optional[SetupResult] = None
-    java_result: Optional[SetupResult] = None
-    dotnet_result: Optional[SetupResult] = None
-    lockfile_path: Optional[str] = None
-    sysdeps_installed: List[str] = field(default_factory=list)
-    sysdeps_failed: List[str] = field(default_factory=list)
-    sysdeps_blocked: List[str] = field(default_factory=list)
+    pip_result: SetupResult | None = None
+    node_result: SetupResult | None = None
+    go_result: SetupResult | None = None
+    rust_result: SetupResult | None = None
+    java_result: SetupResult | None = None
+    dotnet_result: SetupResult | None = None
+    lockfile_path: str | None = None
+    sysdeps_installed: list[str] = field(default_factory=list)
+    sysdeps_failed: list[str] = field(default_factory=list)
+    sysdeps_blocked: list[str] = field(default_factory=list)
     
     @property
     def has_lockfile(self) -> bool:
         """Check if a lockfile was found."""
         return self.lockfile_path is not None and len(self.lockfile_path) > 0
     
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary representation."""
         result = {}
         
@@ -98,16 +98,16 @@ class SetupReport:
 
 
 def create_setup_report(
-    pip_result: Optional[SetupResult] = None,
-    node_result: Optional[SetupResult] = None,
-    go_result: Optional[SetupResult] = None,
-    rust_result: Optional[SetupResult] = None,
-    java_result: Optional[SetupResult] = None,
-    dotnet_result: Optional[SetupResult] = None,
-    lockfile_path: Optional[str] = None,
-    sysdeps_installed: Optional[List[str]] = None,
-    sysdeps_failed: Optional[List[str]] = None,
-    sysdeps_blocked: Optional[List[str]] = None,
+    pip_result: SetupResult | None = None,
+    node_result: SetupResult | None = None,
+    go_result: SetupResult | None = None,
+    rust_result: SetupResult | None = None,
+    java_result: SetupResult | None = None,
+    dotnet_result: SetupResult | None = None,
+    lockfile_path: str | None = None,
+    sysdeps_installed: list[str] | None = None,
+    sysdeps_failed: list[str] | None = None,
+    sysdeps_blocked: list[str] | None = None,
 ) -> SetupReport:
     """Create a setup report from installation results.
     

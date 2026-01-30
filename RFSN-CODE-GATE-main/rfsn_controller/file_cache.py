@@ -9,12 +9,10 @@ Particularly useful for:
 
 from __future__ import annotations
 
-import hashlib
 import time
 from collections import OrderedDict
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
 
 @dataclass
@@ -50,7 +48,7 @@ class FileCache:
         self._evictions = 0
         self._stale_reads = 0
     
-    def get(self, filepath: str | Path, max_age_seconds: float = 60.0) -> Optional[str]:
+    def get(self, filepath: str | Path, max_age_seconds: float = 60.0) -> str | None:
         """Get file content from cache or disk.
         
         Args:
@@ -175,7 +173,7 @@ class FileCache:
 
 
 # Global file cache instance
-_global_cache: Optional[FileCache] = None
+_global_cache: FileCache | None = None
 
 
 def get_file_cache() -> FileCache:
@@ -186,7 +184,7 @@ def get_file_cache() -> FileCache:
     return _global_cache
 
 
-def cached_read_file(filepath: str | Path, max_age_seconds: float = 60.0) -> Optional[str]:
+def cached_read_file(filepath: str | Path, max_age_seconds: float = 60.0) -> str | None:
     """Read file with caching.
     
     Args:

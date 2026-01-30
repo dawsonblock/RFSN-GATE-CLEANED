@@ -6,7 +6,6 @@ Handles Python repositories with pip, poetry, or other dependency managers.
 
 import hashlib
 import re
-from typing import List, Optional
 
 from .base import (
     Buildpack,
@@ -27,7 +26,7 @@ class PythonBuildpack(Buildpack):
         super().__init__()
         self._buildpack_type = BuildpackType.PYTHON
 
-    def detect(self, ctx: BuildpackContext) -> Optional[DetectResult]:
+    def detect(self, ctx: BuildpackContext) -> DetectResult | None:
         """Detect if this is a Python repository.
 
         Args:
@@ -55,10 +54,7 @@ class PythonBuildpack(Buildpack):
         found_indicators = []
         for indicator in python_indicators:
             # Check exact filename match in files dict
-            if indicator in ctx.files:
-                found_indicators.append(indicator)
-            # Check for exact filename match in repo_tree (not just endsWith)
-            elif any(f == indicator or f.endswith("/" + indicator) for f in ctx.repo_tree):
+            if indicator in ctx.files or any(f == indicator or f.endswith("/" + indicator) for f in ctx.repo_tree):
                 found_indicators.append(indicator)
 
         if not found_indicators:
@@ -91,7 +87,7 @@ class PythonBuildpack(Buildpack):
         """
         return "python:3.11-slim"
 
-    def sysdeps_whitelist(self) -> List[str]:
+    def sysdeps_whitelist(self) -> list[str]:
         """Return Python-specific system dependencies.
 
         Returns:
@@ -113,7 +109,7 @@ class PythonBuildpack(Buildpack):
         ]
         return common + python_extras
 
-    def install_plan(self, ctx: BuildpackContext) -> List[Step]:
+    def install_plan(self, ctx: BuildpackContext) -> list[Step]:
         """Generate Python installation steps.
 
         Args:
@@ -207,7 +203,7 @@ class PythonBuildpack(Buildpack):
 
         return steps
 
-    def test_plan(self, ctx: BuildpackContext, focus_file: Optional[str] = None) -> TestPlan:
+    def test_plan(self, ctx: BuildpackContext, focus_file: str | None = None) -> TestPlan:
         """Generate Python test execution plan.
 
         Args:
@@ -319,7 +315,7 @@ class PythonBuildpack(Buildpack):
             error_message=error_message,
         )
 
-    def focus_plan(self, failure: FailureInfo) -> Optional[TestPlan]:
+    def focus_plan(self, failure: FailureInfo) -> TestPlan | None:
         """Generate focused test plan based on failure.
 
         Args:
@@ -341,7 +337,7 @@ class PythonBuildpack(Buildpack):
             focus_file=focus_file,
         )
 
-    def get_verification_goals(self, ctx: BuildpackContext) -> List[str]:
+    def get_verification_goals(self, ctx: BuildpackContext) -> list[str]:
         """Get verification goals for Python.
 
         Args:
@@ -363,7 +359,7 @@ class PythonBuildpack(Buildpack):
 
         return goals
 
-    def get_services_required(self, ctx: BuildpackContext) -> List[str]:
+    def get_services_required(self, ctx: BuildpackContext) -> list[str]:
         """Get required external services for Python.
 
         Args:

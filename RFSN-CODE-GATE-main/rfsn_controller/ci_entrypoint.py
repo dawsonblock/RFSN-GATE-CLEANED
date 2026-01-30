@@ -9,13 +9,12 @@ from __future__ import annotations
 
 import os
 import sys
-from typing import Optional
 
 # Imports for future integration (stubs for now)
 try:
+    from .explainer import Explainer
     from .planner_v2.controller_adapter import ControllerAdapter  # noqa: F401
     from .planner_v2.schema import ControllerOutcome  # noqa: F401
-    from .explainer import Explainer
 except ImportError:
     # Allow import failure during setup
     Explainer = None  # type: ignore
@@ -24,7 +23,7 @@ except ImportError:
 def run_ci_job(
     goal: str,
     repo_path: str,
-    github_token: Optional[str] = None,
+    github_token: str | None = None,
 ) -> int:
     """Run the controller in CI mode.
     

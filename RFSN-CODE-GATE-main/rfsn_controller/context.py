@@ -7,20 +7,19 @@ runtime state and eliminates global configuration drift.
 from __future__ import annotations
 
 import json
-import os
 import random
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    from .budget import Budget
     from .config import ControllerConfig
-    from .repo_index import RepoIndex
+    from .contracts import ContractRegistry, ContractValidator
     from .planner import PlanDAG
     from .policy_bandit import ThompsonBandit
-    from .budget import Budget
-    from .contracts import ContractRegistry, ContractValidator
+    from .repo_index import RepoIndex
 
 
 @dataclass
@@ -28,7 +27,7 @@ class EventLog:
     """Append-only structured event log."""
     
     path: Path
-    events: List[Dict[str, Any]] = field(default_factory=list)
+    events: list[dict[str, Any]] = field(default_factory=list)
     
     def __post_init__(self) -> None:
         """Ensure the output directory exists."""
@@ -42,7 +41,7 @@ class EventLog:
             **data: Additional event data.
         """
         event = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "type": event_type,
             **data,
         }
@@ -52,7 +51,7 @@ class EventLog:
         with open(self.path, "a", encoding="utf-8") as f:
             f.write(json.dumps(event, default=str) + "\n")
     
-    def get_events(self, event_type: Optional[str] = None) -> List[Dict[str, Any]]:
+    def get_events(self, event_type: str | None = None) -> list[dict[str, Any]]:
         """Get events, optionally filtered by type.
         
         Args:
@@ -74,18 +73,18 @@ class ControllerContext:
     to the same configuration and runtime objects.
     """
     
-    config: "ControllerConfig"
+    config: ControllerConfig
     event_log: EventLog
     rng: random.Random = field(init=False)
     
     # Lazy-initialized components
     _sandbox: Any = field(default=None, repr=False)
-    _repo_index: Optional["RepoIndex"] = field(default=None, repr=False)
-    _plan: Optional["PlanDAG"] = field(default=None, repr=False)
-    _policy: Optional["ThompsonBandit"] = field(default=None, repr=False)
-    _budget: Optional["Budget"] = field(default=None, repr=False)
-    _contract_registry: Optional["ContractRegistry"] = field(default=None, repr=False)
-    _contract_validator: Optional["ContractValidator"] = field(default=None, repr=False)
+    _repo_index: RepoIndex | None = field(default=None, repr=False)
+    _plan: PlanDAG | None = field(default=None, repr=False)
+    _policy: ThompsonBandit | None = field(default=None, repr=False)
+    _budget: Budget | None = field(default=None, repr=False)
+    _contract_registry: ContractRegistry | None = field(default=None, repr=False)
+    _contract_validator: ContractValidator | None = field(default=None, repr=False)
     
     def __post_init__(self) -> None:
         """Initialize the seeded RNG."""
@@ -108,45 +107,45 @@ class ControllerContext:
         self._sandbox = value
     
     @property
-    def repo_index(self) -> Optional["RepoIndex"]:
+    def repo_index(self) -> RepoIndex | None:
         """Get the repo index if enabled and built."""
         return self._repo_index
     
     @repo_index.setter
-    def repo_index(self, value: "RepoIndex") -> None:
+    def repo_index(self, value: RepoIndex) -> None:
         """Set the repo index."""
         self._repo_index = value
         self.event_log.emit("repo_index_set", files=len(value.files) if value else 0)
     
     @property
-    def plan(self) -> Optional["PlanDAG"]:
+    def plan(self) -> PlanDAG | None:
         """Get the current execution plan."""
         return self._plan
     
     @plan.setter
-    def plan(self, value: "PlanDAG") -> None:
+    def plan(self, value: PlanDAG) -> None:
         """Set the execution plan."""
         self._plan = value
         self.event_log.emit("plan_set", nodes=len(value.nodes) if value else 0)
     
     @property
-    def policy(self) -> Optional["ThompsonBandit"]:
+    def policy(self) -> ThompsonBandit | None:
         """Get the learning policy."""
         return self._policy
     
     @policy.setter
-    def policy(self, value: "ThompsonBandit") -> None:
+    def policy(self, value: ThompsonBandit) -> None:
         """Set the learning policy."""
         self._policy = value
         self.event_log.emit("policy_set", mode=self.config.policy_mode)
     
     @property
-    def budget(self) -> Optional["Budget"]:
+    def budget(self) -> Budget | None:
         """Get the budget tracker."""
         return self._budget
     
     @budget.setter
-    def budget(self, value: "Budget") -> None:
+    def budget(self, value: Budget) -> None:
         """Set the budget tracker."""
         self._budget = value
         if value is not None:
@@ -160,12 +159,12 @@ class ControllerContext:
             )
     
     @property
-    def contract_registry(self) -> Optional["ContractRegistry"]:
+    def contract_registry(self) -> ContractRegistry | None:
         """Get the contract registry."""
         return self._contract_registry
     
     @contract_registry.setter
-    def contract_registry(self, value: "ContractRegistry") -> None:
+    def contract_registry(self, value: ContractRegistry) -> None:
         """Set the contract registry."""
         self._contract_registry = value
         if value is not None:
@@ -177,17 +176,17 @@ class ControllerContext:
             )
     
     @property
-    def contract_validator(self) -> Optional["ContractValidator"]:
+    def contract_validator(self) -> ContractValidator | None:
         """Get the contract validator."""
         return self._contract_validator
     
     @contract_validator.setter
-    def contract_validator(self, value: "ContractValidator") -> None:
+    def contract_validator(self, value: ContractValidator) -> None:
         """Set the contract validator."""
         self._contract_validator = value
         self.event_log.emit("contract_validator_set")
     
-    def save_plan(self) -> Optional[str]:
+    def save_plan(self) -> str | None:
         """Save the current plan to disk.
         
         Returns:
@@ -206,7 +205,7 @@ class ControllerContext:
         return str(plan_path)
 
 
-def create_context(config: "ControllerConfig") -> ControllerContext:
+def create_context(config: ControllerConfig) -> ControllerContext:
     """Create a new ControllerContext from configuration.
     
     Args:

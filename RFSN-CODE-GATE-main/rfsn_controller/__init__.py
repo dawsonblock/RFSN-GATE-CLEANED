@@ -36,13 +36,13 @@ New in v0.3.0:
 """
 
 # Convenience imports for common usage patterns
-from .run_id import make_run_id
 from .config import (
     BudgetConfig,
     ContractsConfig,
     ControllerConfig,
     config_from_cli_args,
 )
+from .run_id import make_run_id
 
 __all__ = [
     "make_run_id",

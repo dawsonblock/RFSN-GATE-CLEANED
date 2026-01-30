@@ -14,13 +14,11 @@ import os
 import shlex
 import subprocess
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Set, Tuple
 
 from .command_allowlist import is_command_allowed
 
-
 # Environment variables safe to pass to subprocesses
-SAFE_ENV_VARS: Set[str] = {"PATH", "HOME", "LANG", "PYTHONPATH", "TERM"}
+SAFE_ENV_VARS: set[str] = {"PATH", "HOME", "LANG", "PYTHONPATH", "TERM"}
 
 
 @dataclass
@@ -31,11 +29,11 @@ class ExecResult:
     exit_code: int
     stdout: str
     stderr: str
-    command: List[str]
+    command: list[str]
     timed_out: bool = False
 
 
-def _validate_argv(argv: List[str]) -> None:
+def _validate_argv(argv: list[str]) -> None:
     """Validate that argv is a proper command list.
     
     Args:
@@ -65,7 +63,7 @@ def _validate_argv(argv: List[str]) -> None:
             )
 
 
-def _get_safe_env() -> Dict[str, str]:
+def _get_safe_env() -> dict[str, str]:
     """Get a sanitized environment for subprocess execution.
     
     Returns:
@@ -75,11 +73,11 @@ def _get_safe_env() -> Dict[str, str]:
 
 
 def safe_run(
-    argv: List[str],
+    argv: list[str],
     cwd: str,
     timeout_sec: int = 120,
-    env: Optional[Dict[str, str]] = None,
-    allowed_commands: Optional[Set[str]] = None,
+    env: dict[str, str] | None = None,
+    allowed_commands: set[str] | None = None,
     check_global_allowlist: bool = True,
 ) -> ExecResult:
     """Execute a command safely with argv list.
@@ -111,7 +109,7 @@ def safe_run(
     
     # Validate against contracts (if enabled)
     try:
-        from .contracts import validate_shell_execution_global, ContractViolation
+        from .contracts import ContractViolation, validate_shell_execution_global
         validate_shell_execution_global(argv, shell=False, operation="safe_run")
     except ContractViolation as e:
         # Log the violation and return error result
@@ -184,7 +182,7 @@ def safe_run(
             text=True,
             capture_output=True,
             timeout=timeout_sec,
-            env=safe_env,
+            env=safe_env, check=False,
         )
         duration_ms = (_time.time() - start_time) * 1000
         _log_subprocess_event(proc.returncode, proc.returncode == 0, duration_ms)
@@ -218,7 +216,7 @@ def safe_run(
         )
 
 
-def parse_command_string(cmd: str) -> List[str]:
+def parse_command_string(cmd: str) -> list[str]:
     """Parse a command string into an argv list.
     
     This is for compatibility with existing code that uses string commands.
@@ -243,8 +241,8 @@ def safe_run_string(
     cmd: str,
     cwd: str,
     timeout_sec: int = 120,
-    env: Optional[Dict[str, str]] = None,
-    allowed_commands: Optional[Set[str]] = None,
+    env: dict[str, str] | None = None,
+    allowed_commands: set[str] | None = None,
     check_global_allowlist: bool = True,
 ) -> ExecResult:
     """Execute a command string safely by parsing to argv.
@@ -275,11 +273,11 @@ def safe_run_string(
 
 def docker_exec_argv(
     container: str,
-    argv: List[str],
-    workdir: Optional[str] = None,
-    user: Optional[str] = None,
-    env: Optional[Dict[str, str]] = None,
-) -> List[str]:
+    argv: list[str],
+    workdir: str | None = None,
+    user: str | None = None,
+    env: dict[str, str] | None = None,
+) -> list[str]:
     """Build a docker exec command as an argv list.
     
     This ensures docker commands are properly structured without shell wrappers.

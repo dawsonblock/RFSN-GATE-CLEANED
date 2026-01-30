@@ -16,15 +16,14 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 import threading
-import time
 import uuid
-from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
+from collections.abc import Callable, Iterator
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Union
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -96,13 +95,13 @@ class Event:
     timestamp: str
     event_type: EventType
     source: str
-    data: Dict[str, Any]
+    data: dict[str, Any]
     severity: EventSeverity = EventSeverity.INFO
     event_id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    run_id: Optional[str] = None
-    correlation_id: Optional[str] = None
+    run_id: str | None = None
+    correlation_id: str | None = None
     
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert event to a dictionary for serialization."""
         return {
             "timestamp": self.timestamp,
@@ -120,7 +119,7 @@ class Event:
         return json.dumps(self.to_dict())
     
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> "Event":
+    def from_dict(cls, d: dict[str, Any]) -> Event:
         """Create an Event from a dictionary."""
         return cls(
             timestamp=d["timestamp"],
@@ -134,7 +133,7 @@ class Event:
         )
     
     @classmethod
-    def from_json(cls, json_str: str) -> "Event":
+    def from_json(cls, json_str: str) -> Event:
         """Deserialize an Event from JSON string."""
         return cls.from_dict(json.loads(json_str))
 
@@ -142,10 +141,10 @@ class Event:
 def create_event(
     event_type: EventType,
     source: str,
-    data: Dict[str, Any],
+    data: dict[str, Any],
     severity: EventSeverity = EventSeverity.INFO,
-    run_id: Optional[str] = None,
-    correlation_id: Optional[str] = None,
+    run_id: str | None = None,
+    correlation_id: str | None = None,
 ) -> Event:
     """Factory function to create an Event with current timestamp.
     
@@ -161,7 +160,7 @@ def create_event(
         A new Event instance.
     """
     return Event(
-        timestamp=datetime.now(timezone.utc).isoformat(),
+        timestamp=datetime.now(UTC).isoformat(),
         event_type=event_type,
         source=source,
         data=data,
@@ -189,7 +188,7 @@ class EventLogger:
     
     def __init__(
         self,
-        run_id: Optional[str] = None,
+        run_id: str | None = None,
         max_events: int = 10000,
     ):
         """Initialize the event logger.
@@ -198,9 +197,9 @@ class EventLogger:
             run_id: Identifier for the current run.
             max_events: Maximum events to keep (0 = unlimited).
         """
-        self._events: List[Event] = []
+        self._events: list[Event] = []
         self._lock = threading.Lock()
-        self._callbacks: List[Callable[[Event], None]] = []
+        self._callbacks: list[Callable[[Event], None]] = []
         self._min_severity: EventSeverity = EventSeverity.DEBUG
         self.run_id = run_id or str(uuid.uuid4())
         self.max_events = max_events
@@ -209,9 +208,9 @@ class EventLogger:
         self,
         event_type: EventType,
         source: str,
-        data: Dict[str, Any],
+        data: dict[str, Any],
         severity: EventSeverity = EventSeverity.INFO,
-        correlation_id: Optional[str] = None,
+        correlation_id: str | None = None,
     ) -> Event:
         """Log a new event.
         
@@ -266,7 +265,7 @@ class EventLogger:
         self,
         step_number: int,
         phase: str,
-        data: Optional[Dict[str, Any]] = None,
+        data: dict[str, Any] | None = None,
     ) -> Event:
         """Log a controller step event.
         
@@ -297,7 +296,7 @@ class EventLogger:
         tokens_completion: int,
         latency_ms: float,
         success: bool,
-        error: Optional[str] = None,
+        error: str | None = None,
     ) -> Event:
         """Log an LLM API call event.
         
@@ -420,11 +419,11 @@ class EventLogger:
     
     def log_subprocess_exec(
         self,
-        command: List[str],
+        command: list[str],
         exit_code: int,
         success: bool,
         duration_ms: float,
-        cwd: Optional[str] = None,
+        cwd: str | None = None,
     ) -> Event:
         """Log a subprocess execution event.
         
@@ -456,8 +455,8 @@ class EventLogger:
         source: str,
         error_type: str,
         message: str,
-        traceback: Optional[str] = None,
-        data: Optional[Dict[str, Any]] = None,
+        traceback: str | None = None,
+        data: dict[str, Any] | None = None,
     ) -> Event:
         """Log an error event.
         
@@ -509,7 +508,7 @@ class EventLogger:
         self._min_severity = severity
     
     @property
-    def events(self) -> List[Event]:
+    def events(self) -> list[Event]:
         """Get a copy of all collected events."""
         with self._lock:
             return list(self._events)
@@ -525,7 +524,7 @@ class EventLogger:
         with self._lock:
             self._events.clear()
     
-    def get_events_by_type(self, event_type: EventType) -> List[Event]:
+    def get_events_by_type(self, event_type: EventType) -> list[Event]:
         """Get events filtered by type.
         
         Args:
@@ -540,7 +539,7 @@ class EventLogger:
     def get_events_by_severity(
         self,
         min_severity: EventSeverity,
-    ) -> List[Event]:
+    ) -> list[Event]:
         """Get events at or above a severity level.
         
         Args:
@@ -572,7 +571,7 @@ class EventStore:
         storage_path: Path to the events file.
     """
     
-    def __init__(self, storage_path: Union[str, Path]):
+    def __init__(self, storage_path: str | Path):
         """Initialize the event store.
         
         Args:
@@ -594,7 +593,7 @@ class EventStore:
             with open(self.storage_path, "a") as f:
                 f.write(event.to_json() + "\n")
     
-    def append_batch(self, events: List[Event]) -> None:
+    def append_batch(self, events: list[Event]) -> None:
         """Append multiple events to storage.
         
         Args:
@@ -605,7 +604,7 @@ class EventStore:
                 for event in events:
                     f.write(event.to_json() + "\n")
     
-    def read_all(self) -> List[Event]:
+    def read_all(self) -> list[Event]:
         """Read all events from storage.
         
         Returns:
@@ -616,7 +615,7 @@ class EventStore:
             return events
         
         with self._lock:
-            with open(self.storage_path, "r") as f:
+            with open(self.storage_path) as f:
                 for line in f:
                     line = line.strip()
                     if line:
@@ -636,7 +635,7 @@ class EventStore:
         if not self.storage_path.exists():
             return
         
-        with open(self.storage_path, "r") as f:
+        with open(self.storage_path) as f:
             for line in f:
                 line = line.strip()
                 if line:
@@ -661,7 +660,7 @@ class EventStore:
             return 0
         
         count = 0
-        with open(self.storage_path, "r") as f:
+        with open(self.storage_path) as f:
             for _ in f:
                 count += 1
         return count
@@ -702,12 +701,12 @@ class EventQuery:
     arbitrary data field conditions.
     """
     
-    event_types: Optional[Set[EventType]] = None
-    min_severity: Optional[EventSeverity] = None
-    sources: Optional[Set[str]] = None
-    start_time: Optional[str] = None
-    end_time: Optional[str] = None
-    data_filters: Dict[str, Any] = field(default_factory=dict)
+    event_types: set[EventType] | None = None
+    min_severity: EventSeverity | None = None
+    sources: set[str] | None = None
+    start_time: str | None = None
+    end_time: str | None = None
+    data_filters: dict[str, Any] = field(default_factory=dict)
     limit: int = 0
     
     def matches(self, event: Event) -> bool:
@@ -747,7 +746,7 @@ class EventQuery:
         
         return True
     
-    def filter(self, events: List[Event]) -> List[Event]:
+    def filter(self, events: list[Event]) -> list[Event]:
         """Filter a list of events by this query.
         
         Args:
@@ -761,7 +760,7 @@ class EventQuery:
             results = results[:self.limit]
         return results
     
-    def filter_store(self, store: EventStore) -> List[Event]:
+    def filter_store(self, store: EventStore) -> list[Event]:
         """Filter events from a store by this query.
         
         Args:
@@ -783,11 +782,11 @@ class EventQuery:
 # Global Event Logger (Singleton)
 # =============================================================================
 
-_global_event_logger: Optional[EventLogger] = None
+_global_event_logger: EventLogger | None = None
 _global_event_logger_lock = threading.Lock()
 
 
-def get_global_event_logger() -> Optional[EventLogger]:
+def get_global_event_logger() -> EventLogger | None:
     """Get the global event logger instance.
     
     Returns:
@@ -797,7 +796,7 @@ def get_global_event_logger() -> Optional[EventLogger]:
         return _global_event_logger
 
 
-def set_global_event_logger(logger: Optional[EventLogger]) -> None:
+def set_global_event_logger(logger: EventLogger | None) -> None:
     """Set the global event logger instance.
     
     Args:
@@ -811,10 +810,10 @@ def set_global_event_logger(logger: Optional[EventLogger]) -> None:
 def log_event_global(
     event_type: EventType,
     source: str,
-    data: Dict[str, Any],
+    data: dict[str, Any],
     severity: EventSeverity = EventSeverity.INFO,
-    correlation_id: Optional[str] = None,
-) -> Optional[Event]:
+    correlation_id: str | None = None,
+) -> Event | None:
     """Log an event to the global logger if set.
     
     Args:
@@ -840,8 +839,8 @@ def log_event_global(
 def log_controller_step_global(
     step_number: int,
     phase: str,
-    data: Optional[Dict[str, Any]] = None,
-) -> Optional[Event]:
+    data: dict[str, Any] | None = None,
+) -> Event | None:
     """Log a controller step to the global logger."""
     logger = get_global_event_logger()
     if logger is not None:
@@ -855,8 +854,8 @@ def log_llm_call_global(
     tokens_completion: int,
     latency_ms: float,
     success: bool,
-    error: Optional[str] = None,
-) -> Optional[Event]:
+    error: str | None = None,
+) -> Event | None:
     """Log an LLM call to the global logger."""
     logger = get_global_event_logger()
     if logger is not None:
@@ -871,7 +870,7 @@ def log_budget_warning_global(
     current: int,
     limit: int,
     percentage: float,
-) -> Optional[Event]:
+) -> Event | None:
     """Log a budget warning to the global logger."""
     logger = get_global_event_logger()
     if logger is not None:
@@ -883,7 +882,7 @@ def log_budget_exceeded_global(
     resource: str,
     current: int,
     limit: int,
-) -> Optional[Event]:
+) -> Event | None:
     """Log a budget exceeded event to the global logger."""
     logger = get_global_event_logger()
     if logger is not None:
@@ -897,7 +896,7 @@ def log_security_violation_global(
     line_number: int,
     message: str,
     severity: str = "high",
-) -> Optional[Event]:
+) -> Event | None:
     """Log a security violation to the global logger."""
     logger = get_global_event_logger()
     if logger is not None:
@@ -908,12 +907,12 @@ def log_security_violation_global(
 
 
 def log_subprocess_exec_global(
-    command: List[str],
+    command: list[str],
     exit_code: int,
     success: bool,
     duration_ms: float,
-    cwd: Optional[str] = None,
-) -> Optional[Event]:
+    cwd: str | None = None,
+) -> Event | None:
     """Log a subprocess execution to the global logger."""
     logger = get_global_event_logger()
     if logger is not None:
@@ -925,9 +924,9 @@ def log_error_global(
     source: str,
     error_type: str,
     message: str,
-    traceback: Optional[str] = None,
-    data: Optional[Dict[str, Any]] = None,
-) -> Optional[Event]:
+    traceback: str | None = None,
+    data: dict[str, Any] | None = None,
+) -> Event | None:
     """Log an error to the global logger."""
     logger = get_global_event_logger()
     if logger is not None:

@@ -32,21 +32,13 @@ Example usage:
         task_spec = adapter.process_outcome(outcome)
 """
 
-from .schema import (
-    ControllerOutcome,
-    ControllerTaskSpec,
-    FailureCategory,
-    FailureEvidence,
-    Plan,
-    PlanState,
-    RiskLevel,
-    Step,
-    StepStatus,
-)
-from .lifecycle import StepLifecycle
-from .planner import PlannerV2
-from .memory_adapter import DecompositionPrior, MemoryAdapter
+# Artifacts and replay
+from .artifact_log import PlanArtifact, PlanArtifactLog, StepArtifact
+
+# CLI and overrides
+from .cli import format_plan_for_logging, print_plan_dag, print_plan_summary, print_step_detail
 from .controller_adapter import ControllerAdapter
+from .fingerprint import RepoFingerprint, compute_fingerprint
 
 # Governance
 from .governance import (
@@ -62,21 +54,31 @@ from .governance import (
     ValidationResult,
     get_risk_constraints,
 )
-
-# Verification
-from .verification_hooks import TestStrategy, VerificationHooks, VerificationType
-
-# Artifacts and replay
-from .artifact_log import PlanArtifact, PlanArtifactLog, StepArtifact
-from .fingerprint import RepoFingerprint, compute_fingerprint
-from .replay import PlanReplay, ReplayResult, StepDivergence
-
-# CLI and overrides
-from .cli import format_plan_for_logging, print_plan_dag, print_plan_summary, print_step_detail
-from .overrides import OverrideManager, PlanOverride
+from .lifecycle import StepLifecycle
 
 # v2.2: LLM Decomposition
 from .llm_decomposer import DecompositionConfig, DecompositionFallback, LLMDecomposer
+from .memory_adapter import DecompositionPrior, MemoryAdapter
+
+# v2.2: Metrics
+from .metrics import MetricsCollector, PlannerMetrics, get_metrics_collector, reset_metrics
+from .overrides import OverrideManager, PlanOverride
+
+# v2.2: Parallel Execution
+from .parallel_executor import (
+    ParallelBatch,
+    ParallelExecutionConfig,
+    ParallelResult,
+    ParallelStepExecutor,
+)
+
+# v2.2: Plan Caching
+from .plan_cache import CacheEntry, PlanCache
+from .planner import PlannerV2
+
+# v2.2: QA Integration
+from .qa_integration import PlannerQABridge, StepClaimGenerator, StepQAResult
+from .replay import PlanReplay, ReplayResult, StepDivergence
 
 # v2.2: Revision Strategies
 from .revision_strategies import (
@@ -89,23 +91,17 @@ from .revision_strategies import (
     TestRegressionRevision,
     get_revision_registry,
 )
-
-# v2.2: QA Integration
-from .qa_integration import PlannerQABridge, StepClaimGenerator, StepQAResult
-
-# v2.2: Parallel Execution
-from .parallel_executor import (
-    ParallelBatch,
-    ParallelExecutionConfig,
-    ParallelResult,
-    ParallelStepExecutor,
+from .schema import (
+    ControllerOutcome,
+    ControllerTaskSpec,
+    FailureCategory,
+    FailureEvidence,
+    Plan,
+    PlanState,
+    RiskLevel,
+    Step,
+    StepStatus,
 )
-
-# v2.2: Plan Caching
-from .plan_cache import CacheEntry, PlanCache
-
-# v2.2: Metrics
-from .metrics import MetricsCollector, PlannerMetrics, get_metrics_collector, reset_metrics
 
 # v2.3: Tool Contract Registry
 from .tool_registry import (
@@ -115,6 +111,9 @@ from .tool_registry import (
     VerifyRecipe,
     get_tool_registry,
 )
+
+# Verification
+from .verification_hooks import TestStrategy, VerificationHooks, VerificationType
 
 __all__ = [
     # Schema

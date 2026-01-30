@@ -15,7 +15,6 @@ import threading
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from queue import Empty, Queue
-from typing import Dict, List, Optional, Set
 
 from .sandbox import Sandbox
 
@@ -24,7 +23,7 @@ from .sandbox import Sandbox
 # ============================================================================
 
 # Default images to pre-warm
-DEFAULT_BUILDPACK_IMAGES: List[str] = [
+DEFAULT_BUILDPACK_IMAGES: list[str] = [
     "python:3.11-slim",
     "python:3.12-slim",
     "node:20-slim",
@@ -36,8 +35,8 @@ DEFAULT_BUILDPACK_IMAGES: List[str] = [
     "ruby:3.3-slim",
 ]
 
-_prewarm_thread: Optional[threading.Thread] = None
-_prewarm_status: Dict[str, str] = {}  # image -> status (pending/pulling/ready/failed)
+_prewarm_thread: threading.Thread | None = None
+_prewarm_status: dict[str, str] = {}  # image -> status (pending/pulling/ready/failed)
 _prewarm_lock = threading.Lock()
 
 
@@ -60,7 +59,7 @@ def _pull_image(image: str) -> bool:
         result = subprocess.run(
             ["docker", "image", "inspect", image],
             capture_output=True,
-            timeout=10,
+            timeout=10, check=False,
         )
         
         if result.returncode == 0:
@@ -75,7 +74,7 @@ def _pull_image(image: str) -> bool:
         result = subprocess.run(
             ["docker", "pull", image],
             capture_output=True,
-            timeout=300,  # 5 minute timeout per image
+            timeout=300, check=False,  # 5 minute timeout per image
         )
         
         if result.returncode == 0:
@@ -103,7 +102,7 @@ def _pull_image(image: str) -> bool:
 
 
 def prewarm_images(
-    images: Optional[List[str]] = None,
+    images: list[str] | None = None,
     max_workers: int = 3,
     blocking: bool = False,
 ) -> None:
@@ -131,7 +130,7 @@ def prewarm_images(
         _prewarm_thread.start()
 
 
-def get_prewarm_status() -> Dict[str, str]:
+def get_prewarm_status() -> dict[str, str]:
     """Get current pre-warming status for all images.
     
     Returns:
@@ -160,7 +159,7 @@ def is_image_ready(image: str) -> bool:
         result = subprocess.run(
             ["docker", "image", "inspect", image],
             capture_output=True,
-            timeout=5,
+            timeout=5, check=False,
         )
         return result.returncode == 0
     except Exception:
@@ -183,7 +182,7 @@ class WorktreePool:
     pool_size: int = 5
     
     _available: Queue = field(default_factory=Queue)
-    _in_use: Set[str] = field(default_factory=set)
+    _in_use: set[str] = field(default_factory=set)
     _initialized: bool = False
     _lock: threading.Lock = field(default_factory=threading.Lock)
     
@@ -219,7 +218,7 @@ class WorktreePool:
             ["git", "worktree", "add", "--detach", wt_path],
             cwd=self.sb.repo_dir,
             capture_output=True,
-            timeout=60,
+            timeout=60, check=False,
         )
         
         if result.returncode != 0:
@@ -227,7 +226,7 @@ class WorktreePool:
         
         return wt_path
     
-    def acquire(self, timeout: float = 30.0) -> Optional[str]:
+    def acquire(self, timeout: float = 30.0) -> str | None:
         """Acquire a worktree from the pool.
         
         Args:
@@ -263,13 +262,13 @@ class WorktreePool:
                 ["git", "reset", "--hard", "HEAD"],
                 cwd=wt_path,
                 capture_output=True,
-                timeout=30,
+                timeout=30, check=False,
             )
             subprocess.run(
                 ["git", "clean", "-fd"],
                 cwd=wt_path,
                 capture_output=True,
-                timeout=30,
+                timeout=30, check=False,
             )
             self._available.put(wt_path)
         except Exception as e:
@@ -309,7 +308,7 @@ class WorktreePool:
                 ["git", "worktree", "remove", "--force", wt_path],
                 cwd=self.sb.repo_dir,
                 capture_output=True,
-                timeout=30,
+                timeout=30, check=False,
             )
         except Exception:
             pass
@@ -328,7 +327,7 @@ class WorktreePool:
         with self._lock:
             return len(self._in_use)
     
-    def __enter__(self) -> "WorktreePool":
+    def __enter__(self) -> WorktreePool:
         self.initialize()
         return self
     
@@ -346,9 +345,9 @@ class PooledWorktree:
     def __init__(self, pool: WorktreePool, timeout: float = 30.0):
         self.pool = pool
         self.timeout = timeout
-        self.wt_path: Optional[str] = None
+        self.wt_path: str | None = None
     
-    def __enter__(self) -> Optional[str]:
+    def __enter__(self) -> str | None:
         self.wt_path = self.pool.acquire(timeout=self.timeout)
         return self.wt_path
     

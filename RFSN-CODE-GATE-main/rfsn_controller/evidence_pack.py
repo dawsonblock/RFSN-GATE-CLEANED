@@ -7,9 +7,8 @@ Creates structured evidence packs documenting fixes.
 import json
 import os
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 
 @dataclass
@@ -29,8 +28,8 @@ class EvidenceItem:
     type: str  # "diff", "test_output", "log", "screenshot"
     path: str
     description: str
-    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 class EvidencePackExporter:
@@ -38,7 +37,7 @@ class EvidencePackExporter:
     
     def __init__(self, config: EvidencePackConfig):
         self.config = config
-        self.items: List[EvidenceItem] = []
+        self.items: list[EvidenceItem] = []
         self._ensure_output_dir()
     
     def _ensure_output_dir(self) -> None:
@@ -88,12 +87,12 @@ class EvidencePackExporter:
         baseline_output: str = "",
         final_output: str = "",
         winner_diff: str = "",
-        state: Optional[Dict[str, Any]] = None,
-        command_log: Optional[List[Any]] = None,
+        state: dict[str, Any] | None = None,
+        command_log: list[Any] | None = None,
         run_id: str = "",
     ) -> str:
         """Export the evidence pack to the output directory."""
-        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
         pack_dir = os.path.join(self.config.output_dir, f"evidence_{timestamp}")
         os.makedirs(pack_dir, exist_ok=True)
         

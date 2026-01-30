@@ -3,9 +3,19 @@ from __future__ import annotations
 
 import json
 import os
-from typing import Any, Dict, Optional
+from dataclasses import asdict, is_dataclass
+from typing import Any
 
 from .clock import Clock
+
+
+class DataclassJSONEncoder(json.JSONEncoder):
+    """Custom JSON encoder that handles dataclass objects."""
+    
+    def default(self, o: Any) -> Any:
+        if is_dataclass(o) and not isinstance(o, type):
+            return asdict(o)
+        return super().default(o)
 
 
 def ensure_dir(path: str) -> None:
@@ -15,10 +25,10 @@ def ensure_dir(path: str) -> None:
 
 def write_jsonl(
     log_dir: str,
-    record: Dict[str, Any],
+    record: dict[str, Any],
     *,
-    clock: Optional[Clock] = None,
-    ts: Optional[float] = None,
+    clock: Clock | None = None,
+    ts: float | None = None,
 ) -> None:
     """Append a record to a JSONL file in the given log directory.
 
@@ -36,4 +46,4 @@ def write_jsonl(
         raise ValueError("write_jsonl requires either ts or clock")
     path = os.path.join(log_dir, "run.jsonl")
     with open(path, "a", encoding="utf-8") as f:
-        f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+        f.write(json.dumps(entry, ensure_ascii=False, cls=DataclassJSONEncoder) + "\n")

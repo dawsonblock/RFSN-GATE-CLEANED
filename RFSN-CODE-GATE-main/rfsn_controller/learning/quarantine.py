@@ -15,8 +15,8 @@ making the agent worse over time.
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Set
+from dataclasses import dataclass
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ class QuarantineStats:
     total_tries: int = 0
     successes: int = 0
     regressions: int = 0
-    last_regression_timestamp: Optional[float] = None
+    last_regression_timestamp: float | None = None
     
     @property
     def success_rate(self) -> float:
@@ -62,8 +62,8 @@ class QuarantineConfig:
 
 
 def is_quarantined(
-    stats: Dict[str, Any],
-    config: Optional[QuarantineConfig] = None,
+    stats: dict[str, Any],
+    config: QuarantineConfig | None = None,
 ) -> bool:
     """Check if a strategy should be quarantined.
     
@@ -114,7 +114,7 @@ class QuarantineLane:
         lane.record_outcome("temperature_0.3", context="abc123", success=True)
     """
     
-    def __init__(self, config: Optional[QuarantineConfig] = None):
+    def __init__(self, config: QuarantineConfig | None = None):
         """Initialize quarantine lane.
         
         Args:
@@ -124,10 +124,10 @@ class QuarantineLane:
         
         # Per-context quarantine status
         # context -> strategy -> QuarantineStats
-        self._stats: Dict[str, Dict[str, QuarantineStats]] = {}
+        self._stats: dict[str, dict[str, QuarantineStats]] = {}
         
         # Globally quarantined strategies (across all contexts)
-        self._global_quarantine: Set[str] = set()
+        self._global_quarantine: set[str] = set()
     
     def _get_stats(self, context: str, strategy: str) -> QuarantineStats:
         """Get or create stats for a context/strategy pair."""
@@ -140,7 +140,7 @@ class QuarantineLane:
     def is_quarantined(
         self,
         strategy: str,
-        context: Optional[str] = None,
+        context: str | None = None,
     ) -> bool:
         """Check if a strategy is quarantined.
         
@@ -172,8 +172,8 @@ class QuarantineLane:
     
     def get_quarantined_strategies(
         self,
-        context: Optional[str] = None,
-    ) -> Set[str]:
+        context: str | None = None,
+    ) -> set[str]:
         """Get all quarantined strategies.
         
         Args:
@@ -204,7 +204,7 @@ class QuarantineLane:
         context: str,
         success: bool,
         regression: bool = False,
-        timestamp: Optional[float] = None,
+        timestamp: float | None = None,
     ) -> bool:
         """Record outcome and update quarantine status.
         
@@ -264,7 +264,7 @@ class QuarantineLane:
             logger.info("Releasing strategy %s from quarantine", strategy)
             self._global_quarantine.discard(strategy)
     
-    def get_stats_summary(self, context: Optional[str] = None) -> List[Dict]:
+    def get_stats_summary(self, context: str | None = None) -> list[dict]:
         """Get quarantine stats summary.
         
         Args:

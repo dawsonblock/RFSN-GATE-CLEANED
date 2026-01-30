@@ -6,7 +6,8 @@ Uses existing tools to collect evidence for challenged claims.
 """
 
 import logging
-from typing import Any, Callable, Dict, List, Optional
+from collections.abc import Callable
+from typing import Any
 
 from .qa_types import (
     ClaimVerdict,
@@ -32,11 +33,11 @@ class EvidenceCollector:
     def __init__(
         self,
         *,
-        test_runner: Optional[Callable[[str], Dict[str, Any]]] = None,
-        delta_tracker: Optional[Any] = None,  # TestDeltaTracker
-        hygiene_validator: Optional[Callable[[str], Dict[str, Any]]] = None,
-        static_checker: Optional[Callable[[str], Dict[str, Any]]] = None,
-        coverage_analyzer: Optional[Any] = None,  # CoverageAnalyzer
+        test_runner: Callable[[str], dict[str, Any]] | None = None,
+        delta_tracker: Any | None = None,  # TestDeltaTracker
+        hygiene_validator: Callable[[str], dict[str, Any]] | None = None,
+        static_checker: Callable[[str], dict[str, Any]] | None = None,
+        coverage_analyzer: Any | None = None,  # CoverageAnalyzer
         timeout_ms: int = 60000,
     ):
         """Initialize collector.
@@ -62,7 +63,7 @@ class EvidenceCollector:
         *,
         diff: str = "",
         test_cmd: str = "",
-    ) -> List[Evidence]:
+    ) -> list[Evidence]:
         """Collect evidence for a challenged claim.
         
         Args:
@@ -76,7 +77,7 @@ class EvidenceCollector:
         if verdict.verdict != Verdict.CHALLENGE:
             return []
 
-        evidence: List[Evidence] = []
+        evidence: list[Evidence] = []
         request = (verdict.evidence_request or "").lower()
 
         # Parse what evidence is needed
@@ -154,11 +155,11 @@ class EvidenceCollector:
 
     def collect_all(
         self,
-        verdicts: List[ClaimVerdict],
+        verdicts: list[ClaimVerdict],
         *,
         diff: str = "",
         test_cmd: str = "",
-    ) -> Dict[str, List[Evidence]]:
+    ) -> dict[str, list[Evidence]]:
         """Collect evidence for all challenged claims.
         
         Args:
@@ -169,7 +170,7 @@ class EvidenceCollector:
         Returns:
             Dict of claim_id -> evidence list.
         """
-        result: Dict[str, List[Evidence]] = {}
+        result: dict[str, list[Evidence]] = {}
 
         for verdict in verdicts:
             if verdict.verdict == Verdict.CHALLENGE:
@@ -186,7 +187,7 @@ class EvidenceCollector:
         self,
         command: str,
         exit_code: int,
-        failing_tests: List[str],
+        failing_tests: list[str],
         **kwargs,
     ) -> Evidence:
         """Helper to create test result evidence."""
@@ -199,9 +200,9 @@ class EvidenceCollector:
 
     def create_delta_map(
         self,
-        fixed: List[str],
-        regressed: List[str],
-        still_failing: Optional[List[str]] = None,
+        fixed: list[str],
+        regressed: list[str],
+        still_failing: list[str] | None = None,
     ) -> Evidence:
         """Helper to create delta map evidence."""
         return DeltaMapEvidence(
@@ -213,8 +214,8 @@ class EvidenceCollector:
     def create_policy_check(
         self,
         is_valid: bool,
-        violations: Optional[List[str]] = None,
-        diff_stats: Optional[Dict[str, int]] = None,
+        violations: list[str] | None = None,
+        diff_stats: dict[str, int] | None = None,
     ) -> Evidence:
         """Helper to create policy check evidence."""
         return PolicyCheckEvidence(
@@ -223,7 +224,7 @@ class EvidenceCollector:
             diff_stats=diff_stats or {},
         ).to_evidence()
 
-    def _parse_touched_files(self, diff: str) -> List[str]:
+    def _parse_touched_files(self, diff: str) -> list[str]:
         """Parse touched file paths from a diff string."""
         files = []
         if not diff:

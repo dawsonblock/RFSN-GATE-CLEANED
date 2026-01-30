@@ -16,7 +16,7 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from .structured_logging import get_logger
 
@@ -35,7 +35,7 @@ class VerificationResult:
     failing_tests: list[str] = field(default_factory=list)
     passing_tests: list[str] = field(default_factory=list)
     test_count: int = 0
-    error_signature: Optional[str] = None
+    error_signature: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
@@ -150,7 +150,7 @@ class VerificationManager:
                         success=False,
                         exit_code=-1,
                         stdout="",
-                        stderr=f"Verification error: {str(e)}",
+                        stderr=f"Verification error: {e!s}",
                         duration_seconds=0.0,
                         error_signature=str(e),
                     )
@@ -244,7 +244,7 @@ class VerificationManager:
                 },
             )
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             duration = time.time() - start_time
             logger.warning(
                 "Verification timeout",
@@ -325,7 +325,7 @@ class VerificationManager:
 
         return passing
 
-    def _extract_error_signature(self, stderr: str) -> Optional[str]:
+    def _extract_error_signature(self, stderr: str) -> str | None:
         """
         Extract a signature from error output for deduplication.
 

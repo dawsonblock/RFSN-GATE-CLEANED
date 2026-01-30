@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import concurrent.futures
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
 
 from .sandbox import DockerResult, Sandbox, apply_patch_in_dir, docker_run, drop_worktree, make_worktree, run_cmd
 
@@ -153,7 +152,7 @@ def _evaluate_single_patch(
             diff=diff,
             diff_hash=diff_hash,
             ok=False,
-            info=f"exception: {type(e).__name__}: {str(e)}",
+            info=f"exception: {type(e).__name__}: {e!s}",
             temperature=temperature,
         )
         _track_patch_result(diff, result, time.time() - start_time)
@@ -182,7 +181,7 @@ def _track_patch_result(diff: str, result: PatchResult, duration_sec: float) -> 
 
 def evaluate_patches_parallel(
     sb: Sandbox,
-    patches: List[Tuple[str, float]],  # List of (diff, temperature)
+    patches: list[tuple[str, float]],  # List of (diff, temperature)
     focus_cmd: str,
     full_cmd: str,
     docker_image: str,
@@ -191,7 +190,7 @@ def evaluate_patches_parallel(
     durability_reruns: int = 0,
     max_workers: int = 3,
     unsafe_host_exec: bool = False,
-) -> List[PatchResult]:
+) -> list[PatchResult]:
     """Evaluate multiple patches in parallel using thread pool.
 
     Args:
@@ -213,7 +212,7 @@ def evaluate_patches_parallel(
         diff_hash = hashlib.sha256((diff or "").encode("utf-8", errors="ignore")).hexdigest()
         indexed_patches.append((idx, diff, temp, diff_hash))
 
-    results: List[Optional[PatchResult]] = [None] * len(patches)
+    results: list[PatchResult | None] = [None] * len(patches)
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         # Submit all patch evaluations
@@ -248,14 +247,14 @@ def evaluate_patches_parallel(
                     diff=diff,
                     diff_hash=diff_hash,
                     ok=False,
-                    info=f"evaluation_exception: {type(e).__name__}: {str(e)}",
+                    info=f"evaluation_exception: {type(e).__name__}: {e!s}",
                     temperature=temp,
                 )
 
     return [r for r in results if r is not None]
 
 
-def find_first_successful_patch(results: List[PatchResult]) -> Optional[PatchResult]:
+def find_first_successful_patch(results: list[PatchResult]) -> PatchResult | None:
     """Find the first successful patch from evaluation results.
 
     Args:

@@ -6,10 +6,8 @@ Tests cover:
 - Controller loop integration
 """
 
-import pytest
-import tempfile
-import os
 
+import pytest
 
 # ============================================================================
 # PLAN GATE TESTS
@@ -152,7 +150,7 @@ class TestFingerprint:
     
     def test_fingerprint_hash_stable(self):
         """Test that fingerprint hash is stable."""
-        from rfsn_controller.learning import fingerprint_failure, compute_fingerprint_hash
+        from rfsn_controller.learning import compute_fingerprint_hash, fingerprint_failure
         
         fp1 = fingerprint_failure(failing_tests=["test_a", "test_b"])
         fp2 = fingerprint_failure(failing_tests=["test_b", "test_a"])  # Same, different order
@@ -227,7 +225,7 @@ class TestQuarantine:
     
     def test_lane_tracks_outcomes(self):
         """Test quarantine lane tracking."""
-        from rfsn_controller.learning import QuarantineLane, QuarantineConfig
+        from rfsn_controller.learning import QuarantineConfig, QuarantineLane
         
         # Use lower thresholds for testing
         config = QuarantineConfig(min_successes=2, max_regression_rate=0.5)
@@ -374,19 +372,6 @@ class TestPhase4Integration:
     
     def test_all_imports_work(self):
         """Test all Phase 4 imports."""
-        from rfsn_controller.gates import PlanGate, PlanGateConfig, PlanGateError, StepGateError
-        from rfsn_controller.learning import (
-            FailureFingerprint,
-            fingerprint_failure,
-            compute_fingerprint_hash,
-            StrategyBandit,
-            StrategyStats,
-            QuarantineLane,
-            is_quarantined,
-            LearnedStrategySelector,
-            StrategyRecommendation,
-        )
-        from rfsn_controller.controller_loop import ControllerLoop, LoopResult, ExecutionOutcome
         
         assert True
     
@@ -399,7 +384,7 @@ class TestPhase4Integration:
         selector = LearnedStrategySelector()
         
         # Get recommendation, noting quarantined strategies
-        rec = selector.recommend(failing_tests=["test_x"])
+        selector.recommend(failing_tests=["test_x"])
         
         # Verify gate cannot be modified by learning
         original_types = gate.get_allowed_step_types()
@@ -411,9 +396,9 @@ class TestPhase4Integration:
     
     def test_full_pipeline(self):
         """Test full pipeline: fingerprint -> select -> gate -> execute."""
+        from rfsn_controller.controller_loop import ControllerLoop
         from rfsn_controller.gates import PlanGate, PlanGateConfig
         from rfsn_controller.learning import LearnedStrategySelector
-        from rfsn_controller.controller_loop import ControllerLoop
         
         # Setup with non-strict config for testing
         selector = LearnedStrategySelector()

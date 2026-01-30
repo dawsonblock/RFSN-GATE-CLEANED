@@ -19,7 +19,6 @@ from __future__ import annotations
 import os
 import shutil
 from dataclasses import dataclass
-from typing import Optional
 
 
 class StorageError(RuntimeError):
@@ -143,9 +142,9 @@ class S3Store(BaseStore):
 def make_store(
     backend: str,
     *,
-    local_dir: Optional[str] = None,
-    s3_bucket: Optional[str] = None,
-    s3_prefix: Optional[str] = None,
+    local_dir: str | None = None,
+    s3_bucket: str | None = None,
+    s3_prefix: str | None = None,
 ) -> BaseStore:
     """Factory function to create storage backend.
     

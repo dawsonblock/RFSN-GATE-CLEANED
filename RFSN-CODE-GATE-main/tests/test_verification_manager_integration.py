@@ -1,13 +1,15 @@
 """Integration tests for VerificationManager."""
 
 import asyncio
-import pytest
+import sys
 import tempfile
 from pathlib import Path
 
+import pytest
+
 from rfsn_controller.verification_manager import (
-    VerificationManager,
     VerificationConfig,
+    VerificationManager,
     VerificationResult,
 )
 
@@ -16,7 +18,7 @@ class TestVerificationManagerIntegration:
     """Integration tests for VerificationManager."""
 
     @pytest.fixture
-    async def temp_worktree(self):
+    def temp_worktree(self):
         """Create temporary worktree for testing."""
         with tempfile.TemporaryDirectory() as tmpdir:
             worktree = Path(tmpdir) / "worktree"
@@ -37,7 +39,7 @@ def test_failing():
     def basic_config(self, temp_worktree):
         """Create basic verification config."""
         return VerificationConfig(
-            test_command=["python", "-m", "pytest", "-v", str(temp_worktree)],
+            test_command=[sys.executable, "-m", "pytest", "-v", str(temp_worktree)],
             timeout_seconds=30,
             working_directory=temp_worktree,
         )
@@ -69,7 +71,7 @@ def test_failing():
 
         assert not result.success
         assert result.exit_code == -1
-        assert "timeout" in result.stderr.lower() or "Timeout" in result.stderr
+        assert "timed out" in result.stderr.lower() or "timeout" in result.stderr.lower()
 
     @pytest.mark.asyncio
     async def test_retry_logic(self, temp_worktree):
@@ -107,7 +109,7 @@ def test_two():
 """)
 
         config = VerificationConfig(
-            test_command=["python", "-m", "pytest", "-v", str(temp_worktree)],
+            test_command=[sys.executable, "-m", "pytest", "-v", str(temp_worktree)],
             timeout_seconds=30,
             working_directory=temp_worktree,
         )
@@ -155,7 +157,7 @@ def test_pass_two():
 """)
 
         config = VerificationConfig(
-            test_command=["python", "-m", "pytest", "-v", str(temp_worktree)],
+            test_command=[sys.executable, "-m", "pytest", "-v", str(temp_worktree)],
             timeout_seconds=30,
             working_directory=temp_worktree,
         )
@@ -178,7 +180,7 @@ def test_with_error():
 """)
 
         config = VerificationConfig(
-            test_command=["python", "-m", "pytest", "-v", str(temp_worktree)],
+            test_command=[sys.executable, "-m", "pytest", "-v", str(temp_worktree)],
             timeout_seconds=30,
             working_directory=temp_worktree,
         )
@@ -253,6 +255,14 @@ def test_with_error():
 class TestVerificationManagerRealWorld:
     """Real-world integration scenarios."""
 
+    @pytest.fixture
+    def temp_worktree(self):
+        """Create temporary worktree for testing."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            worktree = Path(tmpdir) / "worktree"
+            worktree.mkdir()
+            yield worktree
+
     @pytest.mark.asyncio
     async def test_python_project_verification(self):
         """Test verification of a real Python project structure."""
@@ -295,7 +305,7 @@ def test_failing():
 """)
 
             config = VerificationConfig(
-                test_command=["python", "-m", "pytest", "-v"],
+                test_command=[sys.executable, "-m", "pytest", "-v"],
                 timeout_seconds=30,
                 working_directory=worktree,
             )
@@ -310,7 +320,6 @@ def test_failing():
     @pytest.mark.asyncio
     async def test_flaky_test_detection(self, temp_worktree):
         """Test detection of flaky tests through multiple runs."""
-        import random
 
         # Create a flaky test
         test_file = temp_worktree / "test_flaky.py"
@@ -323,7 +332,7 @@ def test_flaky():
 """)
 
         config = VerificationConfig(
-            test_command=["python", "-m", "pytest", "-v", str(temp_worktree)],
+            test_command=[sys.executable, "-m", "pytest", "-v", str(temp_worktree)],
             timeout_seconds=30,
             verify_multiple_times=10,
             working_directory=temp_worktree,
@@ -333,8 +342,8 @@ def test_flaky():
         results = await manager.verify_multiple_times(temp_worktree)
 
         # Should have mix of successes and failures
-        successes = sum(1 for r in results if r.success)
-        failures = sum(1 for r in results if not r.success)
+        sum(1 for r in results if r.success)
+        sum(1 for r in results if not r.success)
 
         # Flaky test should show inconsistent results
         # (Could be all pass or all fail due to randomness, but likely mixed)

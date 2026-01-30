@@ -1,7 +1,7 @@
 """Unit tests for QA claim-based verification system."""
 
-import tempfile
 import os
+import tempfile
 
 import pytest
 
@@ -52,7 +52,7 @@ class TestClaimExtractor:
 
     def test_always_emits_core_claims(self):
         """Extractor always emits core claim types."""
-        from rfsn_controller.qa import ClaimExtractor, PatchContext, ClaimType
+        from rfsn_controller.qa import ClaimExtractor, ClaimType, PatchContext
 
         extractor = ClaimExtractor()
         context = PatchContext(failing_tests=["test_a", "test_b"])
@@ -65,7 +65,7 @@ class TestClaimExtractor:
 
     def test_scope_minimality_for_surgical_patch(self):
         """Scope minimality claim emitted for small patches."""
-        from rfsn_controller.qa import ClaimExtractor, PatchContext, ClaimType
+        from rfsn_controller.qa import ClaimExtractor, ClaimType, PatchContext
 
         extractor = ClaimExtractor()
         context = PatchContext(
@@ -97,7 +97,7 @@ class TestQACritic:
 
     def test_rule_based_fallback(self):
         """Critic uses rules when no LLM."""
-        from rfsn_controller.qa import QACritic, Claim, ClaimType, Verdict
+        from rfsn_controller.qa import Claim, ClaimType, QACritic, Verdict
 
         critic = QACritic(llm_call=None)
         claims = [Claim("C1", ClaimType.FUNCTIONAL_FIX, "Fix tests")]
@@ -108,7 +108,7 @@ class TestQACritic:
 
     def test_scope_minimality_accept(self):
         """Small patch gets ACCEPT for scope."""
-        from rfsn_controller.qa import QACritic, Claim, ClaimType, Verdict
+        from rfsn_controller.qa import Claim, ClaimType, QACritic, Verdict
 
         critic = QACritic()
         claims = [Claim("C1", ClaimType.SCOPE_MINIMALITY, "Minimal change")]
@@ -120,7 +120,7 @@ class TestQACritic:
 
     def test_scope_minimality_reject(self):
         """Large patch gets REJECT for scope."""
-        from rfsn_controller.qa import QACritic, Claim, ClaimType, Verdict
+        from rfsn_controller.qa import Claim, ClaimType, QACritic, Verdict
 
         critic = QACritic()
         claims = [Claim("C1", ClaimType.SCOPE_MINIMALITY, "Minimal change")]
@@ -136,7 +136,7 @@ class TestQAGate:
 
     def test_accept_all_passed(self):
         """Accept when all claims validated."""
-        from rfsn_controller.qa import QAGate, Claim, ClaimType, ClaimVerdict, Verdict
+        from rfsn_controller.qa import Claim, ClaimType, ClaimVerdict, QAGate, Verdict
 
         gate = QAGate()
         claims = [
@@ -152,7 +152,7 @@ class TestQAGate:
 
     def test_reject_functional_failure(self):
         """Reject when functional_fix fails."""
-        from rfsn_controller.qa import QAGate, Claim, ClaimType, ClaimVerdict, Verdict
+        from rfsn_controller.qa import Claim, ClaimType, ClaimVerdict, QAGate, Verdict
 
         gate = QAGate()
         claims = [Claim("C1", ClaimType.FUNCTIONAL_FIX, "Fix")]
@@ -163,7 +163,7 @@ class TestQAGate:
 
     def test_reject_regression(self):
         """Reject when no_regression fails."""
-        from rfsn_controller.qa import QAGate, Claim, ClaimType, ClaimVerdict, Verdict
+        from rfsn_controller.qa import Claim, ClaimType, ClaimVerdict, QAGate, Verdict
 
         gate = QAGate()
         claims = [Claim("C1", ClaimType.NO_REGRESSION, "No breaks")]
@@ -173,7 +173,7 @@ class TestQAGate:
 
     def test_escalate_scope(self):
         """Escalate rather than reject for scope issues."""
-        from rfsn_controller.qa import QAGate, Claim, ClaimType, ClaimVerdict, Verdict
+        from rfsn_controller.qa import Claim, ClaimType, ClaimVerdict, QAGate, Verdict
 
         gate = QAGate()
         claims = [
@@ -195,11 +195,11 @@ class TestQAPersistence:
     def test_record_and_query(self):
         """Record attempt and query patterns."""
         from rfsn_controller.qa import (
-            QAPersistence,
-            QAAttempt,
             Claim,
             ClaimType,
             ClaimVerdict,
+            QAAttempt,
+            QAPersistence,
             Verdict,
         )
 

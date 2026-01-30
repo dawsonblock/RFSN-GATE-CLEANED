@@ -7,18 +7,17 @@ Stores recurring patterns (diff reviews, tool macros, error templates)
 in a high-capacity, n-gram hashed memory layer.
 """
 
-from typing import List, Dict, Optional
-from dataclasses import dataclass, field
 import math
+from dataclasses import dataclass, field
 
 # Third-party imports (requires torch, numpy, transformers, sympy)
 try:
-    from sympy import isprime
     import numpy as np
     import torch
-    import torch.nn as nn
+    from sympy import isprime
+    from tokenizers import Regex, normalizers
+    from torch import nn
     from transformers import AutoTokenizer
-    from tokenizers import normalizers, Regex
 except ImportError:
     # Allow import without deps for checking configuration
     isprime = None # type: ignore
@@ -33,11 +32,11 @@ except ImportError:
 @dataclass
 class EngramConfig:
     tokenizer_name_or_path: str = "deepseek-ai/DeepSeek-V3"
-    engram_vocab_size: List[int] = field(default_factory=lambda: [129280*5, 129280*5])
+    engram_vocab_size: list[int] = field(default_factory=lambda: [129280*5, 129280*5])
     max_ngram_size: int = 3
     n_embed_per_ngram: int = 512
     n_head_per_ngram: int = 8
-    layer_ids: List[int] = field(default_factory=lambda: [1, 15])
+    layer_ids: list[int] = field(default_factory=lambda: [1, 15])
     pad_id: int = 2
     seed: int = 0
     kernel_size: int = 4
@@ -159,7 +158,7 @@ class ShortConv(nn.Module):
         """
         B, T, G, C = x.shape
         
-        assert G == self.hc_mult, f"Input groups {G} != hc_mult {self.hc_mult}"
+        assert self.hc_mult == G, f"Input groups {G} != hc_mult {self.hc_mult}"
 
         normed_chunks = []
         for i in range(G):
@@ -302,7 +301,7 @@ class NgramHashMapping:
         return hash_ids_for_all_layers
 
 class MultiHeadEmbedding(nn.Module):
-    def __init__(self, list_of_N: List[int], D: int):
+    def __init__(self, list_of_N: list[int], D: int):
         super().__init__()
         self.num_heads = len(list_of_N)
         self.embedding_dim = D

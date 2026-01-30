@@ -19,11 +19,11 @@ Architecture:
 - StateTracker: Maintains planning state
 """
 
-from .proposal import Proposal, ProposalIntent, ActionType, ExpectedEffect, RiskLevel, Target, TestExpectation
-from .planner import ProposalPlanner
 from .meta_planner import MetaPlanner, PlannerState
-from .scoring import ScoringEngine, CandidateScore
-from .state_tracker import StateTracker, HypothesisOutcome, GateRejectionType
+from .planner import ProposalPlanner
+from .proposal import ActionType, ExpectedEffect, Proposal, ProposalIntent, RiskLevel, Target, TestExpectation
+from .scoring import CandidateScore, ScoringEngine
+from .state_tracker import GateRejectionType, HypothesisOutcome, StateTracker
 
 __version__ = "5.0.0"
 

@@ -13,7 +13,7 @@ import sqlite3
 import threading
 import time
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 
 @dataclass
@@ -34,8 +34,8 @@ class SemanticCache:
     max_entries: int = 5000
     max_age_hours: int = 72
     
-    _conn: Optional[sqlite3.Connection] = field(default=None, repr=False)
-    _embedder: Optional[Any] = field(default=None, repr=False)
+    _conn: sqlite3.Connection | None = field(default=None, repr=False)
+    _embedder: Any | None = field(default=None, repr=False)
     _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
     
     def __post_init__(self):
@@ -77,7 +77,7 @@ class SemanticCache:
             # Fall back to TF-IDF vectorizer
             self._embedder = TfidfVectorizer()
     
-    def _embed(self, text: str) -> List[float]:
+    def _embed(self, text: str) -> list[float]:
         """Generate embedding for text."""
         if self._embedder is None:
             return []
@@ -93,12 +93,12 @@ class SemanticCache:
         except Exception:
             return []
     
-    def _cosine_similarity(self, a: List[float], b: List[float]) -> float:
+    def _cosine_similarity(self, a: list[float], b: list[float]) -> float:
         """Compute cosine similarity between two vectors."""
         if not a or not b or len(a) != len(b):
             return 0.0
         
-        dot = sum(x * y for x, y in zip(a, b))
+        dot = sum(x * y for x, y in zip(a, b, strict=False))
         norm_a = sum(x * x for x in a) ** 0.5
         norm_b = sum(x * x for x in b) ** 0.5
         
@@ -117,7 +117,7 @@ class SemanticCache:
         prompt: str,
         model: str,
         temperature: float,
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Find semantically similar cached response.
         
         Args:
@@ -211,7 +211,7 @@ class SemanticCache:
         prompt: str,
         model: str,
         temperature: float,
-        response: Dict[str, Any],
+        response: dict[str, Any],
     ) -> None:
         """Store response with embedding.
         
@@ -281,22 +281,22 @@ class TfidfVectorizer:
     
     def __init__(self, vocab_size: int = 1000):
         self.vocab_size = vocab_size
-        self._vocab: Dict[str, int] = {}
-        self._idf: Dict[str, float] = {}
+        self._vocab: dict[str, int] = {}
+        self._idf: dict[str, float] = {}
     
-    def _tokenize(self, text: str) -> List[str]:
+    def _tokenize(self, text: str) -> list[str]:
         """Simple tokenization."""
         import re
         return re.findall(r'\b\w+\b', text.lower())
     
-    def embed(self, text: str) -> List[float]:
+    def embed(self, text: str) -> list[float]:
         """Generate TF-IDF-like embedding."""
         tokens = self._tokenize(text)
         if not tokens:
             return [0.0] * 100
         
         # Build term frequency
-        tf: Dict[str, float] = {}
+        tf: dict[str, float] = {}
         for token in tokens:
             tf[token] = tf.get(token, 0) + 1
         
@@ -319,11 +319,11 @@ class TfidfVectorizer:
 
 
 # Global semantic cache instance
-_semantic_cache: Optional[SemanticCache] = None
+_semantic_cache: SemanticCache | None = None
 _cache_lock = threading.Lock()
 
 
-def get_semantic_cache(db_path: Optional[str] = None) -> SemanticCache:
+def get_semantic_cache(db_path: str | None = None) -> SemanticCache:
     """Get the global semantic cache instance."""
     global _semantic_cache
     with _cache_lock:

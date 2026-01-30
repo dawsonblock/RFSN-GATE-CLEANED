@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any
 
 from .schema import ControllerOutcome, FailureCategory, FailureEvidence, Step
 
@@ -24,11 +24,11 @@ class StepQAResult:
     
     step_id: str
     accepted: bool
-    rejection_reasons: List[str]
-    escalation_tags: List[str]
+    rejection_reasons: list[str]
+    escalation_tags: list[str]
     should_revise: bool = False
-    revision_hints: Dict[str, Any] = None
-    raw_result: Optional["QAResult"] = None
+    revision_hints: dict[str, Any] = None
+    raw_result: QAResult | None = None
     
     def __post_init__(self):
         if self.revision_hints is None:
@@ -38,7 +38,7 @@ class StepQAResult:
 class PlannerQABridge:
     """Connects planner steps with QA claim verification."""
     
-    def __init__(self, qa_orchestrator: Optional["QAOrchestrator"] = None):
+    def __init__(self, qa_orchestrator: QAOrchestrator | None = None):
         """Initialize the bridge.
         
         Args:
@@ -56,7 +56,7 @@ class PlannerQABridge:
         step: Step,
         diff: str,
         outcome: ControllerOutcome,
-    ) -> List["Claim"]:
+    ) -> list[Claim]:
         """Extract claims from a step outcome for QA evaluation.
         
         Args:
@@ -167,11 +167,11 @@ class PlannerQABridge:
             return StepQAResult(
                 step_id=step.step_id,
                 accepted=outcome.success,
-                rejection_reasons=[f"QA error: {str(e)}"],
+                rejection_reasons=[f"QA error: {e!s}"],
                 escalation_tags=["qa_error"],
             )
     
-    def _should_revise_based_on_qa(self, qa_result: "QAResult") -> bool:
+    def _should_revise_based_on_qa(self, qa_result: QAResult) -> bool:
         """Determine if step should be revised based on QA result.
         
         Args:
@@ -192,7 +192,7 @@ class PlannerQABridge:
         
         return False
     
-    def _get_revision_hints(self, qa_result: "QAResult") -> Dict[str, Any]:
+    def _get_revision_hints(self, qa_result: QAResult) -> dict[str, Any]:
         """Extract revision hints from QA result.
         
         Args:
@@ -220,7 +220,7 @@ class PlannerQABridge:
     
     def convert_qa_to_failure_evidence(
         self,
-        step_result: "StepQAResult",
+        step_result: StepQAResult,
     ) -> FailureEvidence:
         """Convert QA rejection to FailureEvidence for revision.
         
@@ -270,7 +270,7 @@ class StepClaimGenerator:
     }
     
     @classmethod
-    def get_claims_for_step_type(cls, step_id: str) -> List[str]:
+    def get_claims_for_step_type(cls, step_id: str) -> list[str]:
         """Get claim types appropriate for a step.
         
         Args:

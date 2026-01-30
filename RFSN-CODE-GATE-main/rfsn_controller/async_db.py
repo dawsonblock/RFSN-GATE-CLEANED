@@ -7,10 +7,12 @@ replacing synchronous sqlite3 calls to eliminate I/O blocking.
 
 from __future__ import annotations
 
-import aiosqlite
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, AsyncGenerator, Optional
+from typing import Any
+
+import aiosqlite
 
 from .structured_logging import get_logger
 
@@ -204,7 +206,7 @@ class AsyncCache:
         """
         self.pool = pool
         
-    async def get(self, key: str) -> Optional[Any]:
+    async def get(self, key: str) -> Any | None:
         """
         Get value from cache.
         

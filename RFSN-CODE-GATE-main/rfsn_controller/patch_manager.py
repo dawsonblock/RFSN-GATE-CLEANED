@@ -13,12 +13,11 @@ from __future__ import annotations
 import hashlib
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
-from .workspace_manager import WorkspaceManager, GitResult
 from .diff_minimizer import DiffMinimizer
 from .metrics import track_patch_application
 from .structured_logging import get_logger
+from .workspace_manager import GitResult, WorkspaceManager
 
 logger = get_logger(__name__)
 
@@ -33,7 +32,7 @@ class PatchResult:
     tests_passed: bool
     test_output: str
     diff: str
-    error: Optional[str] = None
+    error: str | None = None
 
 
 class PatchManager:
@@ -56,7 +55,7 @@ class PatchManager:
     def __init__(
         self,
         workspace: WorkspaceManager,
-        diff_minimizer: Optional[DiffMinimizer] = None
+        diff_minimizer: DiffMinimizer | None = None
     ):
         """
         Initialize the PatchManager.
@@ -162,7 +161,7 @@ class PatchManager:
                     self.workspace.cleanup_worktree(worktree_path)
                     
             except Exception as e:
-                logger.error(f"Patch application failed", patch_id=patch_id, error=str(e))
+                logger.error("Patch application failed", patch_id=patch_id, error=str(e))
                 return PatchResult(
                     patch_id=patch_id,
                     content=patch_content,
@@ -200,7 +199,7 @@ class PatchManager:
                 cwd=worktree_path,
                 capture_output=True,
                 text=True,
-                timeout=300  # 5 minute timeout
+                timeout=300, check=False  # 5 minute timeout
             )
             
             return GitResult(

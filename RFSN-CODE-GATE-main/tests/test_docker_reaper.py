@@ -2,11 +2,11 @@
 
 import subprocess
 from datetime import datetime, timedelta
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 
 import pytest
 
-from rfsn_controller.docker_reaper import DockerReaper, ContainerInfo
+from rfsn_controller.docker_reaper import ContainerInfo, DockerReaper
 
 
 class TestDockerReaper:

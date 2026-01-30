@@ -7,7 +7,6 @@ for better modularity and reusability.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import List, Optional
 
 
 @dataclass
@@ -34,14 +33,24 @@ class ContractsConfig:
 
 
 @dataclass
+class EventConfig:
+    """Event system configuration."""
+    
+    enabled: bool = True
+    storage_path: str = ".rfsn/events.jsonl"
+    max_events_memory: int = 10000
+    persist_events: bool = True
+
+
+@dataclass
 class ControllerConfig:
     """Configuration for a controller run."""
 
     github_url: str
     test_cmd: str = "pytest -q"
-    ref: Optional[str] = None
+    ref: str | None = None
     max_steps: int = 12
-    temps: List[float] = field(default_factory=lambda: [0.0, 0.2, 0.4])
+    temps: list[float] = field(default_factory=lambda: [0.0, 0.2, 0.4])
     fix_all: bool = False
     max_steps_without_progress: int = 10
     collect_finetuning_data: bool = False
@@ -57,35 +66,35 @@ class ControllerConfig:
     mem_mb: int = 4096
     pids: int = 256
     docker_readonly: bool = False
-    lint_cmd: Optional[str] = None
-    typecheck_cmd: Optional[str] = None
-    repro_cmd: Optional[str] = None
-    verify_cmd: Optional[str] = None
+    lint_cmd: str | None = None
+    typecheck_cmd: str | None = None
+    repro_cmd: str | None = None
+    verify_cmd: str | None = None
     dry_run: bool = False
     project_type: str = "auto"
     buildpack: str = "auto"
     enable_sysdeps: bool = False
     sysdeps_tier: int = 4
     sysdeps_max_packages: int = 10
-    build_cmd: Optional[str] = None
-    learning_db_path: Optional[str] = None
+    build_cmd: str | None = None
+    learning_db_path: str | None = None
     learning_half_life_days: int = 14
     learning_max_age_days: int = 90
     learning_max_rows: int = 20000
     time_mode: str = "frozen"  # frozen|live
-    run_started_at_utc: Optional[str] = None
-    time_seed: Optional[int] = None
-    rng_seed: Optional[int] = None
+    run_started_at_utc: str | None = None
+    time_seed: int | None = None
+    rng_seed: int | None = None
     feature_mode: bool = False
-    feature_description: Optional[str] = None
-    acceptance_criteria: List[str] = field(default_factory=list)
+    feature_description: str | None = None
+    acceptance_criteria: list[str] = field(default_factory=list)
     # Verification configuration for feature mode
     verify_policy: str = "tests_only"  # tests_only | cmds_then_tests | cmds_only
-    focused_verify_cmds: List[str] = field(default_factory=list)
-    verify_cmds: List[str] = field(default_factory=list)
+    focused_verify_cmds: list[str] = field(default_factory=list)
+    verify_cmds: list[str] = field(default_factory=list)
     # Hygiene configuration overrides
-    max_lines_changed: Optional[int] = None
-    max_files_changed: Optional[int] = None
+    max_lines_changed: int | None = None
+    max_files_changed: int | None = None
     allow_lockfile_changes: bool = False
     # Phase budget limits for reliability
     max_install_attempts: int = 3
@@ -95,7 +104,7 @@ class ControllerConfig:
     repro_times: int = 1  # Run verification N times to ensure reproducibility
     # Performance optimizations
     enable_llm_cache: bool = False  # Enable LLM response caching
-    llm_cache_path: Optional[str] = None  # Path to LLM cache database
+    llm_cache_path: str | None = None  # Path to LLM cache database
     parallel_patches: bool = True  # Generate patches in parallel (faster)
     ensemble_mode: bool = False  # Use multi-model ensemble
     incremental_tests: bool = False  # Run only affected tests first
@@ -108,7 +117,7 @@ class ControllerConfig:
     seed: int = 1337  # Deterministic seed
     # Risk & persistence
     risk_profile: str = "production"  # production | research
-    state_dir: Optional[str] = None  # base host dir; we create <base>/<risk>/<run_id>/
+    state_dir: str | None = None  # base host dir; we create <base>/<risk>/<run_id>/
     # Verification durability
     durability_reruns: int = 0  # rerun full tests N additional times after success
     no_eval: bool = False  # Skip final evaluation
@@ -117,12 +126,14 @@ class ControllerConfig:
     events_file: str = "events.jsonl"  # Events log filename
     plan_file: str = "plan.json"  # Plan filename
     # Budget configuration (inline for context compatibility)
-    budget: "BudgetConfig" = field(default_factory=lambda: BudgetConfig())
+    budget: BudgetConfig = field(default_factory=lambda: BudgetConfig())
     # Contracts configuration (inline for context compatibility)
-    contracts: "ContractsConfig" = field(default_factory=lambda: ContractsConfig())
+    contracts: ContractsConfig = field(default_factory=lambda: ContractsConfig())
+    # Events configuration
+    events: EventConfig = field(default_factory=lambda: EventConfig())
 
 
-def config_from_cli_args(args) -> ControllerConfig:
+def config_from_cli_args(args) -> ControllerConfig:  # noqa: PLR0912
     """Create a ControllerConfig from CLI arguments.
     
     Args:
@@ -166,5 +177,43 @@ def config_from_cli_args(args) -> ControllerConfig:
             value = getattr(args, cli_name)
             if value is not None:
                 config_kwargs[config_name] = value
+    
+    # Handle budget configuration from CLI args
+    budget_kwargs = {}
+    budget_mappings = {
+        'budget_max_steps': 'max_steps',
+        'budget_max_llm_calls': 'max_llm_calls',
+        'budget_max_tokens': 'max_tokens',
+        'budget_max_time_seconds': 'max_time_seconds',
+        'budget_max_subprocess_calls': 'max_subprocess_calls',
+        'budget_warning_threshold': 'warning_threshold',
+    }
+    
+    for cli_name, budget_name in budget_mappings.items():
+        if hasattr(args, cli_name):
+            value = getattr(args, cli_name)
+            if value is not None:
+                budget_kwargs[budget_name] = value
+    
+    if budget_kwargs:
+        config_kwargs['budget'] = BudgetConfig(**budget_kwargs)
+    
+    # Handle events configuration from CLI args
+    events_kwargs = {}
+    events_mappings = {
+        'events_enabled': 'enabled',
+        'events_storage_path': 'storage_path',
+        'events_max_memory': 'max_events_memory',
+        'events_persist': 'persist_events',
+    }
+    
+    for cli_name, events_name in events_mappings.items():
+        if hasattr(args, cli_name):
+            value = getattr(args, cli_name)
+            if value is not None:
+                events_kwargs[events_name] = value
+    
+    if events_kwargs:
+        config_kwargs['events'] = EventConfig(**events_kwargs)
     
     return ControllerConfig(**config_kwargs)

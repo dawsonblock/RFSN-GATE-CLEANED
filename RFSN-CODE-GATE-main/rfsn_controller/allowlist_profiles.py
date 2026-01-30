@@ -6,10 +6,10 @@ based on project detection. This prevents "global allowlist creep" where
 adding support for one language makes its tools available to all projects.
 """
 
-from typing import Any, Dict, Set
+from typing import Any
 
 # Base commands available to all projects (safe unix + git + common utilities)
-BASE_COMMANDS: Set[str] = {
+BASE_COMMANDS: set[str] = {
     # Version control
     "git",
     # Unix utilities (safe subset)
@@ -41,7 +41,7 @@ BASE_COMMANDS: Set[str] = {
 
 
 # Python-specific commands
-PYTHON_COMMANDS: Set[str] = {
+PYTHON_COMMANDS: set[str] = {
     "python",
     "python3",
     "pip",
@@ -61,7 +61,7 @@ PYTHON_COMMANDS: Set[str] = {
 
 
 # Node.js / JavaScript / TypeScript commands
-NODE_COMMANDS: Set[str] = {
+NODE_COMMANDS: set[str] = {
     "node",
     "npm",
     "yarn",
@@ -80,7 +80,7 @@ NODE_COMMANDS: Set[str] = {
 
 
 # Rust commands
-RUST_COMMANDS: Set[str] = {
+RUST_COMMANDS: set[str] = {
     "cargo",
     "rustc",
     "rustup",
@@ -90,7 +90,7 @@ RUST_COMMANDS: Set[str] = {
 
 
 # Go commands
-GO_COMMANDS: Set[str] = {
+GO_COMMANDS: set[str] = {
     "go",
     "gofmt",
     "golint",
@@ -99,7 +99,7 @@ GO_COMMANDS: Set[str] = {
 
 
 # Java commands
-JAVA_COMMANDS: Set[str] = {
+JAVA_COMMANDS: set[str] = {
     "mvn",
     "gradle",
     "javac",
@@ -109,14 +109,14 @@ JAVA_COMMANDS: Set[str] = {
 
 
 # .NET / C# commands
-DOTNET_COMMANDS: Set[str] = {
+DOTNET_COMMANDS: set[str] = {
     "dotnet",
     "nuget",
     "msbuild",
 }
 
 
-def commands_for_language(language: str) -> Set[str]:
+def commands_for_language(language: str) -> set[str]:
     """Get the set of allowed commands for a specific language.
 
     Args:
@@ -128,7 +128,7 @@ def commands_for_language(language: str) -> Set[str]:
     language_lower = language.lower() if language else ""
 
     # Map language identifiers to command sets
-    language_commands: Dict[str, Set[str]] = {
+    language_commands: dict[str, set[str]] = {
         "python": PYTHON_COMMANDS,
         "py": PYTHON_COMMANDS,
         "node": NODE_COMMANDS,
@@ -155,7 +155,7 @@ def commands_for_language(language: str) -> Set[str]:
     return BASE_COMMANDS | lang_cmds
 
 
-def commands_for_project(project_info: Any) -> Set[str]:
+def commands_for_project(project_info: Any) -> set[str]:
     """Get the set of allowed commands for a project based on detection results.
 
     This function accepts either a dict or an object with language/project_type fields.

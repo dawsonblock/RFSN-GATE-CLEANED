@@ -7,17 +7,16 @@ Never executes code - only outputs proposal JSON.
 """
 
 import re
-from typing import Optional
 from uuid import uuid4
 
 from .proposal import (
+    ActionType,
+    ExpectedEffect,
     Proposal,
     ProposalIntent,
-    ActionType,
-    Target,
-    ExpectedEffect,
-    TestExpectation,
     RiskLevel,
+    Target,
+    TestExpectation,
 )
 from .state_tracker import StateTracker
 
@@ -42,7 +41,7 @@ class ProposalPlanner:
         """
         self.state = state
 
-    def propose_reproduce(self, test_nodeid: Optional[str] = None) -> Proposal:
+    def propose_reproduce(self, test_nodeid: str | None = None) -> Proposal:
         """
         Generate proposal to reproduce the failure.
 
@@ -57,7 +56,7 @@ class ProposalPlanner:
         if test_nodeid:
             target_path = test_nodeid
             hypothesis = f"Running the specific failing test {test_nodeid} will reproduce the reported error deterministically."
-            change_summary = f"Run the failing test nodeid to capture traceback and failure context."
+            change_summary = "Run the failing test nodeid to capture traceback and failure context."
         else:
             target_path = "tests/"
             hypothesis = "Running the test suite will identify which tests are failing and capture error details."
@@ -229,7 +228,7 @@ class ProposalPlanner:
             hypothesis=f"The targeted test {test_nodeid} will pass if {after_fix}.",
             action_type=ActionType.RUN_TESTS,
             target=Target(path=test_nodeid),
-            change_summary=f"Re-run the specific test to confirm the fix.",
+            change_summary="Re-run the specific test to confirm the fix.",
             expected_effect=ExpectedEffect(
                 tests=TestExpectation.PASS,
                 behavior="Test passes and no new failures appear in this scope.",
@@ -291,7 +290,7 @@ class ProposalPlanner:
             rollback_plan="No changes made; nothing to roll back.",
         )
 
-    def extract_traceback_file(self, traceback_text: str) -> Optional[str]:
+    def extract_traceback_file(self, traceback_text: str) -> str | None:
         """
         Extract the first project file from traceback.
 
@@ -317,7 +316,7 @@ class ProposalPlanner:
 
         return None
 
-    def extract_exception_type(self, output: str) -> Optional[str]:
+    def extract_exception_type(self, output: str) -> str | None:
         """
         Extract exception type from test output.
 
@@ -334,7 +333,7 @@ class ProposalPlanner:
             return matches[0]
         return None
 
-    def parse_pytest_nodeid(self, output: str) -> Optional[str]:
+    def parse_pytest_nodeid(self, output: str) -> str | None:
         """
         Extract pytest nodeid from failure output.
 

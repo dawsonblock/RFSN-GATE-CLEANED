@@ -12,8 +12,7 @@ The planner queries remaining budget to simplify plans when resources are tight.
 from __future__ import annotations
 
 import time
-from dataclasses import dataclass, field
-from typing import Dict, Optional, Tuple
+from dataclasses import dataclass
 
 
 class BudgetExhausted(Exception):
@@ -43,7 +42,7 @@ class PlanBudget:
     patch_cycles_used: int = 0
     failing_steps_used: int = 0
     tokens_used: int = 0
-    start_time: Optional[float] = None
+    start_time: float | None = None
     
     # Thresholds
     simplify_threshold: float = 0.3  # Simplify when <30% remaining
@@ -72,7 +71,7 @@ class PlanBudget:
         """Record token usage."""
         self.tokens_used += tokens
     
-    def is_exhausted(self) -> Tuple[bool, Optional[str]]:
+    def is_exhausted(self) -> tuple[bool, str | None]:
         """Check if any budget is exhausted.
         
         Returns:
@@ -115,7 +114,7 @@ class PlanBudget:
         ]
         return max(0.0, min(fractions))
     
-    def remaining_by_resource(self) -> Dict[str, float]:
+    def remaining_by_resource(self) -> dict[str, float]:
         """Get remaining fraction for each resource."""
         return {
             "patch_cycles": 1.0 - (self.patch_cycles_used / max(1, self.max_patch_cycles)),
@@ -149,7 +148,7 @@ class PlanBudget:
                 tight.append(resource)
         return tight
     
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         """Serialize to dictionary."""
         return {
             "max_patch_cycles": self.max_patch_cycles,
@@ -171,7 +170,7 @@ class PlanBudget:
         max_failures: int = 3,
         max_tokens: int = 50000,
         max_time_sec: float = 600.0,
-    ) -> "PlanBudget":
+    ) -> PlanBudget:
         """Create budget from config values."""
         return cls(
             max_patch_cycles=max_steps,
@@ -180,7 +179,7 @@ class PlanBudget:
             max_wall_clock_sec=max_time_sec,
         )
     
-    def clone(self) -> "PlanBudget":
+    def clone(self) -> PlanBudget:
         """Create a copy with reset usage."""
         return PlanBudget(
             max_patch_cycles=self.max_patch_cycles,

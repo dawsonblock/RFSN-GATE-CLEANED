@@ -3,7 +3,7 @@
 import tempfile
 from pathlib import Path
 
-from rfsn_controller.executor_spine import GovernedExecutor, StepExecResult
+from rfsn_controller.executor_spine import GovernedExecutor
 
 
 def test_governed_executor_basic():

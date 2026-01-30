@@ -13,10 +13,10 @@ from __future__ import annotations
 import hashlib
 import os
 import random
-from pathlib import Path
 from dataclasses import dataclass, field
-from datetime import timezone
-from typing import Any, Dict, List, Optional, Tuple
+from datetime import UTC
+from pathlib import Path
+from typing import Any
 
 from .action_outcome_memory import (
     ActionOutcomeStore,
@@ -57,8 +57,8 @@ from .phases import Phase, PhaseTransition
 from .policy import choose_policy
 from .project_detection import detect_project_type, get_default_test_command, get_setup_commands
 from .prompt import MODE_FEATURE, build_model_input
-from .retrieval_context import build_retrieval_context
 from .qa import QAConfig, QAOrchestrator
+from .retrieval_context import build_retrieval_context
 from .sandbox import (
     DockerResult,
     Sandbox,
@@ -101,6 +101,34 @@ from .url_validation import validate_github_url
 from .verifier import TestDeltaTracker, VerifyResult, run_tests
 
 
+def get_model_client(model: str) -> Any:
+    """Get a model client for the specified model.
+    
+    This is a factory function that returns an appropriate LLM client
+    based on the model name. Used by the controller to abstract model
+    access.
+    
+    Args:
+        model: The model name (e.g., "deepseek-chat", "gemini-3.0-flash").
+        
+    Returns:
+        A callable model client that can be used to make LLM calls.
+        
+    Raises:
+        RuntimeError: If the required SDK is not available.
+    """
+    if "gemini" in model.lower():
+        from . import llm_gemini
+        return llm_gemini.call_model
+    elif "deepseek" in model.lower():
+        from . import llm_deepseek
+        return llm_deepseek.call_model
+    else:
+        # Default to deepseek for unknown models
+        from . import llm_deepseek
+        return llm_deepseek.call_model
+
+
 def _truncate(s: str, limit: int) -> str:
     """Truncate string to limit."""
     if not s:
@@ -113,7 +141,7 @@ def _truncate(s: str, limit: int) -> str:
 
 
 
-def _infer_buildpack_type_from_test_cmd(test_cmd: str) -> Optional[BuildpackType]:
+def _infer_buildpack_type_from_test_cmd(test_cmd: str) -> BuildpackType | None:
     cmd = (test_cmd or "").strip().lower()
     if not cmd:
         return None
@@ -151,7 +179,7 @@ def _safe_path(p: str) -> bool:
     return not any(p.startswith(pref) for pref in FORBIDDEN_PREFIXES)
 
 
-def _files_block(files: List[Dict[str, Any]]) -> str:
+def _files_block(files: list[dict[str, Any]]) -> str:
     """Create a files block for the model input from a list of read_file results."""
     blocks = []
     for f in files:
@@ -181,7 +209,7 @@ def _constraints_text() -> str:
     )
 
 
-def _execute_tool(sb: Sandbox, tool: str, args: Dict[str, Any]) -> Dict[str, Any]:
+def _execute_tool(sb: Sandbox, tool: str, args: dict[str, Any]) -> dict[str, Any]:
     """Execute a sandbox tool by name with the provided arguments.
 
     Note: sandbox.run is intentionally NOT exposed to the model.
@@ -270,14 +298,14 @@ def _execute_tool(sb: Sandbox, tool: str, args: Dict[str, Any]) -> Dict[str, Any
     return {"ok": False, "error": f"Unknown tool: {tool}"}
 
 
-def _collect_relevant_files(sb: Sandbox, v: VerifyResult, repo_tree: str) -> List[Dict[str, Any]]:
+def _collect_relevant_files(sb: Sandbox, v: VerifyResult, repo_tree: str) -> list[dict[str, Any]]:
     """Collect a small set of files likely related to the failure.
 
     The selection includes the first failing test file and any Python files
     mentioned in tracebacks. File paths are normalized and filtered via
     _safe_path to avoid sending forbidden files to the model.
     """
-    out: List[Dict[str, Any]] = []
+    out: list[dict[str, Any]] = []
     # failing test file
     if v.failing_tests:
         tp = normalize_test_path(v.failing_tests[0])
@@ -297,7 +325,7 @@ def _collect_relevant_files(sb: Sandbox, v: VerifyResult, repo_tree: str) -> Lis
 
 def _collect_relevant_files_quixbugs(
     sb: Sandbox, v: VerifyResult, repo_tree: str
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Collect files for QuixBugs repositories with specific heuristics.
 
     QuixBugs structure:
@@ -310,7 +338,7 @@ def _collect_relevant_files_quixbugs(
     3. Include any traceback-referenced files
     4. Add common helper files if referenced
     """
-    out: List[Dict[str, Any]] = []
+    out: list[dict[str, Any]] = []
 
     if not v.failing_tests:
         return out
@@ -355,7 +383,7 @@ def _collect_relevant_files_quixbugs(
 
 def _evaluate_patch_in_worktree(
     sb: Sandbox, diff: str, focus_cmd: str, full_cmd: str
-) -> Tuple[bool, str]:
+) -> tuple[bool, str]:
     """Test a candidate patch in a detached worktree before applying to main repo."""
     wt = make_worktree(sb)
     try:
@@ -370,7 +398,7 @@ def _evaluate_patch_in_worktree(
             return True, "PASS"
         return False, "full_failed:\n" + (r2.get("stdout", "") + r2.get("stderr", ""))
     except Exception as e:
-        return False, f"exception: {type(e).__name__}: {str(e)}"
+        return False, f"exception: {type(e).__name__}: {e!s}"
     finally:
         try:
             drop_worktree(sb, wt)
@@ -407,9 +435,9 @@ class ControllerConfig:
 
     github_url: str
     test_cmd: str = "pytest -q"
-    ref: Optional[str] = None
+    ref: str | None = None
     max_steps: int = 12
-    temps: List[float] = field(default_factory=lambda: [0.0, 0.2, 0.4])
+    temps: list[float] = field(default_factory=lambda: [0.0, 0.2, 0.4])
     fix_all: bool = False
     max_steps_without_progress: int = 10
     collect_finetuning_data: bool = False
@@ -425,35 +453,35 @@ class ControllerConfig:
     mem_mb: int = 4096
     pids: int = 256
     docker_readonly: bool = False
-    lint_cmd: Optional[str] = None
-    typecheck_cmd: Optional[str] = None
-    repro_cmd: Optional[str] = None
-    verify_cmd: Optional[str] = None
+    lint_cmd: str | None = None
+    typecheck_cmd: str | None = None
+    repro_cmd: str | None = None
+    verify_cmd: str | None = None
     dry_run: bool = False
     project_type: str = "auto"
     buildpack: str = "auto"
     enable_sysdeps: bool = False
     sysdeps_tier: int = 4
     sysdeps_max_packages: int = 10
-    build_cmd: Optional[str] = None
-    learning_db_path: Optional[str] = None
+    build_cmd: str | None = None
+    learning_db_path: str | None = None
     learning_half_life_days: int = 14
     learning_max_age_days: int = 90
     learning_max_rows: int = 20000
     time_mode: str = "frozen"  # frozen|live
-    run_started_at_utc: Optional[str] = None
-    time_seed: Optional[int] = None
-    rng_seed: Optional[int] = None
+    run_started_at_utc: str | None = None
+    time_seed: int | None = None
+    rng_seed: int | None = None
     feature_mode: bool = False
-    feature_description: Optional[str] = None
-    acceptance_criteria: List[str] = field(default_factory=list)
+    feature_description: str | None = None
+    acceptance_criteria: list[str] = field(default_factory=list)
     # Verification configuration for feature mode
     verify_policy: str = "tests_only"  # tests_only | cmds_then_tests | cmds_only
-    focused_verify_cmds: List[str] = field(default_factory=list)
-    verify_cmds: List[str] = field(default_factory=list)
+    focused_verify_cmds: list[str] = field(default_factory=list)
+    verify_cmds: list[str] = field(default_factory=list)
     # Hygiene configuration overrides
-    max_lines_changed: Optional[int] = None
-    max_files_changed: Optional[int] = None
+    max_lines_changed: int | None = None
+    max_files_changed: int | None = None
     allow_lockfile_changes: bool = False
     # Phase budget limits for reliability
     max_install_attempts: int = 3
@@ -463,7 +491,7 @@ class ControllerConfig:
     repro_times: int = 1  # Run verification N times to ensure reproducibility
     # Performance optimizations
     enable_llm_cache: bool = False  # Enable LLM response caching
-    llm_cache_path: Optional[str] = None  # Path to LLM cache database
+    llm_cache_path: str | None = None  # Path to LLM cache database
     parallel_patches: bool = True  # Generate patches in parallel (faster)
     ensemble_mode: bool = False  # Use multi-model ensemble
     incremental_tests: bool = False  # Run only affected tests first
@@ -476,7 +504,7 @@ class ControllerConfig:
     seed: int = 1337  # Deterministic seed
     # Risk & persistence
     risk_profile: str = "production"  # production | research
-    state_dir: Optional[str] = None  # base host dir; we create <base>/<risk>/<run_id>/
+    state_dir: str | None = None  # base host dir; we create <base>/<risk>/<run_id>/
     # Verification durability
     durability_reruns: int = 0  # rerun full tests N additional times after success
     no_eval: bool = False  # Skip final evaluation
@@ -485,12 +513,12 @@ class ControllerConfig:
     events_file: str = "events.jsonl"  # Events log filename
     plan_file: str = "plan.json"  # Plan filename
     # Budget configuration (inline for context compatibility)
-    budget: "BudgetConfig" = field(default_factory=lambda: BudgetConfig())
+    budget: BudgetConfig = field(default_factory=lambda: BudgetConfig())
     # Contracts configuration (inline for context compatibility)
-    contracts: "ContractsConfig" = field(default_factory=lambda: ContractsConfig())
+    contracts: ContractsConfig = field(default_factory=lambda: ContractsConfig())
 
 
-def run_controller(cfg: ControllerConfig) -> Dict[str, Any]:
+def run_controller(cfg: ControllerConfig) -> dict[str, Any]:
     """Run the controller loop until the goal is reached or max_steps exhausted.
 
     Args:
@@ -516,14 +544,14 @@ def run_controller(cfg: ControllerConfig) -> Dict[str, Any]:
         "ref": cfg.ref,
         "test_cmd": cfg.test_cmd,
         "model": cfg.model,
-        "run_started_at_utc": start_dt.astimezone(timezone.utc).isoformat(),
+        "run_started_at_utc": start_dt.astimezone(UTC).isoformat(),
         "time_mode": (cfg.time_mode or "").lower() or "frozen",
     }
     if cfg.time_seed is None:
         cfg.time_seed = int(hashlib.sha256(str(seed_material).encode("utf-8")).hexdigest()[:8], 16)
     if cfg.rng_seed is None:
         cfg.rng_seed = int(
-            hashlib.sha256(f"rng:{cfg.time_seed}".encode("utf-8")).hexdigest()[:8], 16
+            hashlib.sha256(f"rng:{cfg.time_seed}".encode()).hexdigest()[:8], 16
         )
 
     seed_material["time_seed"] = str(int(cfg.time_seed) if cfg.time_seed is not None else 0)
@@ -542,15 +570,15 @@ def run_controller(cfg: ControllerConfig) -> Dict[str, Any]:
     sb = None
     log_dir = None
     evidence_exporter = None
-    command_log: List[Dict[str, Any]] = []
-    memory_store: Optional[ActionOutcomeStore] = None
+    command_log: list[dict[str, Any]] = []
+    memory_store: ActionOutcomeStore | None = None
 
     try:
         sb = create_sandbox(run_id=run_id)
         # Determine log directory based on state_dir and risk_profile
         if cfg.state_dir:
             base = Path(cfg.state_dir).expanduser().resolve()
-            log_dir = str((base / cfg.risk_profile / run_id))
+            log_dir = str(base / cfg.risk_profile / run_id)
             os.makedirs(log_dir, exist_ok=True)
         else:
             log_dir = sb.root  # write logs next to sandbox for inspection
@@ -559,7 +587,7 @@ def run_controller(cfg: ControllerConfig) -> Dict[str, Any]:
             EvidencePackConfig(output_dir=os.path.join(log_dir, "results"))
         )
 
-        def log(rec: Dict[str, Any]) -> None:
+        def log(rec: dict[str, Any]) -> None:
             write_jsonl(log_dir, rec, clock=clock)
 
         # Initialize contract system for operation validation
@@ -581,7 +609,7 @@ def run_controller(cfg: ControllerConfig) -> Dict[str, Any]:
         steps_without_progress: int = 0  # track steps without reducing failing tests
         min_failing_tests: int = 999999  # track minimum failing tests seen
         distinct_sigs: set[str] = set()  # track distinct error signatures for multi-bug detection
-        bailout_reason: Optional[str] = None
+        bailout_reason: str | None = None
         low_conf_streak: int = 0
         
         # Initialize optimization components
@@ -650,14 +678,14 @@ def run_controller(cfg: ControllerConfig) -> Dict[str, Any]:
         baseline_output = ""
         final_output = ""
         final_output = ""
-        winner_diff: Optional[str] = None
+        winner_diff: str | None = None
         feature_summary = None  # Store feature summary for evidence pack
         feature_summary = None  # Store feature summary for evidence pack
         log(
             {
                 "phase": "run_header",
                 "run_id": run_id,
-                "run_started_at_utc": start_dt.astimezone(timezone.utc).isoformat(),
+                "run_started_at_utc": start_dt.astimezone(UTC).isoformat(),
                 "time_seed": int(cfg.time_seed or 0),
                 "time_mode": (cfg.time_mode or "").lower() or "frozen",
                 "rng_seed": int(cfg.rng_seed or 0),
@@ -1023,64 +1051,62 @@ def run_controller(cfg: ControllerConfig) -> Dict[str, Any]:
                 )
                 if not install_result.ok:
                     print(f"[SETUP] Failed: {install_result.stderr[:200]}")
-        else:
-            # Legacy setup
-            if setup_commands:
-                for setup_cmd in setup_commands:
-                    print(f"[SETUP] Running: {setup_cmd}")
-                    if cfg.unsafe_host_exec:
-                        r = run_cmd(sb, setup_cmd, timeout_sec=cfg.install_timeout)
-                        install_result = DockerResult(
-                            ok=bool(r.get("ok")),
-                            exit_code=int(r.get("exit_code") or 1),
-                            stdout=r.get("stdout") or "",
-                            stderr=r.get("stderr") or "",
-                            timed_out=False,
-                        )
-                    else:
-                        install_result = docker_install(
-                            sb,
-                            setup_cmd,
-                            timeout_sec=cfg.install_timeout,
-                            docker_image=selected_buildpack,
-                        )
-
-                    # Store result by command type
-                    cmd_lower = setup_cmd.lower()
-                    if "pip install" in cmd_lower or "python -m pip" in cmd_lower:
-                        setup_results["pip"] = install_result
-                    elif "npm install" in cmd_lower or "npm ci" in cmd_lower:
-                        setup_results["node"] = install_result
-                    elif "go mod" in cmd_lower:
-                        setup_results["go"] = install_result
-                    elif "cargo" in cmd_lower:
-                        setup_results["rust"] = install_result
-                    elif "mvn" in cmd_lower or "gradle" in cmd_lower:
-                        setup_results["java"] = install_result
-                    elif "dotnet restore" in cmd_lower:
-                        setup_results["dotnet"] = install_result
-
-                    command_log.append(
-                        {
-                            "phase": "setup",
-                            "command": setup_cmd,
-                            "exit_code": install_result.exit_code,
-                            "ok": install_result.ok,
-                            "stdout": install_result.stdout[:1000],
-                            "stderr": install_result.stderr[:1000],
-                        }
+        elif setup_commands:
+            for setup_cmd in setup_commands:
+                print(f"[SETUP] Running: {setup_cmd}")
+                if cfg.unsafe_host_exec:
+                    r = run_cmd(sb, setup_cmd, timeout_sec=cfg.install_timeout)
+                    install_result = DockerResult(
+                        ok=bool(r.get("ok")),
+                        exit_code=int(r.get("exit_code") or 1),
+                        stdout=r.get("stdout") or "",
+                        stderr=r.get("stderr") or "",
+                        timed_out=False,
                     )
-                    log(
-                        {
-                            "phase": "setup",
-                            "command": setup_cmd,
-                            "result": {"ok": install_result.ok, "exit_code": install_result.exit_code},
-                            "stdout": install_result.stdout[:1000],
-                            "stderr": install_result.stderr[:1000],
-                        }
+                else:
+                    install_result = docker_install(
+                        sb,
+                        setup_cmd,
+                        timeout_sec=cfg.install_timeout,
+                        docker_image=selected_buildpack,
                     )
-                    if not install_result.ok:
-                        print(f"[SETUP] Failed: {install_result.stderr[:200]}")
+
+                # Store result by command type
+                cmd_lower = setup_cmd.lower()
+                if "pip install" in cmd_lower or "python -m pip" in cmd_lower:
+                    setup_results["pip"] = install_result
+                elif "npm install" in cmd_lower or "npm ci" in cmd_lower:
+                    setup_results["node"] = install_result
+                elif "go mod" in cmd_lower:
+                    setup_results["go"] = install_result
+                elif "cargo" in cmd_lower:
+                    setup_results["rust"] = install_result
+                elif "mvn" in cmd_lower or "gradle" in cmd_lower:
+                    setup_results["java"] = install_result
+                elif "dotnet restore" in cmd_lower:
+                    setup_results["dotnet"] = install_result
+
+                command_log.append(
+                    {
+                        "phase": "setup",
+                        "command": setup_cmd,
+                        "exit_code": install_result.exit_code,
+                        "ok": install_result.ok,
+                        "stdout": install_result.stdout[:1000],
+                        "stderr": install_result.stderr[:1000],
+                    }
+                )
+                log(
+                    {
+                        "phase": "setup",
+                        "command": setup_cmd,
+                        "result": {"ok": install_result.ok, "exit_code": install_result.exit_code},
+                        "stdout": install_result.stdout[:1000],
+                        "stderr": install_result.stderr[:1000],
+                    }
+                )
+                if not install_result.ok:
+                    print(f"[SETUP] Failed: {install_result.stderr[:200]}")
 
         # Detect lockfile
         if selected_buildpack_instance:
@@ -1656,7 +1682,7 @@ def run_controller(cfg: ControllerConfig) -> Dict[str, Any]:
 
             # ask model (try multiple temps for diversity)
             winner: Any = None
-            patches_to_evaluate: List[Tuple[str, float]] = []
+            patches_to_evaluate: list[tuple[str, float]] = []
             # Pre-fetch responses in parallel if enabled
             parallel_responses = []
             if cfg.parallel_patches:
@@ -1933,7 +1959,7 @@ def run_controller(cfg: ControllerConfig) -> Dict[str, Any]:
                 print(f"[Step {step_count}] Evaluating {len(patches_to_evaluate)} patch(es)...")
 
                 # Validate patch hygiene
-                valid_patches: List[Tuple[str, float]] = []
+                valid_patches: list[tuple[str, float]] = []
 
                 # Choose hygiene config based on mode and language
                 # Extract language from detection result
@@ -2650,7 +2676,7 @@ def run_controller(cfg: ControllerConfig) -> Dict[str, Any]:
                 "steps_taken": 0,
                 "error": str(e),
                 "traceback": error_details,
-                "bailout_reason": f"Exception: {type(e).__name__}: {str(e)}",
+                "bailout_reason": f"Exception: {type(e).__name__}: {e!s}",
             }
 
             evidence_pack_path = evidence_exporter.export(
@@ -2669,7 +2695,7 @@ def run_controller(cfg: ControllerConfig) -> Dict[str, Any]:
 
         return {
             "ok": False,
-            "error": f"Exception: {type(e).__name__}: {str(e)}",
+            "error": f"Exception: {type(e).__name__}: {e!s}",
             "traceback": error_details,
             "sandbox": sb.root if sb else None,
             "repo_dir": sb.repo_dir if sb else None,
@@ -2687,7 +2713,7 @@ def _run_tests_in_sandbox(
     sb: Sandbox,
     test_cmd: str,
     cfg: ControllerConfig,
-    command_log: List[Dict[str, Any]],
+    command_log: list[dict[str, Any]],
     docker_image: str,
     buildpack_instance=None,
 ) -> VerifyResult:

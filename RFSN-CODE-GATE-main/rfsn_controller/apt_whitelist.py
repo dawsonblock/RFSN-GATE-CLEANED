@@ -7,7 +7,6 @@ whitelist can be installed, and only through the safe SYSDEPS phase.
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import List, Optional, Set
 
 
 class AptTier(Enum):
@@ -116,13 +115,13 @@ class AptWhitelist:
     max_packages: int = 10
     max_tier: AptTier = AptTier.TIER_4
     allow_wildcards: bool = False
-    custom_packages: Optional[List[str]] = None
+    custom_packages: list[str] | None = None
 
     def __post_init__(self):
         """Initialize the allowed packages set."""
         if self.custom_packages is None:
             self.custom_packages = []
-        self._allowed: Set[str] = set()
+        self._allowed: set[str] = set()
         self._build_allowed_set()
 
     def _build_allowed_set(self) -> None:
@@ -161,7 +160,7 @@ class AptWhitelist:
         }
         return tier_order.get(tier, 0)
 
-    def _get_tier_packages(self, tier: AptTier) -> Set[str]:
+    def _get_tier_packages(self, tier: AptTier) -> set[str]:
         """Get packages for a tier."""
         tier_map = {
             AptTier.TIER_0: set(TIER_0_PACKAGES),
@@ -198,7 +197,7 @@ class AptWhitelist:
 
         return package in self._allowed
 
-    def filter_allowed(self, packages: List[str]) -> tuple[List[str], List[str]]:
+    def filter_allowed(self, packages: list[str]) -> tuple[list[str], list[str]]:
         """Filter packages into allowed and blocked.
 
         Args:
@@ -218,7 +217,7 @@ class AptWhitelist:
 
         return allowed, blocked
 
-    def check_within_limits(self, packages: List[str]) -> bool:
+    def check_within_limits(self, packages: list[str]) -> bool:
         """Check if number of packages is within limits.
 
         Args:
@@ -254,7 +253,7 @@ PERMISSIVE_WHITELIST = AptWhitelist(
 )
 
 
-def get_starter_packages() -> List[str]:
+def get_starter_packages() -> list[str]:
     """Get starter package set that covers most Python repos.
 
     Returns:

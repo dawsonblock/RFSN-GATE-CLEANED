@@ -10,8 +10,7 @@ HIGH-risk steps require stricter constraints:
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import Enum
-from typing import TYPE_CHECKING, Dict
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ..schema import RiskLevel, Step
@@ -28,7 +27,7 @@ class RiskConstraints:
     require_rollback_hint: bool
     max_retry_attempts: int
     
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         return {
             "max_files": self.max_files,
             "max_diff_lines": self.max_diff_lines,
@@ -40,7 +39,7 @@ class RiskConstraints:
 
 
 # Default risk profiles
-RISK_PROFILES: Dict[str, RiskConstraints] = {
+RISK_PROFILES: dict[str, RiskConstraints] = {
     "LOW": RiskConstraints(
         max_files=10,
         max_diff_lines=200,
@@ -68,7 +67,7 @@ RISK_PROFILES: Dict[str, RiskConstraints] = {
 }
 
 
-def get_risk_constraints(risk_level: "RiskLevel") -> RiskConstraints:
+def get_risk_constraints(risk_level: RiskLevel) -> RiskConstraints:
     """Get constraints for a risk level.
     
     Args:
@@ -80,7 +79,7 @@ def get_risk_constraints(risk_level: "RiskLevel") -> RiskConstraints:
     return RISK_PROFILES.get(risk_level.value, RISK_PROFILES["LOW"])
 
 
-def validate_step_against_risk(step: "Step") -> list[str]:
+def validate_step_against_risk(step: Step) -> list[str]:
     """Validate a step against its risk constraints.
     
     Args:
@@ -114,7 +113,7 @@ def validate_step_against_risk(step: "Step") -> list[str]:
     return violations
 
 
-def should_split_step(step: "Step") -> bool:
+def should_split_step(step: Step) -> bool:
     """Check if step should use two-phase execution.
     
     Two-phase execution:
@@ -131,7 +130,7 @@ def should_split_step(step: "Step") -> bool:
     return constraints.two_phase_execution
 
 
-def get_max_retries(step: "Step") -> int:
+def get_max_retries(step: Step) -> int:
     """Get maximum retry attempts for a step.
     
     Higher risk = fewer retries (fail fast).
@@ -146,7 +145,7 @@ def get_max_retries(step: "Step") -> int:
     return constraints.max_retry_attempts
 
 
-def get_diff_limit(step: "Step") -> int:
+def get_diff_limit(step: Step) -> int:
     """Get maximum diff lines for a step.
     
     Args:

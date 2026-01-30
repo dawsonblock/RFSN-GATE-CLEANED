@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import List, Optional, Protocol
+from typing import Protocol
 
 from .schema import ControllerOutcome, FailureCategory, FailureEvidence, Plan, RiskLevel, Step, StepStatus
 from .tool_registry import get_tool_registry
@@ -38,7 +38,7 @@ class RevisionResult:
     
     revised_plan: Plan
     strategy_used: str
-    changes_made: List[str]
+    changes_made: list[str]
     should_retry: bool = True
 
 
@@ -53,7 +53,7 @@ class BaseRevisionStrategy(ABC):
     
     @property
     @abstractmethod
-    def handled_categories(self) -> List[FailureCategory]:
+    def handled_categories(self) -> list[FailureCategory]:
         """Categories this strategy can handle."""
         ...
     
@@ -94,7 +94,7 @@ class TestRegressionRevision(BaseRevisionStrategy):
         return "test_regression"
     
     @property
-    def handled_categories(self) -> List[FailureCategory]:
+    def handled_categories(self) -> list[FailureCategory]:
         return [FailureCategory.TEST_REGRESSION, FailureCategory.FLAKY_TEST]
     
     def revise(
@@ -166,7 +166,7 @@ class CompileErrorRevision(BaseRevisionStrategy):
         return "compile_error"
     
     @property
-    def handled_categories(self) -> List[FailureCategory]:
+    def handled_categories(self) -> list[FailureCategory]:
         return [
             FailureCategory.COMPILATION_ERROR,
             FailureCategory.TYPE_ERROR,
@@ -239,7 +239,7 @@ class ImportErrorRevision(BaseRevisionStrategy):
         return "import_error"
     
     @property
-    def handled_categories(self) -> List[FailureCategory]:
+    def handled_categories(self) -> list[FailureCategory]:
         return [FailureCategory.IMPORT_ERROR, FailureCategory.MISSING_DEPENDENCY]
     
     def revise(
@@ -284,7 +284,7 @@ class ScopeReductionRevision(BaseRevisionStrategy):
         return "scope_reduction"
     
     @property
-    def handled_categories(self) -> List[FailureCategory]:
+    def handled_categories(self) -> list[FailureCategory]:
         return [FailureCategory.UNKNOWN, FailureCategory.TIMEOUT]
     
     def revise(
@@ -320,14 +320,14 @@ class RevisionStrategyRegistry:
     """Registry of all revision strategies."""
     
     def __init__(self):
-        self._strategies: List[BaseRevisionStrategy] = [
+        self._strategies: list[BaseRevisionStrategy] = [
             TestRegressionRevision(),
             CompileErrorRevision(),
             ImportErrorRevision(),
             ScopeReductionRevision(),  # Catch-all
         ]
     
-    def get_strategy(self, category: FailureCategory) -> Optional[BaseRevisionStrategy]:
+    def get_strategy(self, category: FailureCategory) -> BaseRevisionStrategy | None:
         """Get the best strategy for a failure category."""
         for strategy in self._strategies:
             if strategy.can_handle(category):

@@ -8,14 +8,14 @@ next and maintains structured state across attempts.
 Does not execute code - only chooses strategies and delegates to ProposalPlanner.
 """
 
+import re
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
 
 from .planner import ProposalPlanner
 from .proposal import Proposal
 from .scoring import ScoringEngine
-from .state_tracker import StateTracker, GateRejectionType, HypothesisOutcome
+from .state_tracker import GateRejectionType, HypothesisOutcome, StateTracker
 
 
 class PlannerPhase(Enum):
@@ -34,8 +34,8 @@ class PlannerState:
     """High-level planner state."""
 
     phase: PlannerPhase = PlannerPhase.REPRODUCE
-    last_proposal: Optional[Proposal] = None
-    last_outcome: Optional[HypothesisOutcome] = None
+    last_proposal: Proposal | None = None
+    last_outcome: HypothesisOutcome | None = None
     phase_attempts: int = 0  # Attempts in current phase
 
 
@@ -55,7 +55,7 @@ class MetaPlanner:
 
     def __init__(
         self,
-        state_tracker: Optional[StateTracker] = None,
+        state_tracker: StateTracker | None = None,
         max_phase_attempts: int = 3,
     ):
         """
@@ -69,12 +69,12 @@ class MetaPlanner:
         self.planner = ProposalPlanner(self.state_tracker)
         self.planner_state = PlannerState()
         self.max_phase_attempts = max_phase_attempts
-        self.last_feedback: Optional[dict] = None
+        self.last_feedback: dict | None = None
 
     def next_proposal(
         self,
-        controller_feedback: Optional[dict] = None,
-        gate_rejection: Optional[tuple[str, str]] = None,
+        controller_feedback: dict | None = None,
+        gate_rejection: tuple[str, str] | None = None,
     ) -> Proposal:
         """
         Generate the next proposal based on state and feedback.
@@ -375,19 +375,17 @@ class MetaPlanner:
                     hypothesis=self.planner_state.last_proposal.hypothesis,
                     outcome=HypothesisOutcome.CONFIRMED,
                 )
-        else:
-            # Still failing
-            if self.planner_state.last_proposal:
-                self.state_tracker.record_hypothesis(
-                    proposal_id=self.planner_state.last_proposal.proposal_id,
-                    hypothesis=self.planner_state.last_proposal.hypothesis,
-                    outcome=HypothesisOutcome.FAILED_EFFECT,
-                )
+        elif self.planner_state.last_proposal:
+            self.state_tracker.record_hypothesis(
+                proposal_id=self.planner_state.last_proposal.proposal_id,
+                hypothesis=self.planner_state.last_proposal.hypothesis,
+                outcome=HypothesisOutcome.FAILED_EFFECT,
+            )
 
         # Update reproduction status
         if self.planner_state.phase == PlannerPhase.REPRODUCE and tests_failed > 0:
             self.state_tracker.reproduction_confirmed = True
-            if not self.state_tracker.repro_command:
+            if not self.state_tracker.repro_command and self.state_tracker.failing_tests:
                 self.state_tracker.repro_command = "pytest " + list(
                     self.state_tracker.failing_tests
                 )[0]

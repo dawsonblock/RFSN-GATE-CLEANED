@@ -8,7 +8,7 @@ class TestPlannerV5Integration:
 
     def test_planner_v5_import(self):
         """Test that Planner v5 can be imported."""
-        from rfsn_controller.planner_v5_adapter import PlannerV5Adapter, HAS_PLANNER_V5
+        from rfsn_controller.planner_v5_adapter import HAS_PLANNER_V5, PlannerV5Adapter
         
         assert HAS_PLANNER_V5 is True
         adapter = PlannerV5Adapter(enabled=True)
@@ -16,8 +16,9 @@ class TestPlannerV5Integration:
 
     def test_planner_v5_in_controller(self):
         """Test that Planner v5 is referenced in controller."""
-        from rfsn_controller import controller
         import inspect
+
+        from rfsn_controller import controller
         
         source = inspect.getsource(controller)
         assert "planner_v5" in source
@@ -50,7 +51,6 @@ class TestVerificationManager:
     def test_verification_manager_import(self):
         """Test that VerificationManager can be imported."""
         from rfsn_controller.verification_manager import (
-            VerificationManager,
             VerificationConfig,
         )
         
@@ -69,9 +69,7 @@ class TestStrategyExecutor:
     def test_strategy_executor_import(self):
         """Test that StrategyExecutor can be imported."""
         from rfsn_controller.strategy_executor import (
-            StrategyExecutor,
             StrategyType,
-            StrategyConfig,
         )
         
         # Check enum values
@@ -87,10 +85,6 @@ class TestAgentFoundation:
         """Test that agent types can be imported."""
         from agent.types import (
             Phase,
-            Proposal,
-            GateDecision,
-            AgentState,
-            LedgerEvent,
         )
         
         # Check Phase enum
@@ -100,7 +94,6 @@ class TestAgentFoundation:
         
     def test_agent_profiles(self):
         """Test profile loading."""
-        from agent.profiles import load_profile
         from pathlib import Path
         
         # Check that profile files exist
@@ -113,8 +106,8 @@ class TestAgentFoundation:
     def test_gate_extensions(self):
         """Test gate extension modules."""
         from gate_ext import gate_with_profile
-        from gate_ext.policy_phase import check_phase
         from gate_ext.policy_files import check_files
+        from gate_ext.policy_phase import check_phase
         from gate_ext.policy_tests import check_tests
         
         # Just check they can be imported
@@ -136,7 +129,6 @@ class TestControllerIntegration:
     def test_controller_import(self):
         """Test that controller can be imported."""
         from rfsn_controller.controller import run_controller
-        from rfsn_controller.config import ControllerConfig
         
         assert callable(run_controller)
         

@@ -7,11 +7,9 @@ to selecting the best LLM for a given task context (language, failure type).
 from __future__ import annotations
 
 import json
-import math
 import random
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Protocol
 
 
 @dataclass
@@ -53,11 +51,11 @@ class ModelStats:
 class ModelSelector:
     """Selects the best model using Thompson Sampling."""
     
-    def __init__(self, storage_path: Optional[Path] = None):
+    def __init__(self, storage_path: Path | None = None):
         self._storage_path = storage_path
-        self._models: Dict[str, ModelOption] = {}
+        self._models: dict[str, ModelOption] = {}
         # Map context_key -> model_id -> ModelStats
-        self._stats: Dict[str, Dict[str, ModelStats]] = {}
+        self._stats: dict[str, dict[str, ModelStats]] = {}
         
         self._register_defaults()
         if storage_path and storage_path.exists():
@@ -85,7 +83,7 @@ class ModelSelector:
         failure_type: str,
         language: str,
         k: int = 1,
-    ) -> List[ModelOption]:
+    ) -> list[ModelOption]:
         """Select top-k models using Thompson Sampling.
         
         Args:
@@ -190,7 +188,7 @@ class ModelSelector:
             return
             
         try:
-            with open(self._storage_path, "r") as f:
+            with open(self._storage_path) as f:
                 data = json.load(f)
                 
             for ctx, models in data.items():

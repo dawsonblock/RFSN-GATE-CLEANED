@@ -17,9 +17,10 @@ import subprocess
 import threading
 import time
 from collections import deque
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from functools import wraps
-from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar
+from typing import Any, TypeVar
 
 # ============================================================================
 # LAZY LOADING
@@ -119,7 +120,7 @@ class SubprocessPool:
     default_timeout: float = 60.0  # seconds
     
     # Internal state - managed via __post_init__
-    _semaphore: Optional[threading.Semaphore] = field(default=None, repr=False)
+    _semaphore: threading.Semaphore | None = field(default=None, repr=False)
     _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
     _active_count: int = field(default=0, repr=False)
     _total_executed: int = field(default=0, repr=False)
@@ -131,7 +132,7 @@ class SubprocessPool:
         self._active_count = 0
         self._total_executed = 0
     
-    def _validate_argv(self, argv: List[str]) -> None:
+    def _validate_argv(self, argv: list[str]) -> None:
         """Validate command is a proper argv list.
         
         Security: Rejects shell wrappers and ensures argv-only execution.
@@ -171,10 +172,10 @@ class SubprocessPool:
     
     def run_command(
         self,
-        argv: List[str],
-        cwd: Optional[str] = None,
-        env: Optional[Dict[str, str]] = None,
-        timeout: Optional[float] = None,
+        argv: list[str],
+        cwd: str | None = None,
+        env: dict[str, str] | None = None,
+        timeout: float | None = None,
         capture_output: bool = True,
     ) -> CommandResult:
         """Execute a command using direct argv-based execution.
@@ -222,7 +223,7 @@ class SubprocessPool:
                     capture_output=capture_output,
                     text=True,
                     timeout=timeout,
-                    shell=False,  # SECURITY: Explicit shell=False
+                    shell=False, check=False,  # SECURITY: Explicit shell=False
                 )
                 
                 elapsed = time.time() - start_time
@@ -314,7 +315,7 @@ class SubprocessPool:
 
 
 # Global subprocess pool
-_subprocess_pool: Optional[SubprocessPool] = None
+_subprocess_pool: SubprocessPool | None = None
 
 
 def get_subprocess_pool() -> SubprocessPool:
@@ -360,7 +361,7 @@ def decompress_response(data: bytes) -> str:
     return gzip.decompress(data).decode("utf-8")
 
 
-def compress_if_large(content: str, threshold: int = 1000) -> Tuple[bool, bytes]:
+def compress_if_large(content: str, threshold: int = 1000) -> tuple[bool, bytes]:
     """Compress content only if it's large enough to benefit.
     
     Args:
@@ -448,7 +449,7 @@ class TerminationHeuristics:
         patch_hash = hashlib.sha256(diff.encode()).hexdigest()[:16]
         self._patch_hashes.append(patch_hash)
     
-    def should_terminate(self) -> Tuple[bool, str]:
+    def should_terminate(self) -> tuple[bool, str]:
         """Check if we should terminate early.
         
         Returns:
@@ -492,7 +493,7 @@ def retry_with_backoff(
     base_delay: float = 1.0,
     max_delay: float = 60.0,
     exponential_base: float = 2.0,
-    retryable_exceptions: Tuple = (Exception,),
+    retryable_exceptions: tuple = (Exception,),
 ) -> Callable[[Callable[..., T]], Callable[..., T]]:
     """Decorator for retry with exponential backoff.
     
@@ -547,7 +548,7 @@ def memoize_with_ttl(ttl_seconds: float = 300.0, maxsize: int = 128):
         Decorator function.
     """
     def decorator(func):
-        cache: Dict[str, Tuple[float, Any]] = {}
+        cache: dict[str, tuple[float, Any]] = {}
         lock = threading.Lock()
         
         @wraps(func)
@@ -593,11 +594,11 @@ def memoize_with_ttl(ttl_seconds: float = 300.0, maxsize: int = 128):
 # ============================================================================
 
 def batch_process(
-    items: List[Any],
+    items: list[Any],
     processor: Callable[[Any], Any],
     batch_size: int = 10,
     max_workers: int = 4,
-) -> List[Any]:
+) -> list[Any]:
     """Process items in batches with parallel execution.
     
     Args:

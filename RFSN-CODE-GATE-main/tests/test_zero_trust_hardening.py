@@ -7,14 +7,14 @@ Verifies:
 4. Fail-Closed Verification
 """
 
-import pytest
 from unittest.mock import Mock, patch
-from pathlib import Path
-import os
 
-from rfsn_controller.sysdeps_installer import SysdepsInstaller
+import pytest
+
+from rfsn_controller.buildpacks.base import Buildpack, BuildpackContext, Step
 from rfsn_controller.sandbox import Sandbox, _resolve_path, read_file
-from rfsn_controller.buildpacks.base import Buildpack, Step, BuildpackContext
+from rfsn_controller.sysdeps_installer import SysdepsInstaller
+
 
 class TestAptInjectionGuard:
     """Test prevention of APT package name injection."""
@@ -45,7 +45,6 @@ class TestAptInjectionGuard:
             assert result.success is True
             assert result.installed_packages == []
             # Check strictly that they were NOT installed
-            calls = mock_run.call_args_list
             # Should verify 'apt-get install' was NOT called with these packages
             # We logic check: install_cmd is constructed with validated_packages.
             # If validated_packages is empty, it returns early.
@@ -151,7 +150,7 @@ class TestFailClosed:
     
     def test_verifier_aborts_on_security_violation(self):
         """Verifier should raise RuntimeError if security violation in output."""
-        from rfsn_controller.verifier import Verifier, VerifySummary
+        from rfsn_controller.verifier import Verifier
         
         sb = Mock(spec=Sandbox)
         # Mock run_cmd to return a security violation in stderr

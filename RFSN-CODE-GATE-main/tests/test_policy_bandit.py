@@ -1,6 +1,5 @@
 """Tests for the policy_bandit module."""
 
-import pytest
 
 from rfsn_controller.policy_bandit import (
     BanditArm,

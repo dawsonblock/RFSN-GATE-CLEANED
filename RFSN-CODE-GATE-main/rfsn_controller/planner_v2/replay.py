@@ -7,8 +7,9 @@ that the controller produces the same diffs and outcomes.
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any
 
 from .artifact_log import PlanArtifact, StepArtifact
 from .schema import ControllerOutcome, ControllerTaskSpec, Plan
@@ -34,12 +35,12 @@ class ReplayResult:
     artifact_id: str
     plan_id: str
     success: bool
-    divergences: List[StepDivergence] = field(default_factory=list)
+    divergences: list[StepDivergence] = field(default_factory=list)
     steps_replayed: int = 0
     steps_matched: int = 0
-    error: Optional[str] = None
+    error: str | None = None
     
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         return {
             "artifact_id": self.artifact_id,
             "plan_id": self.plan_id,
@@ -134,7 +135,7 @@ class PlanReplay:
         self,
         expected: ControllerOutcome,
         actual: ControllerOutcome,
-    ) -> List[StepDivergence]:
+    ) -> list[StepDivergence]:
         """Compare expected and actual outcomes.
         
         Args:
@@ -173,7 +174,7 @@ class PlanReplay:
         
         return divergences
     
-    def get_step_trace(self, step_id: str) -> Optional[StepArtifact]:
+    def get_step_trace(self, step_id: str) -> StepArtifact | None:
         """Get the artifact for a specific step.
         
         Args:
@@ -221,7 +222,7 @@ class PlanReplay:
         
         return "\n".join(lines)
     
-    def summarize(self) -> Dict[str, Any]:
+    def summarize(self) -> dict[str, Any]:
         """Get summary of the artifact for quick review.
         
         Returns:

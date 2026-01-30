@@ -10,9 +10,9 @@ import hashlib
 import json
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from .schema import ControllerOutcome, ControllerTaskSpec, Plan
@@ -30,9 +30,9 @@ class StepArtifact:
     diff_summary_hash: str
     wall_clock_ms: int
     timestamp: str
-    files_touched: List[str] = field(default_factory=list)
+    files_touched: list[str] = field(default_factory=list)
     
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "step_id": self.step_id,
             "task_spec_json": self.task_spec_json,
@@ -44,7 +44,7 @@ class StepArtifact:
         }
     
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "StepArtifact":
+    def from_dict(cls, data: dict[str, Any]) -> StepArtifact:
         return cls(
             step_id=data["step_id"],
             task_spec_json=data["task_spec_json"],
@@ -63,13 +63,13 @@ class PlanArtifact:
     plan_id: str
     plan_json: str
     repo_fingerprint: str
-    step_artifacts: List[StepArtifact]
+    step_artifacts: list[StepArtifact]
     start_time: str
     end_time: str
     final_status: str
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
     
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "plan_id": self.plan_id,
             "plan_json": self.plan_json,
@@ -85,7 +85,7 @@ class PlanArtifact:
         return json.dumps(self.to_dict(), indent=2)
     
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "PlanArtifact":
+    def from_dict(cls, data: dict[str, Any]) -> PlanArtifact:
         return cls(
             plan_id=data["plan_id"],
             plan_json=data["plan_json"],
@@ -98,7 +98,7 @@ class PlanArtifact:
         )
     
     @classmethod
-    def from_json(cls, json_str: str) -> "PlanArtifact":
+    def from_json(cls, json_str: str) -> PlanArtifact:
         return cls.from_dict(json.loads(json_str))
 
 
@@ -113,13 +113,13 @@ class PlanArtifactLog:
         """
         self.output_dir = Path(output_dir) / "plan_artifacts"
         self.output_dir.mkdir(parents=True, exist_ok=True)
-        self._active_artifacts: Dict[str, Dict[str, Any]] = {}
+        self._active_artifacts: dict[str, dict[str, Any]] = {}
     
     def record_plan_start(
         self,
-        plan: "Plan",
+        plan: Plan,
         fingerprint: str,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> str:
         """Start recording a plan execution.
         
@@ -154,7 +154,7 @@ class PlanArtifactLog:
         
         return artifact_id
     
-    def _write_meta(self, artifact_id: str, data: Dict[str, Any]):
+    def _write_meta(self, artifact_id: str, data: dict[str, Any]):
         """Write metadata to disk."""
         base_path = self.output_dir / artifact_id
         (base_path / "meta.json").write_text(json.dumps(data, indent=2))
@@ -162,11 +162,11 @@ class PlanArtifactLog:
     def record_step(
         self,
         artifact_id: str,
-        spec: "ControllerTaskSpec",
-        outcome: "ControllerOutcome",
+        spec: ControllerTaskSpec,
+        outcome: ControllerOutcome,
         diff: str,
         elapsed_ms: int,
-        files_touched: Optional[List[str]] = None,
+        files_touched: list[str] | None = None,
     ) -> None:
         """Record a step execution.
         
@@ -212,7 +212,7 @@ class PlanArtifactLog:
             "timestamp": self._now_iso(),
         })
     
-    def finalize(self, artifact_id: str, status: str) -> Optional[Path]:
+    def finalize(self, artifact_id: str, status: str) -> Path | None:
         """Finalize and save the artifact.
         
         Args:
@@ -237,7 +237,7 @@ class PlanArtifactLog:
         
         return self.output_dir / artifact_id / "meta.json"
     
-    def load(self, artifact_id: str) -> Optional[PlanArtifact]:
+    def load(self, artifact_id: str) -> PlanArtifact | None:
         """Load an artifact by ID.
         
         Args:
@@ -262,7 +262,7 @@ class PlanArtifactLog:
         # Load steps
         steps = []
         if steps_path.exists():
-            with open(steps_path, "r") as f:
+            with open(steps_path) as f:
                 for line in f:
                     if line.strip():
                         steps.append(StepArtifact.from_dict(json.loads(line)))
@@ -278,7 +278,7 @@ class PlanArtifactLog:
             metadata=data["metadata"],
         )
     
-    def list_artifacts(self, plan_id: Optional[str] = None) -> List[str]:
+    def list_artifacts(self, plan_id: str | None = None) -> list[str]:
         """List available artifact IDs.
         
         Args:
@@ -307,11 +307,11 @@ class PlanArtifactLog:
     
     @staticmethod
     def _now_iso() -> str:
-        return datetime.now(timezone.utc).isoformat()
+        return datetime.now(UTC).isoformat()
     
     @staticmethod
     def _timestamp() -> str:
-        return datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        return datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
     
     @staticmethod
     def _hash_diff(diff: str) -> str:

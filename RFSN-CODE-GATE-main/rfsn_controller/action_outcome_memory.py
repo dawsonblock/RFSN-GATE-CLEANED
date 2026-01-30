@@ -1,11 +1,12 @@
 from __future__ import annotations
+
 import hashlib
 import json
 import math
 import os
 import sqlite3
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 
 def _stable_json(obj: Any) -> str:
@@ -62,13 +63,13 @@ class ContextSignature:
     failure_class: str
     repo_type: str
     language: str
-    env: Dict[str, Any]
+    env: dict[str, Any]
     attempt_bucket: int
-    failing_test_file: Optional[str]
-    sig_prefix: Optional[str]
+    failing_test_file: str | None
+    sig_prefix: str | None
     stalled: bool
 
-    def as_dict(self) -> Dict[str, Any]:
+    def as_dict(self) -> dict[str, Any]:
         return {
             "failure_class": self.failure_class,
             "repo_type": self.repo_type,
@@ -94,14 +95,14 @@ class ContextSignature:
 class ActionPrior:
     action_type: str
     action_key: str
-    action_json: Dict[str, Any]
+    action_json: dict[str, Any]
     weight: float
     success_rate: float
     mean_score: float
     n: int
 
 
-def format_action_priors(priors: List[ActionPrior]) -> str:
+def format_action_priors(priors: list[ActionPrior]) -> str:
     if not priors:
         return ""
     lines = []
@@ -225,7 +226,7 @@ class ActionOutcomeStore:
         context: ContextSignature,
         action_type: str,
         action_key: str,
-        action_json: Dict[str, Any],
+        action_json: dict[str, Any],
         outcome: str,
         score: float,
         confidence_weight: float,
@@ -233,7 +234,7 @@ class ActionOutcomeStore:
         command_count: int,
         diff_lines: int,
         regressions: int,
-        created_ts: Optional[int] = None,
+        created_ts: int | None = None,
     ) -> None:
         if created_ts is None:
             created_ts = int(self._next_created_ts)
@@ -317,8 +318,8 @@ class ActionOutcomeStore:
         top_k: int = 6,
         candidate_limit: int = 400,
         min_similarity: float = 0.25,
-        now_ts: Optional[int] = None,
-    ) -> List[ActionPrior]:
+        now_ts: int | None = None,
+    ) -> list[ActionPrior]:
         cur = self.conn.cursor()
         cur.execute(
             """
@@ -355,7 +356,7 @@ class ActionOutcomeStore:
         else:
             now_ts = int(now_ts)
 
-        def sim(row: Tuple[Any, ...]) -> float:
+        def sim(row: tuple[Any, ...]) -> float:
             env_hash = row[8]
             attempt_bucket = row[9]
             failing_test_file = row[10]
@@ -377,7 +378,7 @@ class ActionOutcomeStore:
             s += 0.10 if stalled == context.stalled else 0.0
             return s
 
-        agg: Dict[str, Dict[str, Any]] = {}
+        agg: dict[str, dict[str, Any]] = {}
         for r in rows:
             action_type = r[1]
             action_key = r[2]
@@ -411,7 +412,7 @@ class ActionOutcomeStore:
             a["score_sum"] += w * float(score_v)
             a["n"] += 1
 
-        priors: List[ActionPrior] = []
+        priors: list[ActionPrior] = []
         for a in agg.values():
             if a["w_sum"] <= 0.0:
                 continue
@@ -438,10 +439,10 @@ def make_context_signature(
     failure_class: str,
     repo_type: str,
     language: str,
-    env: Dict[str, Any],
+    env: dict[str, Any],
     attempt_count: int,
-    failing_test_file: Optional[str],
-    sig: Optional[str],
+    failing_test_file: str | None,
+    sig: str | None,
     stalled: bool,
 ) -> ContextSignature:
     attempt_bucket = max(0, min(int(attempt_count), 9))
@@ -458,7 +459,7 @@ def make_context_signature(
     )
 
 
-def make_action_key_for_tool(tool: str, args: Dict[str, Any]) -> str:
+def make_action_key_for_tool(tool: str, args: dict[str, Any]) -> str:
     return _sha256(_stable_json({"tool": tool, "args": args}))
 
 
@@ -466,7 +467,7 @@ def make_action_key_for_patch(diff: str) -> str:
     return _sha256(diff or "")
 
 
-def make_action_json_for_patch(diff: str, tags: Optional[List[str]] = None) -> Dict[str, Any]:
+def make_action_json_for_patch(diff: str, tags: list[str] | None = None) -> dict[str, Any]:
     return {
         "diff_hash": make_action_key_for_patch(diff),
         "diff_lines": _diff_line_count(diff),

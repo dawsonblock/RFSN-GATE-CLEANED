@@ -17,7 +17,7 @@ import threading
 from dataclasses import dataclass
 from itertools import count
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any
 
 from .command_allowlist import is_command_allowed
 
@@ -40,7 +40,7 @@ class Sandbox:
     root: str  # root directory of the sandbox
     repo_dir: str  # path to the cloned repository within the sandbox
     worktree_counter: int = 0
-    allowed_commands: Optional[Set[str]] = None  # Language-specific command allowlist
+    allowed_commands: set[str] | None = None  # Language-specific command allowlist
 
 
 _SANDBOX_COUNTER = count(1)
@@ -76,8 +76,8 @@ def _resolve_path(sb: Sandbox, path: str) -> str:
 
 
 def _run(
-    cmd: str, cwd: str, timeout_sec: int = 120, allowed_commands: Optional[Set[str]] = None
-) -> Tuple[int, str, str]:
+    cmd: str, cwd: str, timeout_sec: int = 120, allowed_commands: set[str] | None = None
+) -> tuple[int, str, str]:
     """Run a shell command and capture its output.
 
     Args:
@@ -141,12 +141,12 @@ def _run(
         text=True,
         capture_output=True,
         timeout=timeout_sec,
-        env=safe_env,
+        env=safe_env, check=False,
     )
     return p.returncode, p.stdout, p.stderr
 
 
-def create_sandbox(*, run_id: Optional[str] = None) -> Sandbox:
+def create_sandbox(*, run_id: str | None = None) -> Sandbox:
     """Create a new disposable sandbox directory.
 
     Returns:
@@ -168,7 +168,7 @@ def destroy_sandbox(sb: Sandbox) -> None:
         shutil.rmtree(sb.root, ignore_errors=True)
 
 
-def clone_public_github(sb: Sandbox, github_url: str) -> Dict[str, Any]:
+def clone_public_github(sb: Sandbox, github_url: str) -> dict[str, Any]:
     """Clone a public GitHub repository into the sandbox.
 
     This enforces that only public GitHub URLs are accepted and that no
@@ -213,7 +213,7 @@ def clone_public_github(sb: Sandbox, github_url: str) -> Dict[str, Any]:
                 
             return {"ok": True, "note": f"Cloned from local source: {src_path}"}
         except Exception as e:
-            return {"ok": False, "error": f"Local clone failed: {str(e)}"}
+            return {"ok": False, "error": f"Local clone failed: {e!s}"}
 
     # public-only enforcement
     if not github_url.startswith("https://github.com/"):
@@ -246,7 +246,7 @@ def clone_public_github(sb: Sandbox, github_url: str) -> Dict[str, Any]:
     return {"ok": code == 0, "exit_code": code, "stdout": out, "stderr": err}
 
 
-def checkout(sb: Sandbox, ref: str) -> Dict[str, Any]:
+def checkout(sb: Sandbox, ref: str) -> dict[str, Any]:
     """Check out a specific git ref inside the sandboxed repository."""
     code, out, err = _run(
         f"git checkout {ref}",
@@ -257,7 +257,7 @@ def checkout(sb: Sandbox, ref: str) -> Dict[str, Any]:
     return {"ok": code == 0, "exit_code": code, "stdout": out, "stderr": err}
 
 
-def git_status(sb: Sandbox) -> Dict[str, Any]:
+def git_status(sb: Sandbox) -> dict[str, Any]:
     """Get a porcelain status of the repository."""
     code, out, err = _run(
         "git status --porcelain=v1",
@@ -268,7 +268,7 @@ def git_status(sb: Sandbox) -> Dict[str, Any]:
     return {"ok": code == 0, "exit_code": code, "stdout": out, "stderr": err}
 
 
-def reset_hard(sb: Sandbox) -> Dict[str, Any]:
+def reset_hard(sb: Sandbox) -> dict[str, Any]:
     """Reset any changes and clean untracked files in the repository."""
     c1, o1, e1 = _run(
         "git reset --hard", cwd=sb.repo_dir, timeout_sec=120, allowed_commands=sb.allowed_commands
@@ -281,8 +281,8 @@ def reset_hard(sb: Sandbox) -> Dict[str, Any]:
 
 
 # Cache for expensive operations
-_tree_cache: Dict[str, Tuple[int, List[str]]] = {}
-_file_cache: Dict[str, Tuple[int, str]] = {}
+_tree_cache: dict[str, tuple[int, list[str]]] = {}
+_file_cache: dict[str, tuple[int, str]] = {}
 _cache_ttl_steps = 60
 _cache_epoch = 0
 
@@ -293,7 +293,7 @@ def _tick_cache_epoch() -> int:
     return int(_cache_epoch)
 
 
-def list_tree(sb: Sandbox, max_files: int = 400, use_cache: bool = True) -> Dict[str, Any]:
+def list_tree(sb: Sandbox, max_files: int = 400, use_cache: bool = True) -> dict[str, Any]:
     """Return a flattened list of files in the repository, pruning junk directories.
 
     Args:
@@ -313,7 +313,7 @@ def list_tree(sb: Sandbox, max_files: int = 400, use_cache: bool = True) -> Dict
         if (now_step - int(cached_step)) < int(_cache_ttl_steps):
             return {"ok": True, "files": cached_files[:max_files]}
 
-    found_files: List[str] = []
+    found_files: list[str] = []
     for root, dirs, fnames in os.walk(sb.repo_dir):
         rel_root = os.path.relpath(root, sb.repo_dir).replace("\\", "/")
         if rel_root.startswith(".git"):
@@ -353,7 +353,7 @@ def list_tree(sb: Sandbox, max_files: int = 400, use_cache: bool = True) -> Dict
 
 def read_file(
     sb: Sandbox, path: str, max_bytes: int = 120_000, use_cache: bool = True
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Read a file from the repository, returning its text truncated to max_bytes.
 
     Args:
@@ -395,7 +395,7 @@ def read_file(
     if not os.path.exists(full_path):
         return {"ok": False, "error": f"File not found: {path}"}
     try:
-        with open(full_path, "r", encoding="utf-8", errors="ignore") as f:
+        with open(full_path, encoding="utf-8", errors="ignore") as f:
             content = f.read(max_bytes)
         
         # Store in both caches
@@ -412,7 +412,7 @@ def read_file(
         return {"ok": False, "error": str(e)}
 
 
-def pip_install(sb: Sandbox, packages: str, timeout_sec: int = 300) -> Dict[str, Any]:
+def pip_install(sb: Sandbox, packages: str, timeout_sec: int = 300) -> dict[str, Any]:
     """Install Python packages using pip in the sandboxed repository.
 
     Args:
@@ -435,7 +435,7 @@ def pip_install(sb: Sandbox, packages: str, timeout_sec: int = 300) -> Dict[str,
 
 def pip_install_requirements(
     sb: Sandbox, requirements_file: str = "requirements.txt", timeout_sec: int = 300
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Install packages from a requirements.txt file.
 
     Args:
@@ -459,7 +459,7 @@ def pip_install_requirements(
     return {"ok": code == 0, "exit_code": code, "stdout": out, "stderr": err}
 
 
-def create_venv(sb: Sandbox, venv_path: str = ".venv", timeout_sec: int = 60) -> Dict[str, Any]:
+def create_venv(sb: Sandbox, venv_path: str = ".venv", timeout_sec: int = 60) -> dict[str, Any]:
     """Create a Python virtual environment in the sandbox.
 
     Args:
@@ -480,7 +480,7 @@ def create_venv(sb: Sandbox, venv_path: str = ".venv", timeout_sec: int = 60) ->
     return {"ok": code == 0, "exit_code": code, "stdout": out, "stderr": err}
 
 
-def pip_install_progressive(sb: Sandbox, packages: str, timeout_sec: int = 300) -> Dict[str, Any]:
+def pip_install_progressive(sb: Sandbox, packages: str, timeout_sec: int = 300) -> dict[str, Any]:
     """Install Python packages one at a time, continuing on failures.
 
     This progressive installation strategy allows partial success when some
@@ -531,7 +531,7 @@ def pip_install_progressive(sb: Sandbox, packages: str, timeout_sec: int = 300) 
     }
 
 
-def find_local_module(sb: Sandbox, module_name: str) -> Dict[str, Any]:
+def find_local_module(sb: Sandbox, module_name: str) -> dict[str, Any]:
     """Search for a local module in the repository.
 
     This helps identify when a "missing" import is actually a local module
@@ -575,7 +575,7 @@ def find_local_module(sb: Sandbox, module_name: str) -> Dict[str, Any]:
     }
 
 
-def set_pythonpath(sb: Sandbox, path: str = "") -> Dict[str, Any]:
+def set_pythonpath(sb: Sandbox, path: str = "") -> dict[str, Any]:
     """Set PYTHONPATH for the sandbox environment.
 
     Note: This sets PYTHONPATH for subsequent commands in the same session.
@@ -601,7 +601,7 @@ def set_pythonpath(sb: Sandbox, path: str = "") -> Dict[str, Any]:
     }
 
 
-def grep(sb: Sandbox, query: str, max_matches: int = 200) -> Dict[str, Any]:
+def grep(sb: Sandbox, query: str, max_matches: int = 200) -> dict[str, Any]:
     """Search recursively for a text query in the repository using grep."""
     query = query.replace("\n", " ")
     # Escape single quotes in query for shell safety
@@ -616,7 +616,7 @@ def grep(sb: Sandbox, query: str, max_matches: int = 200) -> Dict[str, Any]:
     return {"ok": True, "matches": lines}
 
 
-def run_cmd(sb: Sandbox, cmd: str, timeout_sec: int = 120) -> Dict[str, Any]:
+def run_cmd(sb: Sandbox, cmd: str, timeout_sec: int = 120) -> dict[str, Any]:
     """Run an arbitrary shell command inside the repository."""
     code, out, err = _run(
         cmd, cwd=sb.repo_dir, timeout_sec=timeout_sec, allowed_commands=sb.allowed_commands
@@ -624,12 +624,12 @@ def run_cmd(sb: Sandbox, cmd: str, timeout_sec: int = 120) -> Dict[str, Any]:
     return {"ok": code == 0, "exit_code": code, "stdout": out, "stderr": err}
 
 
-def apply_patch(sb: Sandbox, diff: str) -> Dict[str, Any]:
+def apply_patch(sb: Sandbox, diff: str) -> dict[str, Any]:
     """Apply a unified diff directly to the repository."""
     return apply_patch_in_dir(sb.repo_dir, diff)
 
 
-def make_worktree(sb: Sandbox, *, suffix: Optional[str] = None) -> str:
+def make_worktree(sb: Sandbox, *, suffix: str | None = None) -> str:
     """Create a detached worktree for testing candidate patches."""
     if suffix is None:
         with _WORKTREE_COUNTER_LOCK:
@@ -662,7 +662,7 @@ def drop_worktree(sb: Sandbox, wt_dir: str) -> None:
         shutil.rmtree(wt_dir, ignore_errors=True)
 
 
-def apply_patch_in_dir(wt_dir: str, diff: str) -> Dict[str, Any]:
+def apply_patch_in_dir(wt_dir: str, diff: str) -> dict[str, Any]:
     """Apply a unified diff inside a specific worktree."""
     # Use subprocess with list instead of shell=True for security
     p = subprocess.run(
@@ -672,7 +672,7 @@ def apply_patch_in_dir(wt_dir: str, diff: str) -> Dict[str, Any]:
         text=True,
         input=diff,
         capture_output=True,
-        timeout=60,
+        timeout=60, check=False,
     )
     if p.returncode == 0:
         return {
@@ -690,7 +690,7 @@ def apply_patch_in_dir(wt_dir: str, diff: str) -> Dict[str, Any]:
         text=True,
         input=diff,
         capture_output=True,
-        timeout=60,
+        timeout=60, check=False,
     )
     return {
         "ok": p2.returncode == 0,
@@ -702,7 +702,7 @@ def apply_patch_in_dir(wt_dir: str, diff: str) -> Dict[str, Any]:
 
 def docker_run(
     sb: Sandbox,
-    cmd: "str | list[str]",
+    cmd: str | list[str],
     timeout_sec: int = 120,
     network: bool = True,
     docker_image: str = "python:3.11-slim",
@@ -866,7 +866,7 @@ def docker_run(
             text=True,
             capture_output=True,
             timeout=timeout_sec,
-            env=safe_env,
+            env=safe_env, check=False,
         )
 
         return DockerResult(

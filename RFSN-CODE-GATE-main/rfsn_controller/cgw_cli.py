@@ -16,7 +16,6 @@ import json
 import logging
 import sys
 from pathlib import Path
-from typing import Optional
 
 from dotenv import load_dotenv
 
@@ -41,7 +40,7 @@ def run_cgw_agent(
     max_cycles: int = 50,
     max_patches: int = 10,
     log_events: bool = True,
-    event_log_path: Optional[Path] = None,
+    event_log_path: Path | None = None,
     verbose: bool = False,
 ) -> dict:
     """Run the CGW coding agent.

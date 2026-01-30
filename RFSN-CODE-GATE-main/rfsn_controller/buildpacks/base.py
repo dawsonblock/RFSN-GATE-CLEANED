@@ -7,7 +7,7 @@ repository support.
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 class BuildpackType(Enum):
@@ -30,8 +30,8 @@ class DetectResult:
 
     buildpack_type: BuildpackType
     confidence: float  # 0.0 to 1.0
-    workspace: Optional[str] = None  # Subdirectory for monorepos
-    metadata: Optional[Dict[str, Any]] = None
+    workspace: str | None = None  # Subdirectory for monorepos
+    metadata: dict[str, Any] | None = None
 
     def __post_init__(self):
         if self.metadata is None:
@@ -42,7 +42,7 @@ class DetectResult:
 class Step:
     """A single installation or setup step."""
 
-    argv: List[str]  # Command as argv list (never shell=True)
+    argv: list[str]  # Command as argv list (never shell=True)
     description: str
     timeout_sec: int = 300
     network_required: bool = False
@@ -52,23 +52,23 @@ class Step:
 class TestPlan:
     """A test execution plan."""
 
-    argv: List[str]  # Command as argv list
+    argv: list[str]  # Command as argv list
     description: str
     timeout_sec: int = 120
     network_required: bool = False
-    focus_file: Optional[str] = None  # For focused tests
+    focus_file: str | None = None  # For focused tests
 
 
 @dataclass
 class FailureInfo:
     """Parsed failure information from test output."""
 
-    failing_tests: List[str]  # Test identifiers
-    likely_files: List[str]  # Files to examine
+    failing_tests: list[str]  # Test identifiers
+    likely_files: list[str]  # Files to examine
     signature: str  # Hash of failure signature
-    error_type: Optional[str] = None
-    error_message: Optional[str] = None
-    metadata: Optional[Dict[str, Any]] = None
+    error_type: str | None = None
+    error_message: str | None = None
+    metadata: dict[str, Any] | None = None
 
     def __post_init__(self):
         if self.metadata is None:
@@ -80,9 +80,9 @@ class BuildpackContext:
     """Context provided to buildpack methods."""
 
     repo_dir: str
-    repo_tree: List[str]
-    files: Dict[str, str]  # filename -> content
-    workspace: Optional[str] = None
+    repo_tree: list[str]
+    files: dict[str, str]  # filename -> content
+    workspace: str | None = None
 
 
 class Buildpack:
@@ -123,7 +123,7 @@ class Buildpack:
             raise RuntimeError(f"Security Violation: Buildpack generated forbidden command: {reason}")
         return step
 
-    def get_safe_install_plan(self, ctx: BuildpackContext) -> List[Step]:
+    def get_safe_install_plan(self, ctx: BuildpackContext) -> list[Step]:
         """Get validated installation steps.
         
         Args:
@@ -139,7 +139,7 @@ class Buildpack:
         """Return the buildpack type."""
         return self._buildpack_type
 
-    def detect(self, ctx: BuildpackContext) -> Optional[DetectResult]:
+    def detect(self, ctx: BuildpackContext) -> DetectResult | None:
         """Detect if this buildpack applies to the repository.
 
         Args:
@@ -158,7 +158,7 @@ class Buildpack:
         """
         raise NotImplementedError("Subclasses must implement image()")
 
-    def sysdeps_whitelist(self) -> List[str]:
+    def sysdeps_whitelist(self) -> list[str]:
         """Return the whitelist of allowed system packages.
 
         Returns:
@@ -168,7 +168,7 @@ class Buildpack:
         common = ["build-essential", "pkg-config", "git", "ca-certificates"]
         return common
 
-    def install_plan(self, ctx: BuildpackContext) -> List[Step]:
+    def install_plan(self, ctx: BuildpackContext) -> list[Step]:
         """Generate installation steps for this buildpack.
 
         Args:
@@ -179,7 +179,7 @@ class Buildpack:
         """
         raise NotImplementedError("Subclasses must implement install_plan()")
 
-    def test_plan(self, ctx: BuildpackContext, focus_file: Optional[str] = None) -> TestPlan:
+    def test_plan(self, ctx: BuildpackContext, focus_file: str | None = None) -> TestPlan:
         """Generate test execution plan.
 
         Args:
@@ -203,7 +203,7 @@ class Buildpack:
         """
         raise NotImplementedError("Subclasses must implement parse_failures()")
 
-    def focus_plan(self, failure: FailureInfo) -> Optional[TestPlan]:
+    def focus_plan(self, failure: FailureInfo) -> TestPlan | None:
         """Generate focused test plan based on failure.
 
         Args:
@@ -214,7 +214,7 @@ class Buildpack:
         """
         return None
 
-    def get_services_required(self, ctx: BuildpackContext) -> List[str]:
+    def get_services_required(self, ctx: BuildpackContext) -> list[str]:
         """Get required external services for this buildpack.
 
         Args:
@@ -225,7 +225,7 @@ class Buildpack:
         """
         return []
 
-    def get_verification_goals(self, ctx: BuildpackContext) -> List[str]:
+    def get_verification_goals(self, ctx: BuildpackContext) -> list[str]:
         """Get verification goals for this buildpack.
 
         Args:

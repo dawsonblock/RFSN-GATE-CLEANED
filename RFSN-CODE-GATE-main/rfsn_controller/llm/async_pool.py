@@ -80,14 +80,26 @@ class AsyncLLMPool:
             logger.warning("httpx not installed, async pool will not work. Install with: pip install httpx")
             self.client = None
         else:
-            self.client = httpx.AsyncClient(
-                limits=httpx.Limits(
-                    max_connections=max_connections,
-                    max_keepalive_connections=max_keepalive,
-                ),
-                timeout=httpx.Timeout(timeout),
-                http2=True,  # Enable HTTP/2 for multiplexing
-            )
+            # Try HTTP/2 if h2 is installed, fallback to HTTP/1.1
+            try:
+                self.client = httpx.AsyncClient(
+                    limits=httpx.Limits(
+                        max_connections=max_connections,
+                        max_keepalive_connections=max_keepalive,
+                    ),
+                    timeout=httpx.Timeout(timeout),
+                    http2=True,  # Enable HTTP/2 for multiplexing
+                )
+            except ImportError:
+                # h2 not installed, use HTTP/1.1
+                self.client = httpx.AsyncClient(
+                    limits=httpx.Limits(
+                        max_connections=max_connections,
+                        max_keepalive_connections=max_keepalive,
+                    ),
+                    timeout=httpx.Timeout(timeout),
+                    http2=False,
+                )
 
         # Rate limiting (simple token bucket)
         self._rate_limit_semaphore = asyncio.Semaphore(max_connections)

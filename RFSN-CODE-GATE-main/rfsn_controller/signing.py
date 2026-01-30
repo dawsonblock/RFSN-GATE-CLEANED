@@ -5,12 +5,11 @@ import hashlib
 import hmac
 import os
 from dataclasses import dataclass
-from typing import Dict, Tuple
 
 
 @dataclass
 class Manifest:
-    files: Dict[str, str]  # relpath -> sha256 hex
+    files: dict[str, str]  # relpath -> sha256 hex
 
 
 def sha256_file(path: str) -> str:
@@ -22,7 +21,7 @@ def sha256_file(path: str) -> str:
 
 
 def compute_manifest(root_dir: str) -> Manifest:
-    files: Dict[str, str] = {}
+    files: dict[str, str] = {}
     for dirpath, _, filenames in os.walk(root_dir):
         for fn in filenames:
             p = os.path.join(dirpath, fn)
@@ -37,7 +36,7 @@ def sign_manifest(manifest_json_bytes: bytes, key: bytes) -> str:
     return hmac.new(key, manifest_json_bytes, hashlib.sha256).hexdigest()
 
 
-def verify_manifest(manifest_json_bytes: bytes, key: bytes, signature_hex: str) -> Tuple[bool, str]:
+def verify_manifest(manifest_json_bytes: bytes, key: bytes, signature_hex: str) -> tuple[bool, str]:
     expected = sign_manifest(manifest_json_bytes, key)
     ok = hmac.compare_digest(expected, signature_hex.strip())
     return ok, expected

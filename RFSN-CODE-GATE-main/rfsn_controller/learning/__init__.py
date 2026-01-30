@@ -17,21 +17,21 @@ Learning CANNOT influence:
 
 from .fingerprint import (
     FailureFingerprint,
-    fingerprint_failure,
     compute_fingerprint_hash,
-)
-from .strategy_bandit import (
-    StrategyBandit,
-    StrategyStats,
-)
-from .quarantine import (
-    QuarantineLane,
-    QuarantineConfig,
-    is_quarantined,
+    fingerprint_failure,
 )
 from .learned_strategy_selector import (
     LearnedStrategySelector,
     StrategyRecommendation,
+)
+from .quarantine import (
+    QuarantineConfig,
+    QuarantineLane,
+    is_quarantined,
+)
+from .strategy_bandit import (
+    StrategyBandit,
+    StrategyStats,
 )
 
 __all__ = [

@@ -15,17 +15,14 @@ from __future__ import annotations
 
 import os
 import sys
-from pathlib import Path
-from typing import Optional
 
 try:
     import click
     from rich.console import Console
-    from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeElapsedColumn
     from rich.panel import Panel
-    from rich.table import Table
+    from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
     from rich.syntax import Syntax
-    from rich import print as rprint
+    from rich.table import Table
     HAS_RICH = True
 except ImportError:
     HAS_RICH = False
@@ -89,7 +86,7 @@ def print_metrics(metrics: dict):
     console.print(table)
 
 
-def print_error(message: str, traceback: Optional[str] = None):
+def print_error(message: str, traceback: str | None = None):
     """Print error message with optional traceback."""
     if not HAS_RICH:
         print(f"ERROR: {message}", file=sys.stderr)
@@ -162,7 +159,7 @@ class ProgressTracker:
         self.task_id = self.progress.add_task(self.description, total=100)
         return self
     
-    def update(self, advance: float = 0, description: Optional[str] = None):
+    def update(self, advance: float = 0, description: str | None = None):
         """Update progress.
         
         Args:

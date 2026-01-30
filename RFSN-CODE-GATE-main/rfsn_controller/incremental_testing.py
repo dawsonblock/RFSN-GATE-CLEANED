@@ -12,13 +12,12 @@ import ast
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple
 
 # ============================================================================
 # DIFF PARSING
 # ============================================================================
 
-def parse_changed_files(diff: str) -> List[str]:
+def parse_changed_files(diff: str) -> list[str]:
     """Extract list of changed files from a unified diff.
     
     Args:
@@ -44,7 +43,7 @@ def parse_changed_files(diff: str) -> List[str]:
     return list(files)
 
 
-def parse_changed_functions(diff: str) -> Dict[str, List[str]]:
+def parse_changed_functions(diff: str) -> dict[str, list[str]]:
     """Extract changed functions/classes from a diff.
     
     Args:
@@ -53,7 +52,7 @@ def parse_changed_functions(diff: str) -> Dict[str, List[str]]:
     Returns:
         Dict mapping file paths to lists of changed function/class names.
     """
-    changes: Dict[str, List[str]] = {}
+    changes: dict[str, list[str]] = {}
     current_file = None
     
     for line in diff.split("\n"):
@@ -88,11 +87,11 @@ class ImportGraph:
     """Graph of Python imports for dependency tracking."""
     
     # file -> set of files it imports
-    imports: Dict[str, Set[str]] = field(default_factory=dict)
+    imports: dict[str, set[str]] = field(default_factory=dict)
     # file -> set of files that import it
-    importers: Dict[str, Set[str]] = field(default_factory=dict)
+    importers: dict[str, set[str]] = field(default_factory=dict)
     # Module name -> file path mapping
-    modules: Dict[str, str] = field(default_factory=dict)
+    modules: dict[str, str] = field(default_factory=dict)
     
     def add_import(self, source: str, target: str) -> None:
         """Record that source imports target."""
@@ -104,7 +103,7 @@ class ImportGraph:
             self.importers[target] = set()
         self.importers[target].add(source)
     
-    def get_dependents(self, file: str, max_depth: int = 3) -> Set[str]:
+    def get_dependents(self, file: str, max_depth: int = 3) -> set[str]:
         """Get all files that depend on the given file.
         
         Args:
@@ -166,7 +165,7 @@ def build_import_graph(repo_dir: str) -> ImportGraph:
         rel_path = str(py_file.relative_to(repo_path))
         
         try:
-            with open(py_file, "r", encoding="utf-8", errors="ignore") as f:
+            with open(py_file, encoding="utf-8", errors="ignore") as f:
                 content = f.read()
             
             tree = ast.parse(content)
@@ -194,7 +193,7 @@ def build_import_graph(repo_dir: str) -> ImportGraph:
 # TEST DISCOVERY
 # ============================================================================
 
-def find_test_files(repo_dir: str) -> List[str]:
+def find_test_files(repo_dir: str) -> list[str]:
     """Find all test files in a repository.
     
     Args:
@@ -228,9 +227,9 @@ def find_test_files(repo_dir: str) -> List[str]:
 
 def find_tests_for_file(
     changed_file: str,
-    test_files: List[str],
-    graph: Optional[ImportGraph] = None,
-) -> List[str]:
+    test_files: list[str],
+    graph: ImportGraph | None = None,
+) -> list[str]:
     """Find test files that likely test a given source file.
     
     Args:
@@ -285,16 +284,16 @@ class TestSelection:
     """Result of incremental test selection."""
     
     # Tests directly related to changed files
-    affected_tests: List[str] = field(default_factory=list)
+    affected_tests: list[str] = field(default_factory=list)
     
     # Tests in the same package/directory
-    related_tests: List[str] = field(default_factory=list)
+    related_tests: list[str] = field(default_factory=list)
     
     # All other test files
-    remaining_tests: List[str] = field(default_factory=list)
+    remaining_tests: list[str] = field(default_factory=list)
     
     # Changed source files
-    changed_files: List[str] = field(default_factory=list)
+    changed_files: list[str] = field(default_factory=list)
     
     def get_focused_command(self, framework: str = "pytest") -> str:
         """Get command to run only affected tests.
@@ -323,7 +322,7 @@ class TestSelection:
         else:
             return ""
     
-    def get_staged_commands(self, framework: str = "pytest") -> List[Tuple[str, str]]:
+    def get_staged_commands(self, framework: str = "pytest") -> list[tuple[str, str]]:
         """Get staged test commands (affected → related → full).
         
         Returns:
@@ -348,7 +347,7 @@ class TestSelection:
 def select_tests_for_patch(
     diff: str,
     repo_dir: str,
-    graph: Optional[ImportGraph] = None,
+    graph: ImportGraph | None = None,
 ) -> TestSelection:
     """Select tests to run for a given patch.
     

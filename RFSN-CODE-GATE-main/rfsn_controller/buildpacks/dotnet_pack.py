@@ -6,7 +6,6 @@ Handles .NET repositories with dotnet CLI.
 
 import hashlib
 import re
-from typing import List, Optional
 
 from .base import (
     Buildpack,
@@ -27,7 +26,7 @@ class DotnetBuildpack(Buildpack):
         super().__init__()
         self._buildpack_type = BuildpackType.DOTNET
 
-    def detect(self, ctx: BuildpackContext) -> Optional[DetectResult]:
+    def detect(self, ctx: BuildpackContext) -> DetectResult | None:
         """Detect if this is a .NET repository."""
         dotnet_indicators = [
             "*.csproj",
@@ -44,9 +43,7 @@ class DotnetBuildpack(Buildpack):
                 ext = indicator[1:]
                 if any(f.endswith(ext) for f in ctx.repo_tree):
                     found_indicators.append(indicator)
-            elif indicator in ctx.files:
-                found_indicators.append(indicator)
-            elif any(f == indicator or f.endswith("/" + indicator) for f in ctx.repo_tree):
+            elif indicator in ctx.files or any(f == indicator or f.endswith("/" + indicator) for f in ctx.repo_tree):
                 found_indicators.append(indicator)
 
         if not found_indicators:
@@ -66,12 +63,12 @@ class DotnetBuildpack(Buildpack):
         """Return the Docker image for .NET."""
         return "mcr.microsoft.com/dotnet/sdk:8.0"
 
-    def sysdeps_whitelist(self) -> List[str]:
+    def sysdeps_whitelist(self) -> list[str]:
         """Return .NET-specific system dependencies."""
         common = ["build-essential", "pkg-config", "git", "ca-certificates"]
         return common
 
-    def install_plan(self, ctx: BuildpackContext) -> List[Step]:
+    def install_plan(self, ctx: BuildpackContext) -> list[Step]:
         """Generate .NET installation steps."""
         steps = []
 
@@ -91,7 +88,7 @@ class DotnetBuildpack(Buildpack):
 
         return steps
 
-    def test_plan(self, ctx: BuildpackContext, focus_file: Optional[str] = None) -> TestPlan:
+    def test_plan(self, ctx: BuildpackContext, focus_file: str | None = None) -> TestPlan:
         """Generate .NET test execution plan."""
         argv = ["dotnet", "test", "--no-build"]
 
@@ -136,7 +133,7 @@ class DotnetBuildpack(Buildpack):
             error_message=error_message,
         )
 
-    def focus_plan(self, failure: FailureInfo) -> Optional[TestPlan]:
+    def focus_plan(self, failure: FailureInfo) -> TestPlan | None:
         """Generate focused test plan based on failure."""
         if not failure.failing_tests:
             return None

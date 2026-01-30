@@ -6,7 +6,6 @@ is making no progress for an extended period.
 """
 
 from dataclasses import dataclass
-from typing import Optional, Tuple
 
 
 @dataclass
@@ -14,12 +13,12 @@ class StallState:
     """Track state for stall detection."""
 
     failing_tests_count: int = 0
-    failing_test_id: Optional[str] = None
+    failing_test_id: str | None = None
     error_signature: str = ""
     iterations_without_improvement: int = 0
     stall_threshold: int = 3
 
-    def update(self, failing_count: int, test_id: Optional[str], sig: str) -> bool:
+    def update(self, failing_count: int, test_id: str | None, sig: str) -> bool:
         """Update state and return True if stall detected.
 
         Args:
@@ -47,7 +46,7 @@ class StallState:
             self.iterations_without_improvement += 1
             return self.iterations_without_improvement >= self.stall_threshold
 
-    def get_score(self) -> Tuple[int, bool]:
+    def get_score(self) -> tuple[int, bool]:
         """Get current score tuple for comparison.
 
         Returns:

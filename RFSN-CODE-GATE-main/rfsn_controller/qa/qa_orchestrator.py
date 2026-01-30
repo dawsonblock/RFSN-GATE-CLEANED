@@ -6,15 +6,16 @@ in the controller repair loop.
 """
 
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any
 
-from .qa_types import Evidence, QAAttempt, Verdict
 from .claim_extractor import ClaimExtractor, PatchContext
-from .qa_critic import QACritic
 from .evidence_collector import EvidenceCollector
-from .qa_gate import QAGate, GateDecision
+from .qa_critic import QACritic
+from .qa_gate import GateDecision, QAGate
 from .qa_persistence import QAPersistence
+from .qa_types import Evidence, QAAttempt, Verdict
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +37,7 @@ class QAConfig:
     evidence_timeout_ms: int = 60000
 
     # Persistence
-    db_path: Optional[str] = None
+    db_path: str | None = None
 
 
 class QAOrchestrator:
@@ -54,12 +55,12 @@ class QAOrchestrator:
     def __init__(
         self,
         *,
-        config: Optional[QAConfig] = None,
-        llm_call: Optional[Callable[[str, str], str]] = None,
-        test_runner: Optional[Callable[[str], Dict[str, Any]]] = None,
-        delta_tracker: Optional[Any] = None,
-        hygiene_validator: Optional[Callable[[str], Dict[str, Any]]] = None,
-        static_checker: Optional[Callable[[str], Dict[str, Any]]] = None,
+        config: QAConfig | None = None,
+        llm_call: Callable[[str, str], str] | None = None,
+        test_runner: Callable[[str], dict[str, Any]] | None = None,
+        delta_tracker: Any | None = None,
+        hygiene_validator: Callable[[str], dict[str, Any]] | None = None,
+        static_checker: Callable[[str], dict[str, Any]] | None = None,
     ):
         """Initialize orchestrator.
         
@@ -89,7 +90,7 @@ class QAOrchestrator:
         )
 
         # Persistence (optional)
-        self.persistence: Optional[QAPersistence] = None
+        self.persistence: QAPersistence | None = None
         if self.config.persist_outcomes and self.config.db_path:
             self.persistence = QAPersistence(self.config.db_path)
     
@@ -104,11 +105,11 @@ class QAOrchestrator:
     def evaluate_patch(
         self,
         diff: str,
-        failing_tests: List[str],
+        failing_tests: list[str],
         *,
         test_cmd: str = "",
-        issue_text: Optional[str] = None,
-        attempt_id: Optional[str] = None,
+        issue_text: str | None = None,
+        attempt_id: str | None = None,
         failure_signature: str = "",
     ) -> "QAResult":
         """Run complete QA evaluation on a patch.
@@ -154,7 +155,7 @@ class QAOrchestrator:
         )
 
         # Step 3: Collect evidence for challenges
-        evidence: List[Evidence] = []
+        evidence: list[Evidence] = []
         for verdict in verdicts:
             if verdict.verdict == Verdict.CHALLENGE:
                 collected = self.collector.collect_for_verdict(
@@ -201,7 +202,7 @@ class QAOrchestrator:
             diff_stats=diff_stats,
         )
 
-    def _parse_diff_stats(self, diff: str) -> Dict[str, Any]:
+    def _parse_diff_stats(self, diff: str) -> dict[str, Any]:
         """Parse diff for statistics."""
         if not diff:
             return {"lines_changed": 0, "files_changed": 0, "touched_files": []}
@@ -254,18 +255,18 @@ class QAResult:
 
     attempt: QAAttempt
     decision: GateDecision
-    diff_stats: Dict[str, Any] = field(default_factory=dict)
+    diff_stats: dict[str, Any] = field(default_factory=dict)
 
     @property
     def accepted(self) -> bool:
         return self.decision.accepted
 
     @property
-    def rejection_reasons(self) -> List[str]:
+    def rejection_reasons(self) -> list[str]:
         return self.decision.rejection_reasons
 
     @property
-    def escalation_tags(self) -> List[str]:
+    def escalation_tags(self) -> list[str]:
         return self.decision.escalation_tags
 
 

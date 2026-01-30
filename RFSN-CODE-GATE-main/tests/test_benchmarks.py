@@ -8,10 +8,10 @@ Benchmarks for:
 """
 
 import asyncio
-import time
 import tempfile
+import time
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 import pytest
 
@@ -159,7 +159,7 @@ class TestAsyncCacheBenchmark:
             elapsed = time.time() - start
             throughput = 500 / elapsed
 
-            print(f"\n⏱️  Concurrent operations (500 ops, 10 workers)")
+            print("\n⏱️  Concurrent operations (500 ops, 10 workers)")
             print(f"  Total time: {elapsed:.4f}s")
             print(f"  Throughput: {throughput:.0f} ops/sec")
 
@@ -173,8 +173,15 @@ class TestAsyncCacheBenchmark:
 class TestSyncVsAsyncCacheComparison:
     """Compare sync vs async cache performance."""
 
+    @pytest.mark.timeout(120)  # Extended timeout for sympy import overhead
     def test_sync_cache_baseline(self):
         """Baseline sync cache performance."""
+        # Reset global cache to avoid contention
+        import rfsn_controller.multi_tier_cache as cache_module
+        if cache_module._global_cache is not None:
+            cache_module._global_cache.close()
+            cache_module._global_cache = None
+        
         from rfsn_controller.multi_tier_cache import MultiTierCache
 
         with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
@@ -259,8 +266,8 @@ class TestVerificationManagerBenchmark:
     async def test_verification_overhead(self):
         """Benchmark verification manager overhead."""
         from rfsn_controller.verification_manager import (
-            VerificationManager,
             VerificationConfig,
+            VerificationManager,
         )
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -292,10 +299,10 @@ class TestStrategyExecutorBenchmark:
     async def test_strategy_execution_speed(self):
         """Benchmark strategy execution."""
         from rfsn_controller.strategy_executor import (
-            StrategyExecutor,
             StrategyConfig,
-            StrategyType,
+            StrategyExecutor,
             StrategyStep,
+            StrategyType,
         )
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -341,11 +348,11 @@ class TestEndToEndBenchmark:
     async def test_complete_repair_cycle_simulation(self):
         """Simulate a complete repair cycle and measure performance."""
         from rfsn_controller.async_multi_tier_cache import AsyncMultiTierCache
-        from rfsn_controller.verification_manager import (
-            VerificationManager,
-            VerificationConfig,
-        )
         from rfsn_controller.planner_v5_adapter import PlannerV5Adapter
+        from rfsn_controller.verification_manager import (
+            VerificationConfig,
+            VerificationManager,
+        )
 
         with tempfile.TemporaryDirectory() as tmpdir:
             # Setup components
@@ -378,7 +385,7 @@ class TestEndToEndBenchmark:
 
             elapsed = time.time() - start
 
-            print(f"\n⏱️  Complete repair cycle simulation (5 iterations)")
+            print("\n⏱️  Complete repair cycle simulation (5 iterations)")
             print(f"  Total time: {elapsed:.4f}s")
             print(f"  Average per iteration: {elapsed/5:.4f}s")
 

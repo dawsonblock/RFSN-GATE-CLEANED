@@ -17,9 +17,9 @@ from __future__ import annotations
 
 import sqlite3
 import threading
+from collections.abc import Iterator
 from contextlib import contextmanager
 from queue import Empty, Queue
-from typing import Iterator
 
 __all__ = ["SQLiteConnectionPool", "get_pool", "close_all_pools"]
 
