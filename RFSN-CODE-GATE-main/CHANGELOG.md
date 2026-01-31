@@ -1,5 +1,60 @@
 # Changelog
 
+## [1.4.3] - 2026-01-30
+
+### 🎉 Stabilization & Advanced Features
+
+Complete stabilization with 100% test pass rate and new advanced search capabilities.
+
+### ✨ New Features
+
+#### Multi-Step Beam Search
+
+- Explore multiple patch hypotheses in parallel
+- Score-based candidate ranking with pruning
+- Early termination on success
+- Configurable beam width and depth
+- Location: `rfsn_controller/planner_v2/beam_search.py`
+
+#### Git-Based Rollback System  
+
+- Stash-based snapshot/restore for safe exploration
+- Automatic cleanup of old snapshots
+- Working state preservation during search
+- Location: `rfsn_controller/git_rollback.py`
+
+#### Configuration Options
+
+```python
+beam_search_enabled: bool = False
+beam_width: int = 3
+beam_depth: int = 5  
+beam_score_threshold: float = 0.95
+beam_timeout_seconds: float = 300.0
+```
+
+### 🧪 Testing
+
+- **1000 tests passing** (up from 970)
+- 30 new tests for beam search and git rollback
+- All skipped tests now implemented
+
+### 📦 Repository Cleanup
+
+- Reduced repository size: 72MB → 8.1MB (88% reduction)
+- README: 1890 lines → 164 lines (91% reduction)
+- Consolidated 34 historical docs to `docs/archive/`
+- Cleaned all cache/bytecode files
+
+### 🔧 Improvements
+
+- Fixed all lint warnings (F401, F841, B904)
+- Added `from __future__ import annotations` throughout
+- Updated datetime calls to use timezone-aware UTC
+- Modern Python 3.12 patterns
+
+---
+
 ## [0.2.0] - 2026-01-29
 
 ### 🎉 Major Release: Performance & Extensibility
@@ -9,6 +64,7 @@ This release delivers significant performance improvements and extensibility fea
 ### ✨ New Features
 
 #### Async LLM Pool (+200-400% speedup)
+
 - HTTP/2 connection pooling for parallel LLM operations
 - Configurable rate limiting and retry logic
 - Support for DeepSeek, Gemini, and Anthropic APIs
@@ -16,6 +72,7 @@ This release delivers significant performance improvements and extensibility fea
 - Location: `rfsn_controller/llm/async_pool.py`
 
 #### Multi-Tier Caching (+40-60% hit rate)
+
 - In-memory LRU cache (Tier 1, fastest)
 - SQLite disk cache with TTL (Tier 2, persistent)
 - Semantic similarity cache (Tier 3, embedding-based)
@@ -24,6 +81,7 @@ This release delivers significant performance improvements and extensibility fea
 - Location: `rfsn_controller/multi_tier_cache.py`
 
 #### Structured Logging
+
 - Context propagation using Python contextvars
 - Request tracing (request_id, user, session, repo, phase)
 - JSON-formatted logs for easy parsing
@@ -32,6 +90,7 @@ This release delivers significant performance improvements and extensibility fea
 - Location: `rfsn_controller/structured_logging.py`
 
 #### Buildpack Plugin System
+
 - Dynamic buildpack discovery via Python entry points
 - Automatic detection of project language/framework
 - Third-party plugin support
@@ -51,6 +110,7 @@ This release delivers significant performance improvements and extensibility fea
 ### 🔧 Improvements
 
 #### Dependencies
+
 - Fixed OpenAI version conflict: `openai>=1.0.0,<2.0`
 - Added dependency upper bounds to prevent breaking changes
 - Added `httpx[http2]>=0.27.0,<1.0` for HTTP/2 support
@@ -59,18 +119,21 @@ This release delivers significant performance improvements and extensibility fea
 - Added `pytest-asyncio>=0.23.0,<1.0` for async test support
 
 #### Configuration
+
 - Added `.python-version` file (3.12)
 - Added `.editorconfig` for consistent code style
 - Added `.dockerignore` to reduce build context by ~80%
 - Added `.pre-commit-config.yaml` with ruff, mypy, and bandit hooks
 
 #### CI/CD
+
 - Updated GitHub Actions to use Python 3.12
 - Added dependency caching with `actions/cache@v4`
 - Enabled parallel test execution with pytest-xdist
 - Added coverage reporting (HTML + terminal)
 
 #### Code Quality
+
 - All code linted and formatted with ruff
 - Modern type annotations (use `type` instead of `Type`)
 - Replaced try-except-pass patterns with `contextlib.suppress`
@@ -101,6 +164,7 @@ This release delivers significant performance improvements and extensibility fea
 See [UPGRADE_SUMMARY.md](UPGRADE_SUMMARY.md) for detailed migration instructions.
 
 **Quick Migration**:
+
 ```bash
 # Upgrade Python
 pyenv install 3.12
