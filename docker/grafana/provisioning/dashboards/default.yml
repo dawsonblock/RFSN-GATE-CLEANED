@@ -1,0 +1,12 @@
+apiVersion: 1
+
+providers:
+  - name: "RFSN Dashboards"
+    orgId: 1
+    folder: "RFSN"
+    folderUid: "rfsn"
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /etc/grafana/provisioning/dashboards

@@ -1,0 +1,19 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+alerting:
+  alertmanagers: []
+
+scrape_configs:
+  # RFSN Controller metrics
+  - job_name: "rfsn-controller"
+    static_configs:
+      - targets: ["rfsn:9090"]
+    scrape_interval: 10s
+    metrics_path: /metrics
+
+  # Prometheus self-monitoring
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]

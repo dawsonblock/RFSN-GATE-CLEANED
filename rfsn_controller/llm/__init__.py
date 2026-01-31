@@ -28,3 +28,23 @@ except ImportError:
         "call_ensemble_sync",
         "generate_patches_parallel",
     ]
+
+# v1.5.0: Enhanced multi-model client
+try:
+    from .enhanced_client import (
+        EnhancedLLMClient,
+        ModelConfig,
+        LATEST_MODELS,
+        LLMResponse as EnhancedLLMResponse,
+        get_llm_client,
+    )
+    __all__.extend([
+        "EnhancedLLMClient",
+        "ModelConfig",
+        "LATEST_MODELS",
+        "EnhancedLLMResponse",
+        "get_llm_client",
+    ])
+except ImportError:
+    pass
+

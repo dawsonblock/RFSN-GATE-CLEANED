@@ -1,6 +1,4 @@
-"""
-from __future__ import annotations
-Meta-Planner for RFSN v5.
+"""Meta-Planner for RFSN v5.
 
 Strategic layer above proposal generation. Decides which proposal to ask for
 next and maintains structured state across attempts.
@@ -8,14 +6,23 @@ next and maintains structured state across attempts.
 Does not execute code - only chooses strategies and delegates to ProposalPlanner.
 """
 
+from __future__ import annotations
+
+import logging
 import re
 from dataclasses import dataclass
 from enum import Enum
+from typing import TYPE_CHECKING
 
 from .planner import ProposalPlanner
 from .proposal import Proposal
 from .scoring import ScoringEngine
 from .state_tracker import GateRejectionType, HypothesisOutcome, StateTracker
+
+if TYPE_CHECKING:
+    from ..learning import LearnedStrategySelector
+
+logger = logging.getLogger(__name__)
 
 
 class PlannerPhase(Enum):
@@ -57,6 +64,7 @@ class MetaPlanner:
         self,
         state_tracker: StateTracker | None = None,
         max_phase_attempts: int = 3,
+        strategy_selector: LearnedStrategySelector | None = None,
     ):
         """
         Initialize meta-planner.
@@ -64,12 +72,15 @@ class MetaPlanner:
         Args:
             state_tracker: State tracker instance, or creates new one
             max_phase_attempts: Max attempts per phase before pivoting
+            strategy_selector: Optional learned strategy selector for bandit-guided planning
         """
         self.state_tracker = state_tracker or StateTracker()
         self.planner = ProposalPlanner(self.state_tracker)
         self.planner_state = PlannerState()
         self.max_phase_attempts = max_phase_attempts
         self.last_feedback: dict | None = None
+        self.strategy_selector = strategy_selector
+        self._last_recommendation = None  # Track for learning updates
 
     def next_proposal(
         self,
@@ -176,10 +187,14 @@ class MetaPlanner:
         return self._next_reproduce()
 
     def _next_patch(self) -> Proposal:
-        """Generate next proposal for patch phase."""
+        """Generate next proposal for patch phase.
+        
+        Uses strategy_selector if available for learning-informed decisions.
+        """
         # Check phase attempts
         if self.planner_state.phase_attempts >= self.max_phase_attempts:
-            # Too many patch attempts - pivot to localization
+            # Too many patch attempts - update learning and pivot to localization
+            self._update_learning_for_failed_phase()
             self._transition_phase(PlannerPhase.LOCALIZE)
             return self._next_localize()
 
@@ -192,40 +207,11 @@ class MetaPlanner:
             self._transition_phase(PlannerPhase.LOCALIZE)
             return self._next_localize()
 
-        # Determine fix type based on exception
-        if "AttributeError" in self.state_tracker.exception_types:
-            # Likely None access
-            proposal = self.planner.propose_add_guard(
-                file_path=suspect_file,
-                symbol=suspect_symbol[1] if suspect_symbol else "unknown",
-                guard_type="none_check",
-                expected_behavior="Prevents AttributeError by checking for None before attribute access",
-            )
-        elif "IndexError" in self.state_tracker.exception_types:
-            # Boundary issue
-            proposal = self.planner.propose_add_guard(
-                file_path=suspect_file,
-                symbol=suspect_symbol[1] if suspect_symbol else "unknown",
-                guard_type="boundary_check",
-                expected_behavior="Prevents IndexError by validating indices are within bounds",
-            )
-        elif "TypeError" in self.state_tracker.exception_types:
-            # Type mismatch
-            proposal = self.planner.propose_add_guard(
-                file_path=suspect_file,
-                symbol=suspect_symbol[1] if suspect_symbol else "unknown",
-                guard_type="type_check",
-                expected_behavior="Prevents TypeError by validating input types",
-            )
-        else:
-            # Generic logic fix
-            proposal = self.planner.propose_fix_logic_error(
-                file_path=suspect_file,
-                symbol=suspect_symbol[1] if suspect_symbol else "unknown",
-                error_description="Logic error causing test failure",
-                fix_description="Fix logic to match expected behavior",
-                expected_behavior="Corrects behavior to satisfy test expectations",
-            )
+        # Get strategy recommendation from learning layer if available
+        strategy = self._get_strategy_recommendation()
+        
+        # Map strategy to proposal based on recommendation or exception type
+        proposal = self._create_patch_proposal(suspect_file, suspect_symbol, strategy)
 
         self._record_proposal(proposal)
         self.planner_state.phase_attempts += 1
@@ -233,6 +219,349 @@ class MetaPlanner:
         # After patch, verify
         self._transition_phase(PlannerPhase.VERIFY)
         return proposal
+
+    def _get_strategy_recommendation(self) -> str | None:
+        """Get strategy recommendation from learning layer."""
+        if not self.strategy_selector:
+            return None
+        
+        try:
+            # Build fingerprint context
+            failing = list(self.state_tracker.failing_tests)
+            traceback_str = "\n".join(
+                f"{f[0]}:{f[1]}" for f in self.state_tracker.traceback_frames[:5]
+            )
+            
+            rec = self.strategy_selector.recommend(
+                failing_tests=failing,
+                lint_errors=[],
+                stack_trace=traceback_str if traceback_str else None,
+            )
+            self._last_recommendation = rec
+            logger.info(
+                "Strategy recommendation: %s (confidence=%.2f)",
+                rec.strategy, rec.confidence
+            )
+            return rec.strategy
+        except Exception as e:
+            logger.warning("Failed to get strategy recommendation: %s", e)
+            return None
+
+    def _create_patch_proposal(
+        self,
+        suspect_file: str,
+        suspect_symbol: tuple[str, str] | None,
+        strategy: str | None,
+    ) -> Proposal:
+        """Create patch proposal based on strategy or exception type."""
+        symbol_name = suspect_symbol[1] if suspect_symbol else "unknown"
+        
+        # Strategy-based proposal creation
+        if strategy:
+            # Guard-type strategies
+            if strategy in ("guard_none", "none_check"):
+                return self.planner.propose_add_guard(
+                    file_path=suspect_file,
+                    symbol=symbol_name,
+                    guard_type="none_check",
+                    expected_behavior="Prevents AttributeError by checking for None",
+                )
+            elif strategy == "boundary_check":
+                return self.planner.propose_add_guard(
+                    file_path=suspect_file,
+                    symbol=symbol_name,
+                    guard_type="boundary_check",
+                    expected_behavior="Prevents IndexError by validating indices",
+                )
+            elif strategy == "type_check":
+                return self.planner.propose_add_guard(
+                    file_path=suspect_file,
+                    symbol=symbol_name,
+                    guard_type="type_check",
+                    expected_behavior="Prevents TypeError by validating types",
+                )
+            elif strategy == "fix_off_by_one":
+                return self.planner.propose_fix_logic_error(
+                    file_path=suspect_file,
+                    symbol=symbol_name,
+                    error_description="Off-by-one error in loop or index",
+                    fix_description="Adjust boundary condition by one",
+                    expected_behavior="Corrects index/loop boundary",
+                )
+            elif strategy == "empty_case":
+                return self.planner.propose_add_guard(
+                    file_path=suspect_file,
+                    symbol=symbol_name,
+                    guard_type="empty_check",
+                    expected_behavior="Handles empty input case explicitly",
+                )
+            elif strategy == "normalize_input":
+                return self.planner.propose_fix_logic_error(
+                    file_path=suspect_file,
+                    symbol=symbol_name,
+                    error_description="Input requires normalization",
+                    fix_description="Normalize input before processing",
+                    expected_behavior="Handles varied input formats correctly",
+                )
+            elif strategy == "fallback_default":
+                return self.planner.propose_fix_logic_error(
+                    file_path=suspect_file,
+                    symbol=symbol_name,
+                    error_description="Missing fallback for edge case",
+                    fix_description="Add fallback/default value",
+                    expected_behavior="Returns sensible default for edge cases",
+                )
+            elif strategy == "return_shape_fix":
+                return self.planner.propose_fix_logic_error(
+                    file_path=suspect_file,
+                    symbol=symbol_name,
+                    error_description="Return value shape mismatch",
+                    fix_description="Fix return value shape/structure",
+                    expected_behavior="Returns correctly shaped value",
+                )
+            elif strategy == "fix_import":
+                return self.planner.propose_fix_logic_error(
+                    file_path=suspect_file,
+                    symbol=symbol_name,
+                    error_description="Import error or missing dependency",
+                    fix_description="Fix import statement",
+                    expected_behavior="Module imports correctly",
+                )
+            elif strategy == "fix_typing":
+                return self.planner.propose_fix_logic_error(
+                    file_path=suspect_file,
+                    symbol=symbol_name,
+                    error_description="Type annotation or conversion error",
+                    fix_description="Fix type handling",
+                    expected_behavior="Correct type conversion/handling",
+                )
+            # --- New strategies: Dictionary/Key ---
+            elif strategy == "fix_key_error":
+                return self.planner.propose_add_guard(
+                    file_path=suspect_file,
+                    symbol=symbol_name,
+                    guard_type="key_check",
+                    expected_behavior="Prevents KeyError with key existence check",
+                )
+            elif strategy == "use_get_default":
+                return self.planner.propose_fix_logic_error(
+                    file_path=suspect_file,
+                    symbol=symbol_name,
+                    error_description="KeyError from missing dictionary key",
+                    fix_description="Use dict.get() with default value",
+                    expected_behavior="Returns default when key missing",
+                )
+            # --- New strategies: Arithmetic ---
+            elif strategy == "fix_division_by_zero":
+                return self.planner.propose_add_guard(
+                    file_path=suspect_file,
+                    symbol=symbol_name,
+                    guard_type="zero_check",
+                    expected_behavior="Prevents ZeroDivisionError",
+                )
+            elif strategy == "fix_overflow":
+                return self.planner.propose_fix_logic_error(
+                    file_path=suspect_file,
+                    symbol=symbol_name,
+                    error_description="Numeric overflow error",
+                    fix_description="Add bounds check or use larger type",
+                    expected_behavior="Handles large numbers safely",
+                )
+            elif strategy == "fix_precision":
+                return self.planner.propose_fix_logic_error(
+                    file_path=suspect_file,
+                    symbol=symbol_name,
+                    error_description="Floating point precision issue",
+                    fix_description="Use appropriate precision handling",
+                    expected_behavior="Handles floating point correctly",
+                )
+            # --- New strategies: String ---
+            elif strategy == "fix_encoding":
+                return self.planner.propose_fix_logic_error(
+                    file_path=suspect_file,
+                    symbol=symbol_name,
+                    error_description="String encoding/decoding error",
+                    fix_description="Fix encoding handling",
+                    expected_behavior="Handles text encoding correctly",
+                )
+            elif strategy == "fix_format_string":
+                return self.planner.propose_fix_logic_error(
+                    file_path=suspect_file,
+                    symbol=symbol_name,
+                    error_description="String formatting error",
+                    fix_description="Fix format string/template",
+                    expected_behavior="Formats string correctly",
+                )
+            elif strategy == "fix_regex":
+                return self.planner.propose_fix_logic_error(
+                    file_path=suspect_file,
+                    symbol=symbol_name,
+                    error_description="Regular expression error",
+                    fix_description="Fix regex pattern",
+                    expected_behavior="Pattern matches correctly",
+                )
+            # --- New strategies: Async ---
+            elif strategy == "fix_await_missing":
+                return self.planner.propose_fix_logic_error(
+                    file_path=suspect_file,
+                    symbol=symbol_name,
+                    error_description="Missing await keyword",
+                    fix_description="Add await to coroutine call",
+                    expected_behavior="Async function called correctly",
+                )
+            elif strategy == "fix_deadlock":
+                return self.planner.propose_fix_logic_error(
+                    file_path=suspect_file,
+                    symbol=symbol_name,
+                    error_description="Potential deadlock in locking",
+                    fix_description="Fix lock ordering or add timeout",
+                    expected_behavior="Prevents deadlock condition",
+                )
+            elif strategy == "fix_race_condition":
+                return self.planner.propose_fix_logic_error(
+                    file_path=suspect_file,
+                    symbol=symbol_name,
+                    error_description="Race condition detected",
+                    fix_description="Add synchronization",
+                    expected_behavior="Thread-safe operation",
+                )
+            # --- New strategies: Resource ---
+            elif strategy == "fix_file_handle":
+                return self.planner.propose_fix_logic_error(
+                    file_path=suspect_file,
+                    symbol=symbol_name,
+                    error_description="File handle not properly closed",
+                    fix_description="Use context manager or ensure close",
+                    expected_behavior="File handle cleaned up properly",
+                )
+            elif strategy == "fix_connection_leak":
+                return self.planner.propose_fix_logic_error(
+                    file_path=suspect_file,
+                    symbol=symbol_name,
+                    error_description="Connection/resource leak",
+                    fix_description="Ensure resource cleanup",
+                    expected_behavior="Resources released properly",
+                )
+            elif strategy == "fix_memory":
+                return self.planner.propose_fix_logic_error(
+                    file_path=suspect_file,
+                    symbol=symbol_name,
+                    error_description="Memory allocation issue",
+                    fix_description="Fix memory handling",
+                    expected_behavior="Memory managed correctly",
+                )
+            # --- New strategies: Iteration ---
+            elif strategy == "fix_iteration":
+                return self.planner.propose_fix_logic_error(
+                    file_path=suspect_file,
+                    symbol=symbol_name,
+                    error_description="Iteration or StopIteration error",
+                    fix_description="Fix iterator handling",
+                    expected_behavior="Iteration completes correctly",
+                )
+            elif strategy == "fix_generator":
+                return self.planner.propose_fix_logic_error(
+                    file_path=suspect_file,
+                    symbol=symbol_name,
+                    error_description="Generator/yield issue",
+                    fix_description="Fix generator behavior",
+                    expected_behavior="Generator yields correctly",
+                )
+            # --- New strategies: Null coalesce ---
+            elif strategy == "none_coalesce":
+                return self.planner.propose_fix_logic_error(
+                    file_path=suspect_file,
+                    symbol=symbol_name,
+                    error_description="None value where value expected",
+                    fix_description="Use default when None",
+                    expected_behavior="Returns default for None",
+                )
+            elif strategy == "fix_type_coercion":
+                return self.planner.propose_fix_logic_error(
+                    file_path=suspect_file,
+                    symbol=symbol_name,
+                    error_description="Type conversion needed",
+                    fix_description="Add explicit type conversion",
+                    expected_behavior="Values converted correctly",
+                )
+            elif strategy == "fix_circular_import":
+                return self.planner.propose_fix_logic_error(
+                    file_path=suspect_file,
+                    symbol=symbol_name,
+                    error_description="Circular import dependency",
+                    fix_description="Break circular import",
+                    expected_behavior="Module imports successfully",
+                )
+            elif strategy == "fix_logic_error":
+                return self.planner.propose_fix_logic_error(
+                    file_path=suspect_file,
+                    symbol=symbol_name,
+                    error_description="Generic logic error",
+                    fix_description="Fix logic to match expected behavior",
+                    expected_behavior="Test passes",
+                )
+        
+        # Fall back to exception-based selection
+        if "AttributeError" in self.state_tracker.exception_types:
+            return self.planner.propose_add_guard(
+                file_path=suspect_file,
+                symbol=symbol_name,
+                guard_type="none_check",
+                expected_behavior="Prevents AttributeError",
+            )
+        elif "IndexError" in self.state_tracker.exception_types:
+            return self.planner.propose_add_guard(
+                file_path=suspect_file,
+                symbol=symbol_name,
+                guard_type="boundary_check",
+                expected_behavior="Prevents IndexError",
+            )
+        elif "KeyError" in self.state_tracker.exception_types:
+            return self.planner.propose_add_guard(
+                file_path=suspect_file,
+                symbol=symbol_name,
+                guard_type="key_check",
+                expected_behavior="Prevents KeyError",
+            )
+        elif "ZeroDivisionError" in self.state_tracker.exception_types:
+            return self.planner.propose_add_guard(
+                file_path=suspect_file,
+                symbol=symbol_name,
+                guard_type="zero_check",
+                expected_behavior="Prevents ZeroDivisionError",
+            )
+        elif "TypeError" in self.state_tracker.exception_types:
+            return self.planner.propose_add_guard(
+                file_path=suspect_file,
+                symbol=symbol_name,
+                guard_type="type_check",
+                expected_behavior="Prevents TypeError",
+            )
+        else:
+            # Generic logic fix
+            return self.planner.propose_fix_logic_error(
+                file_path=suspect_file,
+                symbol=symbol_name,
+                error_description="Logic error causing test failure",
+                fix_description="Fix logic to match expected behavior",
+                expected_behavior="Corrects behavior to satisfy test",
+            )
+
+    def _update_learning_for_failed_phase(self) -> None:
+        """Update learning layer when a phase fails (too many attempts)."""
+        if not self.strategy_selector or not self._last_recommendation:
+            return
+        try:
+            self.strategy_selector.update(
+                self._last_recommendation,
+                success=False,
+                regression=False,
+                partial_reward=0.0,
+            )
+            logger.info("Updated learning: phase failed, strategy=%s", 
+                       self._last_recommendation.strategy)
+        except Exception as e:
+            logger.warning("Failed to update learning: %s", e)
 
     def _next_verify(self) -> Proposal:
         """Generate next proposal for verification phase."""
@@ -346,6 +675,7 @@ class MetaPlanner:
         # Extract info from feedback
         output = feedback.get("output", "")
         tests_failed = feedback.get("tests_failed", 0)
+        tests_passed = feedback.get("tests_passed", 0)
         traceback = feedback.get("traceback")
 
         # Update failing tests
@@ -366,8 +696,8 @@ class MetaPlanner:
                 self.state_tracker.add_suspect_file(tb_file, confidence=0.9)
 
         # Check if tests now pass
-        if tests_failed == 0 and feedback.get("tests_passed", 0) > 0:
-            # Success! Move to expand phase
+        if tests_failed == 0 and tests_passed > 0:
+            # Success! Move to expand phase and update learning
             self._transition_phase(PlannerPhase.EXPAND)
             if self.planner_state.last_proposal:
                 self.state_tracker.record_hypothesis(
@@ -375,11 +705,23 @@ class MetaPlanner:
                     hypothesis=self.planner_state.last_proposal.hypothesis,
                     outcome=HypothesisOutcome.CONFIRMED,
                 )
+            # Update learning layer with success
+            self._update_learning_outcome(success=True, regression=False)
         elif self.planner_state.last_proposal:
             self.state_tracker.record_hypothesis(
                 proposal_id=self.planner_state.last_proposal.proposal_id,
                 hypothesis=self.planner_state.last_proposal.hypothesis,
                 outcome=HypothesisOutcome.FAILED_EFFECT,
+            )
+            # Update learning layer with failure
+            # Calculate partial reward based on test progress
+            partial = 0.0
+            if tests_passed > 0 and tests_failed > 0:
+                partial = tests_passed / (tests_passed + tests_failed) * 0.5
+            self._update_learning_outcome(
+                success=False,
+                regression=feedback.get("regression", False),
+                partial_reward=partial,
             )
 
         # Update reproduction status
@@ -389,6 +731,38 @@ class MetaPlanner:
                 self.state_tracker.repro_command = "pytest " + list(
                     self.state_tracker.failing_tests
                 )[0]
+
+    def _update_learning_outcome(
+        self,
+        success: bool,
+        regression: bool = False,
+        partial_reward: float | None = None,
+    ) -> None:
+        """Update learning layer with outcome from verification.
+        
+        Args:
+            success: Whether the patch resolved the issue
+            regression: Whether the patch caused a regression
+            partial_reward: Partial credit for improvements
+        """
+        if not self.strategy_selector or not self._last_recommendation:
+            return
+        try:
+            self.strategy_selector.update(
+                self._last_recommendation,
+                success=success,
+                regression=regression,
+                partial_reward=partial_reward,
+            )
+            status = "success" if success else ("regression" if regression else "failure")
+            logger.info(
+                "Updated learning: %s, strategy=%s, partial=%.2f",
+                status,
+                self._last_recommendation.strategy,
+                partial_reward or 0.0,
+            )
+        except Exception as e:
+            logger.warning("Failed to update learning outcome: %s", e)
 
     def _transition_phase(self, new_phase: PlannerPhase):
         """Transition to new planning phase."""

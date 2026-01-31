@@ -15,6 +15,9 @@ making the agent worse over time.
 from __future__ import annotations
 
 import logging
+import os
+import sqlite3
+import time
 from dataclasses import dataclass
 from typing import Any
 
@@ -114,11 +117,16 @@ class QuarantineLane:
         lane.record_outcome("temperature_0.3", context="abc123", success=True)
     """
     
-    def __init__(self, config: QuarantineConfig | None = None):
+    def __init__(
+        self,
+        config: QuarantineConfig | None = None,
+        db_path: str | None = None,
+    ):
         """Initialize quarantine lane.
         
         Args:
             config: Quarantine configuration.
+            db_path: Optional SQLite path for persistent quarantine.
         """
         self.config = config or QuarantineConfig()
         
@@ -128,6 +136,101 @@ class QuarantineLane:
         
         # Globally quarantined strategies (across all contexts)
         self._global_quarantine: set[str] = set()
+        
+        # SQLite persistence
+        self._db_path = db_path
+        self._conn: sqlite3.Connection | None = None
+        if self._db_path:
+            parent = os.path.dirname(os.path.abspath(self._db_path))
+            if parent:
+                os.makedirs(parent, exist_ok=True)
+            self._conn = sqlite3.connect(self._db_path)
+            self._conn.execute("PRAGMA journal_mode=WAL;")
+            self._init_schema()
+            self._load_from_db()
+    
+    def _init_schema(self) -> None:
+        """Initialize SQLite schema for quarantine persistence."""
+        assert self._conn is not None
+        self._conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS quarantine_stats (
+                context TEXT NOT NULL,
+                strategy TEXT NOT NULL,
+                total_tries INTEGER NOT NULL,
+                successes INTEGER NOT NULL,
+                regressions INTEGER NOT NULL,
+                last_regression_ts REAL,
+                updated_ts INTEGER NOT NULL,
+                PRIMARY KEY (context, strategy)
+            )
+            """
+        )
+        self._conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS quarantine_global (
+                strategy TEXT PRIMARY KEY,
+                reason TEXT,
+                quarantined_ts INTEGER NOT NULL
+            )
+            """
+        )
+        self._conn.commit()
+
+    def _load_from_db(self) -> None:
+        """Load persisted quarantine stats from database."""
+        if not self._conn:
+            return
+
+        # Load per-context stats
+        cur = self._conn.execute(
+            "SELECT context, strategy, total_tries, successes, regressions, last_regression_ts "
+            "FROM quarantine_stats"
+        )
+        for (ctx, s, tries, succ, reg, last_ts) in cur.fetchall():
+            if ctx not in self._stats:
+                self._stats[ctx] = {}
+            self._stats[ctx][s] = QuarantineStats(
+                strategy=s,
+                total_tries=int(tries),
+                successes=int(succ),
+                regressions=int(reg),
+                last_regression_timestamp=float(last_ts) if last_ts else None,
+            )
+
+        # Load global quarantine list
+        cur = self._conn.execute("SELECT strategy FROM quarantine_global")
+        for (s,) in cur.fetchall():
+            self._global_quarantine.add(s)
+
+    def _persist_stats(self, context: str, strategy: str, stats: QuarantineStats) -> None:
+        """Persist stats for one context/strategy pair."""
+        if not self._conn:
+            return
+        now = int(time.time())
+        self._conn.execute(
+            """
+            INSERT INTO quarantine_stats
+                (context, strategy, total_tries, successes, regressions, last_regression_ts, updated_ts)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(context, strategy) DO UPDATE SET
+                total_tries=excluded.total_tries,
+                successes=excluded.successes,
+                regressions=excluded.regressions,
+                last_regression_ts=excluded.last_regression_ts,
+                updated_ts=excluded.updated_ts
+            """,
+            (
+                context,
+                strategy,
+                stats.total_tries,
+                stats.successes,
+                stats.regressions,
+                stats.last_regression_timestamp,
+                now,
+            ),
+        )
+        self._conn.commit()
     
     def _get_stats(self, context: str, strategy: str) -> QuarantineStats:
         """Get or create stats for a context/strategy pair."""
@@ -218,7 +321,6 @@ class QuarantineLane:
         Returns:
             True if strategy became quarantined due to this outcome.
         """
-        import time
         timestamp = timestamp or time.time()
         
         stats = self._get_stats(context, strategy)
@@ -240,9 +342,15 @@ class QuarantineLane:
                 strategy, context[:8],
                 stats.total_tries, stats.successes, stats.regressions
             )
-            return True
         
-        return False
+        # Persist to database
+        if self._conn:
+            try:
+                self._persist_stats(context, strategy, stats)
+            except Exception:
+                logger.exception("Failed to persist quarantine stats")
+        
+        return now_quarantined and not was_quarantined
     
     def force_quarantine(self, strategy: str, reason: str = "manual") -> None:
         """Force-quarantine a strategy globally.

@@ -1,9 +1,124 @@
 services:
   rfsn:
     build: .
-    image: rfsn-coding:latest
+    image: rfsn-controller:latest
+    container_name: rfsn-controller
     environment:
+      # LLM API Keys
       - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
+      # Database connections
+      - POSTGRES_URL=postgresql://rfsn:rfsn_pass@postgres:5432/rfsn
+      - REDIS_URL=redis://redis:6379/0
+      # Metrics
+      - RFSN_METRICS_PORT=9090
+      - RFSN_ENABLE_METRICS=true
     volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./repos:/app/repos
+      - ./cache:/app/cache
       - ./artifacts:/artifacts
+      - rfsn_data:/app/data
+    ports:
+      - "9090:9090" # Prometheus metrics
+      - "8000:8000" # API
+      - "7860:7860" # Gradio UI
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - rfsn-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import rfsn_controller; print('OK')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: rfsn-postgres
+    environment:
+      POSTGRES_DB: rfsn
+      POSTGRES_USER: rfsn
+      POSTGRES_PASSWORD: rfsn_pass
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/init_db.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rfsn"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - rfsn-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: rfsn-redis
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - rfsn-network
+
+  # Prometheus Metrics
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: rfsn-prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=30d"
+    volumes:
+      - ./docker/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9091:9090"
+    restart: unless-stopped
+    networks:
+      - rfsn-network
+
+  # Grafana Dashboard
+  grafana:
+    image: grafana/grafana:latest
+    container_name: rfsn-grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    networks:
+      - rfsn-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  prometheus_data:
+  grafana_data:
+  rfsn_data:
+
+networks:
+  rfsn-network:
+    driver: bridge

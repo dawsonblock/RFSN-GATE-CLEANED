@@ -16,7 +16,10 @@ Reward = Verified success, penalized for regressions
 from __future__ import annotations
 
 import logging
+import os
 import random
+import sqlite3
+import time
 from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
@@ -70,23 +73,42 @@ class StrategyStats:
             "mean_reward": round(self.mean_reward, 3),
         }
 
-
 # Default strategies the bandit can choose from
-DEFAULT_STRATEGIES = [
-    "temperature_0.0",
-    "temperature_0.3",
-    "temperature_0.7",
-    "temperature_1.0",
-    "prompt_minimal",
-    "prompt_verbose",
-    "prompt_structured",
-    "add_test_first",
-    "fix_direct",
-    "refactor_small",
-    "guard_none",
-    "fix_import",
-    "fix_typing",
-]
+# Import from centralized strategies module
+try:
+    from .strategies import DEFAULT_STRATEGY_NAMES
+    DEFAULT_STRATEGIES = DEFAULT_STRATEGY_NAMES
+except ImportError:
+    # Fallback if strategies module not available
+    DEFAULT_STRATEGIES = [
+        # Prompting / sampling controls (advisory)
+        "temperature_0.0",
+        "temperature_0.3",
+        "temperature_0.7",
+        "temperature_1.0",
+        "prompt_minimal",
+        "prompt_verbose",
+        "prompt_structured",
+
+        # Planning-level tactics
+        "add_test_first",
+        "fix_direct",
+        "refactor_small",
+
+        # Guard / validation patterns
+        "guard_none",
+        "boundary_check",
+        "type_check",
+
+        # Common fix archetypes
+        "normalize_input",
+        "fix_off_by_one",
+        "empty_case",
+        "fallback_default",
+        "return_shape_fix",
+        "fix_import",
+        "fix_typing",
+    ]
 
 
 class StrategyBandit:
@@ -109,12 +131,14 @@ class StrategyBandit:
         self,
         strategies: list[str] | None = None,
         exploration_bonus: float = 0.1,
+        db_path: str | None = None,
     ):
         """Initialize bandit.
         
         Args:
             strategies: List of strategy names. Uses defaults if None.
             exploration_bonus: Bonus for underexplored arms.
+            db_path: Optional SQLite path for persistent learning.
         """
         self.strategies = set(strategies or DEFAULT_STRATEGIES)
         self.exploration_bonus = exploration_bonus
@@ -127,6 +151,156 @@ class StrategyBandit:
         self._global_stats: dict[str, StrategyStats] = {
             s: StrategyStats() for s in self.strategies
         }
+        
+        # SQLite persistence
+        self._db_path = db_path
+        self._conn: sqlite3.Connection | None = None
+        if self._db_path:
+            parent = os.path.dirname(os.path.abspath(self._db_path))
+            if parent:
+                os.makedirs(parent, exist_ok=True)
+            self._conn = sqlite3.connect(self._db_path)
+            self._conn.execute("PRAGMA journal_mode=WAL;")
+            self._init_schema()
+            self._load_from_db()
+    
+    def _init_schema(self) -> None:
+        """Initialize SQLite schema for persistence."""
+        assert self._conn is not None
+        self._conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS strategy_bandit (
+                context_key TEXT NOT NULL,
+                strategy TEXT NOT NULL,
+                tries INTEGER NOT NULL,
+                wins INTEGER NOT NULL,
+                regressions INTEGER NOT NULL,
+                alpha REAL NOT NULL,
+                beta REAL NOT NULL,
+                total_reward REAL NOT NULL,
+                updated_ts INTEGER NOT NULL,
+                PRIMARY KEY (context_key, strategy)
+            )
+            """
+        )
+        self._conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS strategy_bandit_global (
+                strategy TEXT PRIMARY KEY,
+                tries INTEGER NOT NULL,
+                wins INTEGER NOT NULL,
+                regressions INTEGER NOT NULL,
+                alpha REAL NOT NULL,
+                beta REAL NOT NULL,
+                total_reward REAL NOT NULL,
+                updated_ts INTEGER NOT NULL
+            )
+            """
+        )
+        self._conn.commit()
+
+    def _load_from_db(self) -> None:
+        """Load persisted stats from database."""
+        if not self._conn:
+            return
+
+        # Load global stats
+        cur = self._conn.execute(
+            "SELECT strategy, tries, wins, regressions, alpha, beta, total_reward "
+            "FROM strategy_bandit_global"
+        )
+        for (s, tries, wins, reg, a, b, tr) in cur.fetchall():
+            if s not in self.strategies:
+                continue
+            st = self._global_stats.get(s) or StrategyStats()
+            st.tries = int(tries)
+            st.wins = int(wins)
+            st.regressions = int(reg)
+            st.alpha = float(a)
+            st.beta = float(b)
+            st.total_reward = float(tr)
+            self._global_stats[s] = st
+
+        # Load per-context stats
+        cur = self._conn.execute(
+            "SELECT context_key, strategy, tries, wins, regressions, alpha, beta, total_reward "
+            "FROM strategy_bandit"
+        )
+        for (ctx, s, tries, wins, reg, a, b, tr) in cur.fetchall():
+            if s not in self.strategies:
+                continue
+            arms = self._get_context_arms(ctx)
+            st = arms.get(s) or StrategyStats()
+            st.tries = int(tries)
+            st.wins = int(wins)
+            st.regressions = int(reg)
+            st.alpha = float(a)
+            st.beta = float(b)
+            st.total_reward = float(tr)
+            arms[s] = st
+
+    def _persist_one(self, context_key: str, strategy: str, stats: StrategyStats) -> None:
+        """Persist stats for one context/strategy pair."""
+        if not self._conn:
+            return
+        now = int(time.time())
+        self._conn.execute(
+            """
+            INSERT INTO strategy_bandit
+                (context_key, strategy, tries, wins, regressions, alpha, beta, total_reward, updated_ts)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(context_key, strategy) DO UPDATE SET
+                tries=excluded.tries,
+                wins=excluded.wins,
+                regressions=excluded.regressions,
+                alpha=excluded.alpha,
+                beta=excluded.beta,
+                total_reward=excluded.total_reward,
+                updated_ts=excluded.updated_ts
+            """,
+            (
+                context_key,
+                strategy,
+                stats.tries,
+                stats.wins,
+                stats.regressions,
+                stats.alpha,
+                stats.beta,
+                stats.total_reward,
+                now,
+            ),
+        )
+
+    def _persist_global(self, strategy: str, stats: StrategyStats) -> None:
+        """Persist global stats for a strategy."""
+        if not self._conn:
+            return
+        now = int(time.time())
+        self._conn.execute(
+            """
+            INSERT INTO strategy_bandit_global
+                (strategy, tries, wins, regressions, alpha, beta, total_reward, updated_ts)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(strategy) DO UPDATE SET
+                tries=excluded.tries,
+                wins=excluded.wins,
+                regressions=excluded.regressions,
+                alpha=excluded.alpha,
+                beta=excluded.beta,
+                total_reward=excluded.total_reward,
+                updated_ts=excluded.updated_ts
+            """,
+            (
+                strategy,
+                stats.tries,
+                stats.wins,
+                stats.regressions,
+                stats.alpha,
+                stats.beta,
+                stats.total_reward,
+                now,
+            ),
+        )
     
     def _get_context_arms(self, context_key: str) -> dict[str, StrategyStats]:
         """Get or create arm stats for a context."""
@@ -251,6 +425,15 @@ class StrategyBandit:
             "Updated %s for context %s: success=%s, new_mean=%.3f",
             strategy, context_key[:8], success, stats.mean_reward
         )
+        
+        # Persist to database
+        if self._conn:
+            try:
+                self._persist_one(context_key, strategy, stats)
+                self._persist_global(strategy, global_stats)
+                self._conn.commit()
+            except Exception:
+                logger.exception("Failed to persist strategy bandit stats")
     
     def get_stats(self, context_key: str | None = None) -> dict[str, dict]:
         """Get statistics for arms.

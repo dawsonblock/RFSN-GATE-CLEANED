@@ -32,6 +32,13 @@ except ImportError:
     Proposal = None  # type: ignore
     ActionType = None  # type: ignore
 
+try:
+    from .learning import LearnedStrategySelector
+    HAS_LEARNING = True
+except ImportError:
+    HAS_LEARNING = False
+    LearnedStrategySelector = None  # type: ignore
+
 
 @dataclass
 class ControllerAction:
@@ -64,17 +71,26 @@ class PlannerV5Adapter:
         ...     adapter.process_result(result)
     """
     
-    def __init__(self, enabled: bool = True):
+    def __init__(
+        self,
+        enabled: bool = True,
+        strategy_selector: LearnedStrategySelector | None = None,
+    ):
         """Initialize Planner v5 adapter.
         
         Args:
             enabled: Whether to enable Planner v5 (default: True)
+            strategy_selector: Optional learned strategy selector for bandit-guided planning
         """
         self.enabled = enabled and HAS_PLANNER_V5
+        self.strategy_selector = strategy_selector
         
         if self.enabled:
             self.state_tracker = StateTracker()
-            self.meta_planner = MetaPlanner(state_tracker=self.state_tracker)
+            self.meta_planner = MetaPlanner(
+                state_tracker=self.state_tracker,
+                strategy_selector=strategy_selector,
+            )
         else:
             self.state_tracker = None
             self.meta_planner = None

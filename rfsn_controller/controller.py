@@ -751,12 +751,41 @@ def run_controller(cfg: ControllerConfig) -> dict[str, Any]:
         # === PLANNER V5: Meta-planning with state tracking ===
         planner_v5_adapter = None
         planner_v5_enabled = cfg.planner_mode == "v5"
+        strategy_selector = None  # For learning-informed planning
+        
         if planner_v5_enabled:
             try:
                 from .planner_v5_adapter import PlannerV5Adapter
-                planner_v5_adapter = PlannerV5Adapter(enabled=True)
+                
+                # Initialize strategy selector with persistence if configured
+                if cfg.learning_db_path:
+                    try:
+                        from .learning import LearnedStrategySelector
+                        strategy_db = cfg.learning_db_path.replace(
+                            ".db", "_strategy.db"
+                        )
+                        strategy_selector = LearnedStrategySelector(
+                            db_path=strategy_db
+                        )
+                        log({
+                            "phase": "strategy_selector_init",
+                            "db_path": strategy_db,
+                            "status": "ready",
+                        })
+                    except ImportError as e:
+                        log({"phase": "strategy_selector_init", "error": str(e)})
+                
+                planner_v5_adapter = PlannerV5Adapter(
+                    enabled=True,
+                    strategy_selector=strategy_selector,
+                )
                 if planner_v5_adapter.enabled:
-                    log({"phase": "planner_v5_init", "mode": cfg.planner_mode, "status": "ready"})
+                    log({
+                        "phase": "planner_v5_init",
+                        "mode": cfg.planner_mode,
+                        "strategy_selector": strategy_selector is not None,
+                        "status": "ready",
+                    })
                 else:
                     log({"phase": "planner_v5_init", "mode": cfg.planner_mode, "status": "unavailable"})
                     planner_v5_enabled = False

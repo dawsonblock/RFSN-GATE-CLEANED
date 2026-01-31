@@ -33,6 +33,14 @@ from .strategy_bandit import (
     StrategyBandit,
     StrategyStats,
 )
+from .strategies import (
+    ALL_STRATEGIES,
+    DEFAULT_STRATEGY_NAMES,
+    ErrorCategory,
+    StrategyDefinition,
+    get_strategy,
+    strategies_for_error,
+)
 
 __all__ = [
     # Fingerprinting
@@ -49,4 +57,11 @@ __all__ = [
     # Selector
     "LearnedStrategySelector",
     "StrategyRecommendation",
+    # Strategies
+    "StrategyDefinition",
+    "ErrorCategory",
+    "ALL_STRATEGIES",
+    "DEFAULT_STRATEGY_NAMES",
+    "get_strategy",
+    "strategies_for_error",
 ]

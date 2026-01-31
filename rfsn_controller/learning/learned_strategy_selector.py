@@ -90,14 +90,16 @@ class LearnedStrategySelector:
     def __init__(
         self,
         strategies: list[str] | None = None,
+        db_path: str | None = None,
     ):
         """Initialize selector.
         
         Args:
             strategies: List of strategy names to use.
+            db_path: Optional SQLite path for persistent learning across runs.
         """
-        self.bandit = StrategyBandit(strategies=strategies)
-        self.quarantine = QuarantineLane()
+        self.bandit = StrategyBandit(strategies=strategies, db_path=db_path)
+        self.quarantine = QuarantineLane(db_path=db_path)
         
         # Cache of fingerprints for update correlation
         self._fingerprint_cache: dict[str, FailureFingerprint] = {}
