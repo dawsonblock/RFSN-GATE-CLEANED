@@ -516,6 +516,12 @@ class ControllerConfig:
     budget: BudgetConfig = field(default_factory=lambda: BudgetConfig())
     # Contracts configuration (inline for context compatibility)
     contracts: ContractsConfig = field(default_factory=lambda: ContractsConfig())
+    # Beam search configuration
+    beam_search_enabled: bool = False  # Enable multi-step beam search
+    beam_width: int = 3  # Number of candidates to keep per step
+    beam_depth: int = 5  # Maximum expansion depth
+    beam_score_threshold: float = 0.95  # Score to terminate early
+    beam_timeout_seconds: float = 300.0  # Total search timeout
 
 
 def run_controller(cfg: ControllerConfig) -> dict[str, Any]:
